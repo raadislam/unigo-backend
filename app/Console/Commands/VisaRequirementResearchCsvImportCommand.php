@@ -64,6 +64,8 @@ class VisaRequirementResearchCsvImportCommand extends Command
                     if (($record['application_fee'] ?? null) !== $fee) $changes['application_fee'] = $fee;
                     if (($record['processing_time'] ?? null) !== $time) $changes['processing_time'] = $time;
                     if (empty($record['official_source_checked_at']) || substr((string) $record['official_source_checked_at'], 0, 10) < $checked) $changes['official_source_checked_at'] = $checked;
+                    $fullAudit = filter_var($row['full_audit'] ?? 'false', FILTER_VALIDATE_BOOLEAN);
+                    if ($fullAudit) $changes = array_merge($changes, $this->fullAuditPayload($row));
 
                     if ($changes !== []) {
                         if (! $dry) $this->api('PUT', $base . '/api/admin/visa-requirements/' . $id, $changes, $secret);
@@ -87,6 +89,7 @@ class VisaRequirementResearchCsvImportCommand extends Command
 
                     if ($this->addSource($base, $id, $sources, $primary, $secret, $dry)) {
                         $summary['sources_added']++;
+                        $sources = array_map(fn ($source) => [...$source, 'is_primary' => false], $sources);
                         $sources[] = ['source_url' => $primaryUrl, 'source_last_checked_at' => $checked, 'is_primary' => true];
                     }
 
@@ -101,7 +104,21 @@ class VisaRequirementResearchCsvImportCommand extends Command
                         'verification_notes' => 'Additional official or application-provider reference for fee or processing-time information. Checked ' . $checked . '.',
                     ];
 
-                    if ($this->addSource($base, $id, $sources, $cross, $secret, $dry)) $summary['sources_added']++;
+                    if ($this->addSource($base, $id, $sources, $cross, $secret, $dry)) {
+                        $summary['sources_added']++;
+                        $sources[] = ['source_url' => $crossUrl, 'source_last_checked_at' => $checked, 'is_primary' => false];
+                    }
+
+                    $extraSources = json_decode((string) ($row['additional_sources'] ?? '[]'), true, 512, JSON_THROW_ON_ERROR);
+                    if (! is_array($extraSources)) throw new RuntimeException('Additional sources must be a JSON array.');
+                    foreach ($extraSources as $extra) {
+                        $extra['source_last_checked_at'] = Carbon::parse($checked)->startOfDay()->toDateTimeString();
+                        $extra['is_primary'] = false;
+                        if ($this->addSource($base, $id, $sources, $extra, $secret, $dry)) {
+                            $summary['sources_added']++;
+                            $sources[] = ['source_url' => $extra['source_url'], 'source_last_checked_at' => $checked, 'is_primary' => false];
+                        }
+                    }
 
                     $shouldPublish = trim($row['verification_status']) === 'verified' && trim($row['publish_status']) === 'published';
                     if ($shouldPublish && ! $dry) {
@@ -121,12 +138,34 @@ class VisaRequirementResearchCsvImportCommand extends Command
                             throw new RuntimeException('Saved fee or processing time does not match the CSV.');
                         }
 
+                        if ($fullAudit) {
+                            foreach ($this->fullAuditPayload($row) as $field => $expected) {
+                                $actual = $saved[$field] ?? null;
+                                if ($field === 'required_documents') {
+                                    $actualList = is_array($actual) ? $actual : [];
+                                    sort($actualList);
+                                    $expectedList = $expected;
+                                    sort($expectedList);
+                                    if ($actualList !== $expectedList) throw new RuntimeException('Readback mismatch for required_documents.');
+                                } elseif (in_array($field, ['visa_required', 'visa_free_available', 'visa_on_arrival_available', 'evisa_available'], true)) {
+                                    if ((bool) $actual !== (bool) $expected) throw new RuntimeException('Readback mismatch for ' . $field . '.');
+                                } elseif ((string) $actual !== (string) $expected) {
+                                    throw new RuntimeException('Readback mismatch for ' . $field . '.');
+                                }
+                            }
+                        }
+
                         $savedSources = collect($saved['sources'] ?? []);
                         if (! $savedSources->contains(fn ($source) => ($source['source_url'] ?? null) === $primaryUrl && (bool) ($source['is_primary'] ?? false))) {
                             throw new RuntimeException('Primary official source was not present after readback.');
                         }
                         if (! $savedSources->contains(fn ($source) => ($source['source_url'] ?? null) === $crossUrl)) {
                             throw new RuntimeException('Cross-check source was not present after readback.');
+                        }
+                        foreach ($extraSources as $extra) {
+                            if (! $savedSources->contains(fn ($source) => ($source['source_url'] ?? null) === ($extra['source_url'] ?? null))) {
+                                throw new RuntimeException('An additional source was not present after readback.');
+                            }
                         }
 
                         if ($shouldPublish && (($saved['verification_status'] ?? null) !== 'verified' || ! (bool) ($saved['is_published'] ?? false))) {
@@ -200,10 +239,75 @@ class VisaRequirementResearchCsvImportCommand extends Command
             if (! in_array(trim($row['publish_status']), ['draft', 'published'], true)) throw new RuntimeException('Invalid publication status (line ' . $line . ').');
             if (trim($row['publish_status']) === 'published' && trim($row['verification_status']) !== 'verified') throw new RuntimeException('Unverified rows cannot be published (line ' . $line . ').');
             try { Carbon::parse(trim($row['official_source_last_checked'])); } catch (Throwable) { throw new RuntimeException('Invalid source checked date (line ' . $line . ').'); }
+
+            if (filter_var($row['full_audit'] ?? 'false', FILTER_VALIDATE_BOOLEAN)) {
+                $fullColumns = ['visa_requirement_type', 'visa_required', 'visa_free_eligibility', 'visa_on_arrival_available', 'evisa_available', 'maximum_permitted_stay', 'entry_count', 'passport_validity_rule', 'blank_passport_pages_rule', 'return_ticket_rule', 'proof_of_funds_rule', 'accommodation_rule', 'travel_insurance_rule', 'yellow_fever_or_health_rule', 'transit_rule', 'application_channel', 'required_documents', 'additional_sources'];
+                foreach ($fullColumns as $column) {
+                    if (! array_key_exists($column, $row)) throw new RuntimeException('Missing full-audit column ' . $column . ' (line ' . $line . ').');
+                }
+                foreach (['visa_required', 'visa_free_eligibility', 'visa_on_arrival_available', 'evisa_available'] as $column) {
+                    if (filter_var(trim($row[$column]), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === null) throw new RuntimeException('Invalid boolean ' . $column . ' (line ' . $line . ').');
+                }
+                if (trim($row['required_documents']) === '') throw new RuntimeException('Required document list is empty (line ' . $line . ').');
+                $extra = json_decode((string) $row['additional_sources'], true);
+                if (! is_array($extra)) throw new RuntimeException('Additional sources must be a JSON array (line ' . $line . ').');
+                foreach ($extra as $source) {
+                    if (! in_array($source['source_type'] ?? null, ['official', 'provider', 'secondary'], true) || trim((string) ($source['source_name'] ?? '')) === '' || ! filter_var(trim((string) ($source['source_url'] ?? '')), FILTER_VALIDATE_URL)) {
+                        throw new RuntimeException('Invalid additional source (line ' . $line . ').');
+                    }
+                }
+            }
+
             $key = $iso2 . ':BGD:tourism';
             if (isset($seen[$key])) throw new RuntimeException('Duplicate destination/passport/purpose row (line ' . $line . ').');
             $seen[$key] = true;
         }
+    }
+
+    private function fullAuditPayload(array $row): array
+    {
+        $payload = [];
+        $booleanFields = [
+            'visa_required' => 'visa_required',
+            'visa_free_eligibility' => 'visa_free_available',
+            'visa_on_arrival_available' => 'visa_on_arrival_available',
+            'evisa_available' => 'evisa_available',
+        ];
+
+        foreach ($booleanFields as $column => $field) {
+            $value = filter_var(trim($row[$column]), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($value === null) throw new RuntimeException('Invalid boolean value for ' . $column . '.');
+            $payload[$field] = $value;
+        }
+
+        $stringFields = [
+            'visa_requirement_type' => 'requirement_type',
+            'maximum_permitted_stay' => 'maximum_permitted_stay',
+            'entry_count' => 'entry_count',
+            'passport_validity_rule' => 'passport_validity_rule',
+            'blank_passport_pages_rule' => 'blank_passport_pages_rule',
+            'return_ticket_rule' => 'return_ticket_rule',
+            'proof_of_funds_rule' => 'proof_of_funds_rule',
+            'accommodation_rule' => 'accommodation_rule',
+            'travel_insurance_rule' => 'travel_insurance_rule',
+            'yellow_fever_or_health_rule' => 'health_requirements',
+            'transit_rule' => 'transit_requirements',
+            'application_channel' => 'application_channel',
+        ];
+
+        foreach ($stringFields as $column => $field) {
+            $payload[$field] = trim((string) $row[$column]);
+        }
+
+        $documents = array_values(array_filter(array_map('trim', explode('|', (string) $row['required_documents']))));
+        if ($documents === []) throw new RuntimeException('The full-audit required document list is empty.');
+        $payload['required_documents'] = $documents;
+
+        foreach (['effective_from', 'effective_until'] as $field) {
+            if (trim((string) ($row[$field] ?? '')) !== '') $payload[$field] = trim($row[$field]);
+        }
+
+        return $payload;
     }
 
     private function addSource(string $base, int $id, array $sources, array $source, string $secret, bool $dry): bool
