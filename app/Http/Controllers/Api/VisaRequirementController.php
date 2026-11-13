@@ -23,21 +23,15 @@ class VisaRequirementController extends Controller
                 'sources' => fn ($query) => $query
                     ->where('source_type', 'official')
                     ->orderByDesc('is_primary')
-                    ->get(['id', 'visa_requirement_id', 'source_type', 'source_name', 'source_url', 'source_last_checked_at', 'is_primary']),
+                    ->select(['id', 'visa_requirement_id', 'source_type', 'source_name', 'source_url', 'source_last_checked_at', 'is_primary']),
             ])
             ->where('passport_nationality_iso3', strtoupper($validated['passport'] ?? 'BGD'))
             ->where('travel_purpose', $validated['purpose'] ?? 'tourism')
             ->where('verification_status', 'verified')
             ->where('is_published', true)
-            ->where(function ($query) {
-                $query->whereNull('effective_from')->orWhereDate('effective_from', '<=', now()->toDateString());
-            })
-            ->where(function ($query) {
-                $query->whereNull('effective_until')->orWhereDate('effective_until', '>=', now()->toDateString());
-            })
-            ->when($validated['destination'] ?? null, function ($query, $destination) {
-                $query->whereHas('country', fn ($country) => $country->where('iso2', strtoupper($destination)));
-            })
+            ->where(fn ($query) => $query->whereNull('effective_from')->orWhereDate('effective_from', '<=', now()->toDateString()))
+            ->where(fn ($query) => $query->whereNull('effective_until')->orWhereDate('effective_until', '>=', now()->toDateString()))
+            ->when($validated['destination'] ?? null, fn ($query, $destination) => $query->whereHas('country', fn ($country) => $country->where('iso2', strtoupper($destination))))
             ->orderBy('country_id')
             ->get();
 
@@ -71,12 +65,8 @@ class VisaRequirementController extends Controller
             ->where('verification_status', 'verified')
             ->where('is_published', true)
             ->whereHas('country', fn ($country) => $country->where('iso2', strtoupper($destination)))
-            ->where(function ($query) {
-                $query->whereNull('effective_from')->orWhereDate('effective_from', '<=', now()->toDateString());
-            })
-            ->where(function ($query) {
-                $query->whereNull('effective_until')->orWhereDate('effective_until', '>=', now()->toDateString());
-            })
+            ->where(fn ($query) => $query->whereNull('effective_from')->orWhereDate('effective_from', '<=', now()->toDateString()))
+            ->where(fn ($query) => $query->whereNull('effective_until')->orWhereDate('effective_until', '>=', now()->toDateString()))
             ->firstOrFail();
 
         return response()->json([
