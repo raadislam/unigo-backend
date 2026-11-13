@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Country;
 use App\Models\VisaRequirement;
 use Illuminate\Console\Command;
 
