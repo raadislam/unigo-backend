@@ -61,22 +61,11 @@ class CountryDirectorySeeder extends Seeder
                     'short_description' => 'Explore visa information and available UniGo assistance for ' . $countryData['name'] . '.',
                     'seo_title' => $countryData['name'] . ' Visa Services from Bangladesh | UniGo',
                     'seo_description' => 'Explore ' . $countryData['name'] . ' visa information, application guidance and available services from UniGo Bangladesh.',
-                    'is_published' => true,
+                    'is_published' => false,
                     'sort_order' => $index + 1,
                 ])
             );
 
-            $country->visaCategories()->syncWithoutDetaching(
-                VisaCategory::query()->pluck('id')->mapWithKeys(fn ($id) => [
-                    $id => ['availability_note' => null, 'application_method' => null],
-                ])->all()
-            );
-
-            $country->services()->syncWithoutDetaching(
-                Service::query()->pluck('id')->mapWithKeys(fn ($id, $index) => [
-                    $id => ['is_featured' => $index < 2, 'sort_order' => $index + 1],
-                ])->all()
-            );
         }
     }
 }
