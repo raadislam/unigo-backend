@@ -15,11 +15,26 @@ class VisaRequirementAuditCommand extends Command
     {
         $records = VisaRequirement::query()
             ->with([
-                'country:id,name,iso2,iso3,slug',
+                'country:id,name,iso2,iso3,slug,is_published,sort_order',
                 'sources:id,visa_requirement_id,source_type,source_name,source_url,source_last_checked_at,is_primary,verification_notes',
             ])
             ->orderBy('id')
             ->get();
+
+        $publishedRequirements = VisaRequirement::query()
+            ->select('country_id')
+            ->where('passport_nationality_iso3', 'BGD')
+            ->where('travel_purpose', 'tourism')
+            ->where('verification_status', 'verified')
+            ->where('is_published', true)
+            ->where(fn ($query) => $query->whereNull('effective_from')->orWhereDate('effective_from', '<=', today()))
+            ->where(fn ($query) => $query->whereNull('effective_until')->orWhereDate('effective_until', '>=', today()));
+
+        $publicCountries = Country::query()
+            ->where(fn ($query) => $query->where('is_published', true)->orWhereIn('id', $publishedRequirements))
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'name', 'iso2', 'iso3', 'slug', 'is_published', 'sort_order']);
 
         $fields = [
             'id',
@@ -61,10 +76,12 @@ class VisaRequirementAuditCommand extends Command
             'total' => $records->count(),
             'verification_status_counts' => $records->countBy('verification_status'),
             'published_count' => $records->where('is_published', true)->count(),
+            'public_country_directory_count' => $publicCountries->count(),
+            'public_country_directory' => $publicCountries->map(fn (Country $country) => $country->only(['id', 'name', 'iso2', 'iso3', 'slug', 'is_published', 'sort_order']))->values()->all(),
             'records' => $records->map(function (VisaRequirement $record) use ($fields): array {
                 return [
                     ...$record->only($fields),
-                    'country' => $record->country?->only(['id', 'name', 'iso2', 'iso3', 'slug']),
+                    'country' => $record->country?->only(['id', 'name', 'iso2', 'iso3', 'slug', 'is_published', 'sort_order']),
                     'sources' => $record->sources->map(fn ($source) => $source->only([
                         'id',
                         'source_type',
