@@ -86,13 +86,21 @@ jobs:
           fi
           ln -s "$SHARED_DIR/storage" "$APP_DIR/storage"
 
+          mkdir -p "$SHARED_DIR/storage/framework/cache/data"
+          mkdir -p "$SHARED_DIR/storage/framework/sessions"
+          mkdir -p "$SHARED_DIR/storage/framework/views"
+          mkdir -p "$SHARED_DIR/storage/logs"
+
           cd "$APP_DIR"
 
           composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
           php artisan config:clear
           php artisan route:clear
-          php artisan view:clear
           php artisan config:cache
-          php artisan view:cache
+
+          if [ -d "$APP_DIR/resources/views" ]; then
+            php artisan view:clear
+            php artisan view:cache
+          fi
           REMOTE
