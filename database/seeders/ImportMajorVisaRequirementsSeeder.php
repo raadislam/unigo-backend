@@ -1,13 +1,13 @@
 <?php
 
-namespace Database\\Seeders;
+namespace Database\Seeders;
 
-use App\\Models\\Country;
-use App\\Models\\VisaRequirement;
-use App\\Models\\VisaRequirementHistory;
-use App\\Models\\VisaRequirementSource;
-use Illuminate\\Database\\Seeder;
-use Illuminate\\Support\\Facades\\DB;
+use App\Models\Country;
+use App\Models\VisaRequirement;
+use App\Models\VisaRequirementHistory;
+use App\Models\VisaRequirementSource;
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class ImportMajorVisaRequirementsSeeder extends Seeder
@@ -31,7 +31,7 @@ class ImportMajorVisaRequirementsSeeder extends Seeder
             throw new RuntimeException('The visa requirements CSV is empty.');
         }
 
-        $headers[0] = preg_replace('/^\\xEF\\xBB\\xBF/', '', $headers[0]);
+        $headers[0] = preg_replace('/^\xEF\xBB\xBF/', '', $headers[0]);
         $required = ['passport_iso3', 'destination_iso2', 'travel_purpose', 'visa_requirement_type', 'visa_required', 'official_source_url', 'verification_status'];
         $missing = array_diff($required, $headers);
         if ($missing !== []) {
