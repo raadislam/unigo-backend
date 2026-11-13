@@ -106,7 +106,6 @@ jobs:
           REMOTE
 
       - name: Export read-only visa database audit
-        continue-on-error: true
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
@@ -147,7 +146,6 @@ jobs:
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_02.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_02.csv --base-url=https://api.unigo-bd.com; else echo "No pending full-audit batch."; fi'
 
       - name: Verify imported visa records by readback
-        continue-on-error: true
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
@@ -155,7 +153,6 @@ jobs:
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit'
       - name: Inspect live public country directory API
-        continue-on-error: true
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
