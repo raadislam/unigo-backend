@@ -152,10 +152,68 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit'
-      - name: Inspect live public country directory API
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
+      - name: Verify public country directory and visa requirement API
         run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'curl -sS -o /tmp/unigo-country-directory.json -w "HTTP_STATUS=%{http_code}\n" https://api.unigo-bd.com/api/countries; head -c 4000 /tmp/unigo-country-directory.json; printf "\n"'
+          python3 - <<'PY'
+          import json
+          from urllib.request import Request, urlopen
+
+          base = "https://api.unigo-bd.com/api"
+
+          def get_json(path):
+              request = Request(base + path, headers={"Accept": "application/json", "User-Agent": "UniGo-Public-API-Check/1.0"})
+              with urlopen(request, timeout=45) as response:
+                  if response.status != 200:
+                      raise SystemExit(f"Public API returned HTTP {response.status}: {path}")
+                  payload = json.loads(response.read().decode("utf-8"))
+              return payload
+
+          directory = get_json("/countries")
+          if directory.get("success") is not True or not isinstance(directory.get("data"), list) or not directory["data"]:
+              raise SystemExit("Public country directory API returned an unsuccessful or empty response.")
+
+          requirements_payload = get_json("/visa-requirements?passport=BGD&purpose=tourism")
+          if requirements_payload.get("success") is not True or not isinstance(requirements_payload.get("data"), list):
+              raise SystemExit("Public BGD tourism visa requirement API returned an invalid response.")
+
+          countries = directory["data"]
+          requirements = requirements_payload["data"]
+          country_by_slug = {item.get("slug"): item for item in countries}
+          requirement_by_slug = {
+              item.get("country", {}).get("slug"): item
+              for item in requirements
+              if item.get("country", {}).get("slug")
+          }
+
+          if len(country_by_slug) != len(countries):
+              raise SystemExit("Public country directory contains duplicate or empty slugs.")
+
+          for country in countries:
+              slug = country.get("slug")
+              if not country.get("is_published", False) and slug not in requirement_by_slug:
+                  raise SystemExit(f"Country {slug} is included without a published BGD tourism requirement or country publication flag.")
+
+          for slug, requirement in requirement_by_slug.items():
+              if slug not in country_by_slug:
+                  raise SystemExit(f"Published BGD tourism requirement {slug} is missing from the public country directory.")
+              if requirement.get("passport_nationality_iso3") != "BGD" or requirement.get("travel_purpose") != "tourism":
+                  raise SystemExit(f"Public requirement {slug} has an unexpected passport or travel purpose.")
+              if requirement.get("verification_status") != "verified" or requirement.get("is_published") is not True:
+                  raise SystemExit(f"Public requirement {slug} is not verified and published.")
+              if not any(source.get("source_type") == "official" and source.get("is_primary") is True for source in requirement.get("sources", [])):
+                  raise SystemExit(f"Public requirement {slug} is missing a primary official source.")
+
+          for slug in ("japan", "australia"):
+              country = country_by_slug.get(slug)
+              requirement = requirement_by_slug.get(slug)
+              if not country or not requirement:
+                  raise SystemExit(f"Mandatory country or BGD tourism requirement is missing: {slug}.")
+              if country.get("is_published") is not False:
+                  raise SystemExit(f"Expected {slug} to remain admitted by its visa requirement rather than a blanket country flag.")
+              print(f"Verified {slug}: country.is_published=false; requirement.verification_status=verified; requirement.is_published=true.")
+
+          print(f"Public country directory HTTP 200: {len(countries)} countries.")
+          print("Directory slugs: " + ", ".join(sorted(country_by_slug)))
+          print(f"Public BGD tourism requirements HTTP 200: {len(requirements)} records.")
+          print("All country visibility gates and official-source checks passed.")
+          PY
