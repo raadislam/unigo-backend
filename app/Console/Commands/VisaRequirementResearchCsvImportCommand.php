@@ -89,6 +89,7 @@ class VisaRequirementResearchCsvImportCommand extends Command
 
                     if ($this->addSource($base, $id, $sources, $primary, $secret, $dry)) {
                         $summary['sources_added']++;
+                        $sources = array_map(fn ($source) => [...$source, 'is_primary' => false], $sources);
                         $sources[] = ['source_url' => $primaryUrl, 'source_last_checked_at' => $checked, 'is_primary' => true];
                     }
 
