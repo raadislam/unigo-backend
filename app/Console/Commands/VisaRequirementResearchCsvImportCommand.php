@@ -28,7 +28,7 @@ class VisaRequirementResearchCsvImportCommand extends Command
         }
 
         $hash = hash_file('sha256', $file);
-        $marker = storage_path('app/visa-imports/' . $hash . '.json');
+        $marker = storage_path('logs/visa-imports-' . $hash . '.json');
         if (! $dry && is_file($marker)) {
             $this->info('This exact CSV batch has already been imported and reconciled.');
             return self::SUCCESS;
@@ -146,7 +146,6 @@ class VisaRequirementResearchCsvImportCommand extends Command
             if ($summary['failures'] !== []) return self::FAILURE;
 
             if (! $dry) {
-                if (! is_dir(dirname($marker))) mkdir(dirname($marker), 0755, true);
                 file_put_contents($marker, json_encode(['csv_sha256' => $hash, 'imported_at' => now()->toIso8601String(), 'summary' => $summary], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
             }
 
