@@ -231,30 +231,102 @@ class VisaRequirementResearchCsvImportCommand extends Command
             $iso2 = strtoupper(trim($row['destination_iso2']));
             if (strtoupper(trim($row['passport_iso3'])) !== 'BGD' || trim($row['travel_purpose']) !== 'tourism') throw new RuntimeException('Only BGD tourism rows are allowed (line ' . $line . ').');
             if (! preg_match('/^[A-Z]{2}$/', $iso2)) throw new RuntimeException('Invalid destination ISO2 (line ' . $line . ').');
-            if (trim($row['application_fee']) === '' || mb_strlen(trim($row['application_fee'])) > 120) throw new RuntimeException('Application fee missing or over 120 characters (line ' . $line . ').');
-            if (trim($row['processing_time']) === '' || mb_strlen(trim($row['processing_time'])) > 120) throw new RuntimeException('Processing time missing or over 120 characters (line ' . $line . ').');
+
+            $commonLimits = [
+                'application_fee' => [120, true],
+                'processing_time' => [120, true],
+                'official_source_url' => [2000, true],
+                'official_immigration_source_name' => [180, true],
+                'cross_check_source_url' => [2000, true],
+                'cross_check_source_name' => [180, true],
+                'review_notes' => [5000, false],
+            ];
+
+            foreach ($commonLimits as $column => [$limit, $required]) {
+                $this->assertTextLength($row[$column] ?? null, $column, $limit, $line, $required);
+            }
+
             if (! filter_var(trim($row['official_source_url']), FILTER_VALIDATE_URL) || ! filter_var(trim($row['cross_check_source_url']), FILTER_VALIDATE_URL)) throw new RuntimeException('Invalid source URL (line ' . $line . ').');
-            if (trim($row['official_immigration_source_name']) === '' || trim($row['cross_check_source_name']) === '') throw new RuntimeException('Source name missing (line ' . $line . ').');
             if (! in_array(trim($row['verification_status']), ['pending_review', 'verified'], true)) throw new RuntimeException('Invalid verification status (line ' . $line . ').');
             if (! in_array(trim($row['publish_status']), ['draft', 'published'], true)) throw new RuntimeException('Invalid publication status (line ' . $line . ').');
             if (trim($row['publish_status']) === 'published' && trim($row['verification_status']) !== 'verified') throw new RuntimeException('Unverified rows cannot be published (line ' . $line . ').');
-            try { Carbon::parse(trim($row['official_source_last_checked'])); } catch (Throwable) { throw new RuntimeException('Invalid source checked date (line ' . $line . ').'); }
+            try {
+                Carbon::parse(trim($row['official_source_last_checked']));
+            } catch (Throwable) {
+                throw new RuntimeException('Invalid source checked date (line ' . $line . ').');
+            }
 
-            if (filter_var($row['full_audit'] ?? 'false', FILTER_VALIDATE_BOOLEAN)) {
+            $fullAuditRaw = trim((string) ($row['full_audit'] ?? 'false'));
+            if ($fullAuditRaw === '') $fullAuditRaw = 'false';
+            $fullAudit = filter_var($fullAuditRaw, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($fullAudit === null) throw new RuntimeException('Invalid full_audit boolean (line ' . $line . ').');
+
+            if ($fullAudit) {
                 $fullColumns = ['visa_requirement_type', 'visa_required', 'visa_free_eligibility', 'visa_on_arrival_available', 'evisa_available', 'maximum_permitted_stay', 'entry_count', 'passport_validity_rule', 'blank_passport_pages_rule', 'return_ticket_rule', 'proof_of_funds_rule', 'accommodation_rule', 'travel_insurance_rule', 'yellow_fever_or_health_rule', 'transit_rule', 'application_channel', 'required_documents', 'additional_sources'];
                 foreach ($fullColumns as $column) {
                     if (! array_key_exists($column, $row)) throw new RuntimeException('Missing full-audit column ' . $column . ' (line ' . $line . ').');
                 }
+
                 foreach (['visa_required', 'visa_free_eligibility', 'visa_on_arrival_available', 'evisa_available'] as $column) {
                     if (filter_var(trim($row[$column]), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === null) throw new RuntimeException('Invalid boolean ' . $column . ' (line ' . $line . ').');
                 }
-                if (trim($row['required_documents']) === '') throw new RuntimeException('Required document list is empty (line ' . $line . ').');
-                $extra = json_decode((string) $row['additional_sources'], true);
+
+                $fullLimits = [
+                    'visa_requirement_type' => 255,
+                    'maximum_permitted_stay' => 60000,
+                    'entry_count' => 40,
+                    'passport_validity_rule' => 10000,
+                    'blank_passport_pages_rule' => 10000,
+                    'return_ticket_rule' => 10000,
+                    'proof_of_funds_rule' => 10000,
+                    'accommodation_rule' => 10000,
+                    'travel_insurance_rule' => 10000,
+                    'yellow_fever_or_health_rule' => 10000,
+                    'transit_rule' => 10000,
+                    'application_channel' => 60000,
+                ];
+
+                foreach ($fullLimits as $column => $limit) {
+                    $this->assertTextLength($row[$column] ?? null, $column, $limit, $line);
+                }
+
+                $documents = array_values(array_filter(array_map('trim', explode('|', (string) $row['required_documents']))));
+                if ($documents === []) throw new RuntimeException('Required document list is empty (line ' . $line . ').');
+                foreach ($documents as $document) {
+                    $this->assertTextLength($document, 'required_documents item', 500, $line, true);
+                }
+
+                $effectiveFrom = trim((string) ($row['effective_from'] ?? ''));
+                $effectiveUntil = trim((string) ($row['effective_until'] ?? ''));
+                try {
+                    $fromDate = $effectiveFrom !== '' ? Carbon::parse($effectiveFrom) : null;
+                    $untilDate = $effectiveUntil !== '' ? Carbon::parse($effectiveUntil) : null;
+                } catch (Throwable) {
+                    throw new RuntimeException('Invalid effective date (line ' . $line . ').');
+                }
+                if ($fromDate && $untilDate && $untilDate->lt($fromDate)) {
+                    throw new RuntimeException('effective_until must be on or after effective_from (line ' . $line . ').');
+                }
+
+                try {
+                    $extra = json_decode((string) $row['additional_sources'], true, 512, JSON_THROW_ON_ERROR);
+                } catch (Throwable) {
+                    throw new RuntimeException('Additional sources must be a valid JSON array (line ' . $line . ').');
+                }
                 if (! is_array($extra)) throw new RuntimeException('Additional sources must be a JSON array (line ' . $line . ').');
+
                 foreach ($extra as $source) {
-                    if (! in_array($source['source_type'] ?? null, ['official', 'provider', 'secondary'], true) || trim((string) ($source['source_name'] ?? '')) === '' || ! filter_var(trim((string) ($source['source_url'] ?? '')), FILTER_VALIDATE_URL)) {
-                        throw new RuntimeException('Invalid additional source (line ' . $line . ').');
+                    if (! is_array($source) || ! in_array($source['source_type'] ?? null, ['official', 'provider', 'secondary'], true)) {
+                        throw new RuntimeException('Invalid additional source type (line ' . $line . ').');
                     }
+                    $this->assertTextLength($source['source_name'] ?? null, 'additional source name', 180, $line, true);
+                    $this->assertTextLength($source['source_url'] ?? null, 'additional source URL', 2000, $line, true);
+                    if (! filter_var(trim((string) $source['source_url']), FILTER_VALIDATE_URL)) {
+                        throw new RuntimeException('Invalid additional source URL (line ' . $line . ').');
+                    }
+                    $this->assertTextLength($source['provider_name'] ?? null, 'additional source provider_name', 100, $line);
+                    $this->assertTextLength($source['provider_record_id'] ?? null, 'additional source provider_record_id', 180, $line);
+                    $this->assertTextLength($source['verification_notes'] ?? null, 'additional source verification_notes', 5000, $line);
                 }
             }
 
@@ -262,6 +334,13 @@ class VisaRequirementResearchCsvImportCommand extends Command
             if (isset($seen[$key])) throw new RuntimeException('Duplicate destination/passport/purpose row (line ' . $line . ').');
             $seen[$key] = true;
         }
+    }
+
+    private function assertTextLength(mixed $value, string $field, int $max, int $line, bool $required = false): void
+    {
+        $text = trim((string) ($value ?? ''));
+        if ($required && $text === '') throw new RuntimeException($field . ' is required (line ' . $line . ').');
+        if (mb_strlen($text) > $max) throw new RuntimeException($field . ' exceeds ' . $max . ' characters (line ' . $line . ').');
     }
 
     private function fullAuditPayload(array $row): array
