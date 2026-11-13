@@ -25,7 +25,7 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_deploy
+          printf '%s\\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_deploy
           chmod 600 ~/.ssh/unigo_deploy
           ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
@@ -43,15 +43,15 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
-          rsync -az --delete \
-            --exclude='.git/' \
-            --exclude='.github/' \
-            --exclude='.env' \
-            --exclude='.env.*' \
-            --exclude='storage/' \
-            --exclude='vendor/' \
-            --exclude='node_modules/' \
-            -e "ssh -i ~/.ssh/unigo_deploy -p $VPS_PORT" \
+          rsync -az --delete \\
+            --exclude='.git/' \\
+            --exclude='.github/' \\
+            --exclude='.env' \\
+            --exclude='.env.*' \\
+            --exclude='storage/' \\
+            --exclude='vendor/' \\
+            --exclude='node_modules/' \\
+            -e "ssh -i ~/.ssh/unigo_deploy -p $VPS_PORT" \\
             ./ "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/current/"
 
       - name: Install dependencies and refresh Laravel caches
@@ -104,3 +104,12 @@ jobs:
             php artisan view:cache
           fi
           REMOTE
+
+      - name: Export read-only visa database audit
+        continue-on-error: true
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit'
