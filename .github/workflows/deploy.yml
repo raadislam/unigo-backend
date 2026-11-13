@@ -43,7 +43,16 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
-          rsync -az --delete             --exclude='.git/'             --exclude='.github/'             --exclude='.env'             --exclude='.env.*'             --exclude='storage/'             --exclude='vendor/'             --exclude='node_modules/'             -e "ssh -i ~/.ssh/unigo_deploy -p $VPS_PORT"             ./ "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/current/"
+          rsync -az --delete \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.env' \
+            --exclude='.env.*' \
+            --exclude='storage/' \
+            --exclude='vendor/' \
+            --exclude='node_modules/' \
+            -e "ssh -i ~/.ssh/unigo_deploy -p $VPS_PORT" \
+            ./ "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/current/"
 
       - name: Install dependencies and refresh Laravel caches
         env:
@@ -81,7 +90,9 @@ jobs:
 
           composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
-          php artisan optimize:clear
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
           php artisan config:cache
           php artisan view:cache
           REMOTE
