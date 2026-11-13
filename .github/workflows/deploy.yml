@@ -203,6 +203,37 @@ jobs:
               if not any(source.get("source_type") == "official" and source.get("is_primary") is True for source in requirement.get("sources", [])):
                   raise SystemExit(f"Public requirement {slug} is missing a primary official source.")
 
+              iso2 = (requirement.get("country") or {}).get("iso2")
+              if not iso2:
+                  raise SystemExit(f"Public requirement {slug} is missing its destination ISO2.")
+              detail_path = f"/visa-requirements/{iso2}?passport=BGD&purpose=tourism"
+              detail_payload = get_json(detail_path)
+              detail = detail_payload.get("data")
+              if detail_payload.get("success") is not True or not isinstance(detail, dict):
+                  raise SystemExit(f"Public visa detail API returned an invalid record for {slug}.")
+              if (
+                  detail.get("id") != requirement.get("id")
+                  or detail.get("passport_nationality_iso3") != "BGD"
+                  or detail.get("travel_purpose") != "tourism"
+                  or detail.get("verification_status") != "verified"
+                  or detail.get("is_published") is not True
+                  or (detail.get("country") or {}).get("slug") != slug
+              ):
+                  raise SystemExit(f"Public visa detail API does not match the published list record for {slug}.")
+              list_sources = {
+                  source.get("source_url")
+                  for source in requirement.get("sources", [])
+                  if source.get("source_type") == "official" and source.get("source_url")
+              }
+              detail_sources = {
+                  source.get("source_url")
+                  for source in detail.get("sources", [])
+                  if source.get("source_type") == "official" and source.get("source_url")
+              }
+              if not list_sources.issubset(detail_sources):
+                  raise SystemExit(f"Public visa detail API is missing official source links for {slug}.")
+              print(f"Public visa detail API HTTP 200 verified: {slug} ({iso2}).")
+
           for slug in ("japan", "australia"):
               country = country_by_slug.get(slug)
               requirement = requirement_by_slug.get(slug)
