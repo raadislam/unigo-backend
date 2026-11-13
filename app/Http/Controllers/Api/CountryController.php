@@ -1,13 +1,14 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\\Http\\Controllers\\Api;
 
-use App\Http\Controllers\Controller;
-use App\Models\Country;
-use App\Models\Service;
-use App\Models\VisaCategory;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
+use App\\Http\\Controllers\\Controller;
+use App\\Models\\Country;
+use App\\Models\\Service;
+use App\\Models\\VisaCategory;
+use App\\Models\\VisaRequirement;
+use Illuminate\\Http\\JsonResponse;
+use Illuminate\\Http\\Request;
 
 class CountryController extends Controller
 {
@@ -20,8 +21,19 @@ class CountryController extends Controller
             'service' => ['nullable', 'string', 'max:160'],
         ]);
 
-        $countries = Country::query()
+        $publishedRequirements = VisaRequirement::query()
+            ->select('country_id')
+            ->where('passport_nationality_iso3', 'BGD')
+            ->where('travel_purpose', 'tourism')
+            ->where('verification_status', 'verified')
             ->where('is_published', true)
+            ->where(fn ($query) => $query->whereNull('effective_from')->orWhereDate('effective_from', '<=', now()->toDateString()))
+            ->where(fn ($query) => $query->whereNull('effective_until')->orWhereDate('effective_until', '>=', now()->toDateString()));
+
+        $countries = Country::query()
+            ->where(fn ($query) => $query
+                ->where('is_published', true)
+                ->orWhereIn('id', $publishedRequirements))
             ->with([
                 'visaCategories' => fn ($query) => $query->where('is_active', true),
                 'services' => fn ($query) => $query->where('is_active', true),
@@ -57,9 +69,20 @@ class CountryController extends Controller
 
     public function show(string $slug): JsonResponse
     {
+        $publishedRequirements = VisaRequirement::query()
+            ->select('country_id')
+            ->where('passport_nationality_iso3', 'BGD')
+            ->where('travel_purpose', 'tourism')
+            ->where('verification_status', 'verified')
+            ->where('is_published', true)
+            ->where(fn ($query) => $query->whereNull('effective_from')->orWhereDate('effective_from', '<=', now()->toDateString()))
+            ->where(fn ($query) => $query->whereNull('effective_until')->orWhereDate('effective_until', '>=', now()->toDateString()));
+
         $country = Country::query()
             ->where('slug', $slug)
-            ->where('is_published', true)
+            ->where(fn ($query) => $query
+                ->where('is_published', true)
+                ->orWhereIn('id', $publishedRequirements))
             ->with([
                 'visaCategories' => fn ($query) => $query->where('is_active', true),
                 'services' => fn ($query) => $query->where('is_active', true),
