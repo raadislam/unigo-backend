@@ -130,6 +130,22 @@ jobs:
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_fee_processing_batch_01.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_fee_processing_batch_01.csv --base-url=https://api.unigo-bd.com; else echo "No pending visa research CSV."; fi'
 
+      - name: Validate full audit batch 02 for Japan and Australia
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_02.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_02.csv --base-url=https://api.unigo-bd.com --dry-run; else echo "No pending full-audit batch."; fi'
+
+      - name: Import full audit batch 02 for Japan and Australia
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_02.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_02.csv --base-url=https://api.unigo-bd.com; else echo "No pending full-audit batch."; fi'
+
       - name: Verify imported visa records by readback
         continue-on-error: true
         env:
@@ -138,3 +154,11 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit'
+      - name: Inspect live public country directory API
+        continue-on-error: true
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'curl -sS -o /tmp/unigo-country-directory.json -w "HTTP_STATUS=%{http_code}\n" https://api.unigo-bd.com/api/countries; head -c 4000 /tmp/unigo-country-directory.json; printf "\n"'
