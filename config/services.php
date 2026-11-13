@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'unigo_admin' => [
+        'secret' => env('UNIGO_ADMIN_API_SECRET'),
+    ],
+
 ];
