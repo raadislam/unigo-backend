@@ -1,4 +1,3 @@
-
 @extends('emails.layout')
 
 @section('content')
@@ -19,7 +18,8 @@
         Our team will review your message and get back to you shortly.
     </p>
 
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="margin:25px 0;background:#f3f6fa;border-radius:8px;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0"
+        style="margin:25px 0;background:#f3f6fa;border-radius:8px;">
         <tr>
             <td style="padding:18px 20px;">
                 <p style="margin:0 0 7px;font-size:10px;font-weight:bold;letter-spacing:1px;color:#64748b;">
