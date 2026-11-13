@@ -12,7 +12,8 @@ return [
     | other UI elements where an application name needs to be displayed.
     |
     */
-
+    'mail_logo_url' => env('MAIL_LOGO_URL'),
+    'mail_footer_logo_url' => env('MAIL_FOOTER_LOGO_URL'),
     'name' => env('APP_NAME', 'Laravel'),
 
     /*

@@ -1,6 +1,7 @@
 <?php
 
 return [
+    'contact_recipient' => env('CONTACT_NOTIFICATION_EMAIL', 'contact@unigo-bd.com'),
 
     /*
     |--------------------------------------------------------------------------
