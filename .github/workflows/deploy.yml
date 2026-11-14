@@ -121,6 +121,8 @@ jobs:
 
           composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
+          php artisan migrate --force
+
           php artisan config:clear
           php artisan route:clear
           php artisan config:cache
