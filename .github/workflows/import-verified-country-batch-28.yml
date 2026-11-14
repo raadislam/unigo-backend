@@ -34,14 +34,14 @@ jobs:
           checked = "2026-11-15"
           simple = list(csv.DictReader(Path("database/data/new_country_visa_batch_28.csv").open(encoding="utf-8-sig", newline="")))
           audit = list(csv.DictReader(Path("database/data/visa_full_audit_batch_28.csv").open(encoding="utf-8-sig", newline="")))
-          if len(simple) != 4 or len(audit) != 4:
-            raise SystemExit("Batch 28 must contain exactly four verified seed and full-audit rows.")
+          if len(simple) != 2 or len(audit) != 2:
+            raise SystemExit("Batch 28 must contain exactly two verified seed and full-audit rows.")
           simple_by = {r["destination_iso2"]: r for r in simple}
           audit_by = {r["destination_iso2"]: r for r in audit}
           pending_rows = list(csv.DictReader(Path("database/data/pending_country_research_batch_28.csv").open(encoding="utf-8-sig", newline="")))
           pending_by = {r["destination_iso2"]: r for r in pending_rows}
-          if set(pending_by) != {"SM", "GI", "VA"} or len(pending_by) != 3 or len(pending_by) != len(pending_rows):
-            raise SystemExit("Batch 28 pending research file must contain exactly SM, GI and VA with no duplicates.")
+          if set(pending_by) != {"FO", "GL", "SM", "GI", "VA"} or len(pending_by) != 5 or len(pending_by) != len(pending_rows):
+            raise SystemExit("Batch 28 pending research file must contain FO, GL, SM, GI and VA with no duplicates.")
           for code, row in pending_by.items():
             if code in expected or row.get("discovery_status") != "research_in_progress_batch_28" or not row.get("exact_blocker", "").strip() or not row.get("next_research_action", "").strip():
               raise SystemExit(f"{code}: pending country blocker or status is missing, or it leaked into the verified allowlist.")
@@ -428,7 +428,7 @@ jobs:
           require $base . '/vendor/autoload.php';
           $app = require $base . '/bootstrap/app.php';
           $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-          $codes = ['AX', 'FO', 'GL', 'MC'];
+          $codes = ['AX', 'MC'];
           $rows = \App\Models\VisaRequirement::query()
               ->with(['country:id,name,slug,iso2', 'sources'])
               ->where('passport_nationality_iso3', 'BGD')
@@ -469,9 +469,9 @@ jobs:
               expected = {row["destination_iso2"]: row for row in csv.DictReader(handle)}
           payload = json.loads(Path("batch28_json_readback.json").read_text(encoding="utf-8"))
           actual = {row["iso2"]: row for row in payload.get("records", [])}
-          allowed = {"AX", "FO", "GL", "MC"}
-          if payload.get("count") != 4 or set(actual) != allowed:
-              raise SystemExit("Production database JSON readback did not return the exact four-country allowlist.")
+          allowed = {"AX", "MC"}
+          if payload.get("count") != 2 or set(actual) != allowed:
+              raise SystemExit("Production database JSON readback did not return the exact two-country allowlist.")
           for code in sorted(allowed):
               row = expected[code]
               saved = actual[code]
@@ -497,7 +497,7 @@ jobs:
                       raise SystemExit(f"{code}: production DB source type mismatch for {url}.")
               if not any(source.get("source_url") == row["official_source_url"] and source.get("is_primary") is True for source in sources):
                   raise SystemExit(f"{code}: production DB primary source flag is missing.")
-          print("BATCH28_DATABASE_JSON_READBACK_PASSED: 4 records, photo specs, four applicant checklists and all official sources match.")
+          print("BATCH28_DATABASE_JSON_READBACK_PASSED: 2 records, photo specifications, applicant checklists and all official sources match.")
           PY
 
       - name: Verify database, source records and public API
@@ -520,8 +520,8 @@ jobs:
           expected_codes = set(all_rows)
           if pending_research_codes & set(summary.get("public_directory_codes_before", [])):
             raise SystemExit("A pending research-only country is already present in the public directory.")
-          if imported.get("mode") != "import" or imported.get("rows") != 4 or imported.get("failures") or imported.get("read_back") != 4 or imported.get("reverified") != 4 or imported.get("republished") != 4:
-            raise SystemExit(f"Importer readback did not confirm all four verified rows: {imported}")
+          if imported.get("mode") != "import" or imported.get("rows") != 2 or imported.get("failures") or imported.get("read_back") != 2 or imported.get("reverified") != 2 or imported.get("republished") != 2:
+            raise SystemExit(f"Importer readback did not confirm both verified rows: {imported}")
           if post.get("country_table_count") != pre.get("country_table_count"):
             raise SystemExit("Country master row count changed during a visa-requirement-only import.")
           expected_total = int(pre.get("total", 0)) + len(expected_codes - set(summary["existing_requirement_codes"]))
@@ -575,7 +575,7 @@ jobs:
 
           base = "https://api.unigo-bd.com/api"
           def get(path):
-            request = Request(base + path, headers={"Accept":"application/json","User-Agent":"UniGo-Verified-Batch-27/1.0"})
+            request = Request(base + path, headers={"Accept":"application/json","User-Agent":"UniGo-Verified-Batch-28/1.0"})
             with urlopen(request, timeout=45) as response:
               if response.status != 200:
                 raise SystemExit(f"Public API HTTP {response.status}: {path}")
