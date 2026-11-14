@@ -31,8 +31,8 @@ jobs:
 
           expected_44 = {"ID","MU","NP","PH","TR","BN","RW","TZ","HK","MO","UZ","KR","AM","AZ","PK","TL","BB","JM","FJ","KI","NZ","TO","VU","AS","CK","GU","MP","NF","NC","PF","WF","PN","TK","AO","BJ","BW","GM","MZ","NG","AL","IE","MD","ME","RS"}
           expected_4 = {"KY","BM","PA","MX"}
-          simple21 = list(csv.DictReader(Path("verified_country_backlog_batch_21.csv").open(encoding="utf-8-sig", newline="")))
-          audit21 = list(csv.DictReader(Path("verified_country_full_audit_batch_21.csv").open(encoding="utf-8-sig", newline="")))
+          simple21 = list(csv.DictReader(Path("database/data/verified_country_backlog_batch_21.csv").open(encoding="utf-8-sig", newline="")))
+          audit21 = list(csv.DictReader(Path("database/data/verified_country_full_audit_batch_21.csv").open(encoding="utf-8-sig", newline="")))
           simple22 = list(csv.DictReader(Path("database/data/new_country_visa_batch_22.csv").open(encoding="utf-8-sig", newline="")))
           audit22 = list(csv.DictReader(Path("database/data/visa_full_audit_batch_22.csv").open(encoding="utf-8-sig", newline="")))
           if len(simple21) != 44 or len(audit21) != 44 or {r["destination_iso2"] for r in audit21} != expected_44:
@@ -96,8 +96,8 @@ jobs:
           path: |
             verified_new_country_backlog_batches_21_22.csv
             verified_full_audit_batches_21_22.csv
-            verified_country_backlog_batch_21.csv
-            verified_country_full_audit_batch_21.csv
+            database/data/verified_country_backlog_batch_21.csv
+            database/data/verified_country_full_audit_batch_21.csv
 
   import-production:
     needs: validate
