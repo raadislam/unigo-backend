@@ -21,7 +21,7 @@ class VisaRequirementManagementController extends Controller
         'return_ticket_rule', 'proof_of_funds_rule', 'accommodation_rule',
         'travel_insurance_rule', 'health_requirements', 'transit_requirements',
         'application_channel', 'application_fee', 'processing_time',
-        'required_documents', 'effective_from', 'effective_until',
+        'required_documents', 'photo_specifications', 'applicant_checklists', 'effective_from', 'effective_until',
         'official_source_checked_at', 'provider_updated_at', 'last_synced_at',
     ];
 
@@ -223,6 +223,14 @@ class VisaRequirementManagementController extends Controller
             'processing_time' => ['nullable', 'string', 'max:120'],
             'required_documents' => ['nullable', 'array'],
             'required_documents.*' => ['string', 'max:500'],
+            'photo_specifications' => ['nullable', 'array'],
+            'photo_specifications.*' => ['nullable'],
+            'applicant_checklists' => ['nullable', 'array'],
+            'applicant_checklists.*.applicant_type' => ['required', 'string', 'max:80'],
+            'applicant_checklists.*.documents' => ['required', 'array'],
+            'applicant_checklists.*.documents.*.name' => ['required', 'string', 'max:200'],
+            'applicant_checklists.*.documents.*.status' => ['required', 'in:required,conditional,if_applicable'],
+            'applicant_checklists.*.documents.*.notes' => ['nullable', 'string', 'max:1000'],
             'effective_from' => ['nullable', 'date'],
             'effective_until' => ['nullable', 'date', 'after_or_equal:effective_from'],
             'official_source_checked_at' => ['nullable', 'date'],
