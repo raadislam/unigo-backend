@@ -1,6 +1,11 @@
 name: Dispatch frontend after visa publication
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/frontend-content-dispatch.trigger'
   workflow_run:
     workflows:
       - Import staged 12-country visa batch
