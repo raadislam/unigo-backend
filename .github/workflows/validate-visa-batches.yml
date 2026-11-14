@@ -1,5 +1,8 @@
 name: Validate Visa Research Batches
 on:
+  push:
+    branches:
+      - automation/country-discovery-batches-06-07-20261114
   pull_request:
     paths:
       - 'database/data/visa_full_audit_batch_06.csv'
