@@ -11,6 +11,9 @@ on:
       - 'scripts/validate_vfs_coverage.py'
       - '.github/workflows/validate-vfs-coverage.yml'
       - '.github/workflows/deploy.yml'
+      - '.github/workflows/import-staged-country-batch.yml'
+      - 'scripts/import_staged_country_batch.php'
+      - 'scripts/run-staged-country-import-20261114.trigger'
   workflow_dispatch:
 
 concurrency:
