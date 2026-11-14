@@ -1,1 +1,1 @@
-Retry batch 26 after adding the official Paraguay exceptional airport-visa route and ensuring all source checked dates are populated. Allowlist BY, PY, TW only; KG and TM remain research-only.
+Final reviewed batch 26 update: BY and PY include conditional pre-arranged airport visa routes; PY reflects the official exceptional VOA procedure and New Delhi mission accreditation. Seed cross-check fields remain blank; full audit contains cross-check and all official sources. Allowlist BY, PY, TW only; KG and TM remain research-only.
