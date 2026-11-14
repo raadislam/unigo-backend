@@ -124,12 +124,9 @@ class VisaRequirementResearchCsvImportCommand extends Command
                     if ($shouldPublish && ! $dry) {
                         $this->api('POST', $base . '/api/admin/visa-requirements/' . $id . '/verification', [
                             'verification_status' => 'verified',
-                            'change_summary' => 'Rechecked official application fee and processing-time information on ' . $checked . '; previously verified requirement fields were retained.',
+                            'change_summary' => 'Rechecked official application fee, processing-time and full visitor checklist information on ' . $checked . '.',
                             'official_source_checked_at' => $checked,
                         ], $secret);
-                        $summary['reverified']++;
-                        $this->api('POST', $base . '/api/admin/visa-requirements/' . $id . '/publish', [], $secret);
-                        $summary['republished']++;
                     }
 
                     if (! $dry) {
@@ -172,16 +169,39 @@ class VisaRequirementResearchCsvImportCommand extends Command
                             }
                         }
 
-                        if ($shouldPublish && (($saved['verification_status'] ?? null) !== 'verified' || ! (bool) ($saved['is_published'] ?? false))) {
-                            throw new RuntimeException('The previously published record did not return to verified and published status.');
-                        }
-                        if (! $shouldPublish && (($saved['verification_status'] ?? null) !== 'pending_review' || (bool) ($saved['is_published'] ?? false))) {
+                        if ($shouldPublish) {
+                            if (($saved['verification_status'] ?? null) !== 'verified' || (bool) ($saved['is_published'] ?? false)) {
+                                throw new RuntimeException('A verified record must pass full field and source readback before publication.');
+                            }
+                            $this->api('POST', $base . '/api/admin/visa-requirements/' . $id . '/publish', [], $secret);
+                            $finalSaved = data_get($this->api('GET', $base . '/api/admin/visa-requirements/' . $id, [], $secret), 'data', []);
+                            if (! is_array($finalSaved) || ($finalSaved['verification_status'] ?? null) !== 'verified' || ! (bool) ($finalSaved['is_published'] ?? false)) {
+                                throw new RuntimeException('Final publication status did not survive the API readback.');
+                            }
+                            $summary['reverified']++;
+                            $summary['republished']++;
+                        } elseif (($saved['verification_status'] ?? null) !== 'pending_review' || (bool) ($saved['is_published'] ?? false)) {
                             throw new RuntimeException('A pending-review record was unexpectedly verified or published.');
                         }
+
                         $summary['read_back']++;
                     }
                 } catch (Throwable $exception) {
-                    $summary['failures'][] = ['destination_iso2' => $iso2, 'record_id' => $id, 'error' => $exception->getMessage()];
+                    $failure = ['destination_iso2' => $iso2, 'record_id' => $id, 'error' => $exception->getMessage()];
+                    if (! $dry && ($shouldPublish ?? false)) {
+                        try {
+                            $this->api('POST', $base . '/api/admin/visa-requirements/' . $id . '/unpublish', [], $secret);
+                            $this->api('POST', $base . '/api/admin/visa-requirements/' . $id . '/verification', [
+                                'verification_status' => 'pending_review',
+                                'change_summary' => 'Publication withheld because the full requirement and source readback did not pass: ' . $exception->getMessage(),
+                                'official_source_checked_at' => $checked,
+                            ], $secret);
+                            $failure['publication_withheld'] = true;
+                        } catch (Throwable $rollbackException) {
+                            $failure['rollback_error'] = $rollbackException->getMessage();
+                        }
+                    }
+                    $summary['failures'][] = $failure;
                 }
             }
 
