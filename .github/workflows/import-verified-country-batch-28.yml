@@ -345,15 +345,16 @@ jobs:
           ACTUAL_SHA="$(sha256sum ./unigo-production-backup.sql.gz | awk '{print $1}')"
           test -n "$EXPECTED_SHA"
           test "$EXPECTED_SHA" = "$ACTUAL_SHA"
-          docker run --name unigo-mysql-batch28-restore -e MYSQL_ROOT_PASSWORD=unigo_restore_test -d mysql:8.0
+          RESTORE_PASS="$(openssl rand -hex 24)"
+          docker run --name unigo-mysql-batch28-restore -e MYSQL_ROOT_PASSWORD="$RESTORE_PASS" -d mysql:8.0
           trap 'docker rm -f unigo-mysql-batch28-restore >/dev/null 2>&1 || true' EXIT
-          for attempt in $(seq 1 60); do docker exec unigo-mysql-batch28-restore mysql -uroot -punigo_restore_test -e "SELECT 1" >/dev/null 2>&1 && break; sleep 2; done
-          docker exec unigo-mysql-batch28-restore mysql -uroot -punigo_restore_test -e "CREATE DATABASE unigo_restore_verify"
-          gzip -dc ./unigo-production-backup.sql.gz | docker exec -i unigo-mysql-batch28-restore mysql -uroot -punigo_restore_test unigo_restore_verify
-          TABLES="$(docker exec unigo-mysql-batch28-restore mysql -uroot -punigo_restore_test --batch --skip-column-names unigo_restore_verify -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema='unigo_restore_verify' AND table_type='BASE TABLE'")"
+          for attempt in $(seq 1 60); do docker exec unigo-mysql-batch28-restore mysql -uroot -p"$RESTORE_PASS" -e "SELECT 1" >/dev/null 2>&1 && break; sleep 2; done
+          docker exec unigo-mysql-batch28-restore mysql -uroot -p"$RESTORE_PASS" -e "CREATE DATABASE unigo_restore_verify"
+          gzip -dc ./unigo-production-backup.sql.gz | docker exec -i unigo-mysql-batch28-restore mysql -uroot -p"$RESTORE_PASS" unigo_restore_verify
+          TABLES="$(docker exec unigo-mysql-batch28-restore mysql -uroot -p"$RESTORE_PASS" --batch --skip-column-names unigo_restore_verify -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema='unigo_restore_verify' AND table_type='BASE TABLE'")"
           test -n "$TABLES"
           while IFS= read -r table; do
-            count="$(docker exec unigo-mysql-batch28-restore mysql -uroot -punigo_restore_test --batch --skip-column-names unigo_restore_verify -e "SELECT COUNT(*) FROM \`$table\`")"
+            count="$(docker exec unigo-mysql-batch28-restore mysql -uroot -p"$RESTORE_PASS" --batch --skip-column-names unigo_restore_verify -e "SELECT COUNT(*) FROM \`$table\`")"
             test "$count" -ge 0
           done <<< "$TABLES"
           echo "BACKUP_SHA256_AND_RESTORE_TEST_PASSED_IN_ISOLATED_MYSQL"
