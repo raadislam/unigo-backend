@@ -250,8 +250,9 @@ jobs:
           php artisan migrate:status --no-interaction > "$IMPORT_DIR/batch28_migration_status.txt"
           php <<'PHP'
           <?php
-          require __DIR__ . '/vendor/autoload.php';
-          $app = require __DIR__ . '/bootstrap/app.php';
+          $root = getcwd();
+          require $root . '/vendor/autoload.php';
+          $app = require $root . '/bootstrap/app.php';
           $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
           $required = [
               '2026_11_13_180112_increase_requirement_type_length_in_visa_requirements_table',
@@ -515,7 +516,10 @@ jobs:
           summary = json.loads(Path("batch28_pre_import_summary.json").read_text())
           verified_codes = set(rows)
           pending_codes = set()
+          pending_research_codes = {"SM", "GI", "VA"}
           expected_codes = set(all_rows)
+          if pending_research_codes & set(summary.get("public_directory_codes_before", [])):
+            raise SystemExit("A pending research-only country is already present in the public directory.")
           if imported.get("mode") != "import" or imported.get("rows") != 4 or imported.get("failures") or imported.get("read_back") != 4 or imported.get("reverified") != 4 or imported.get("republished") != 4:
             raise SystemExit(f"Importer readback did not confirm all four verified rows: {imported}")
           if post.get("country_table_count") != pre.get("country_table_count"):
@@ -624,6 +628,12 @@ jobs:
             country = country_by_iso.get(code)
             if country and country.get("slug") in directory_by_slug:
               raise SystemExit(f"{code}: pending record leaked into public country directory.")
+          for code in pending_research_codes:
+            country = country_by_iso.get(code)
+            if not country or not country.get("slug"):
+              raise SystemExit(f"{code}: pending research country master row is missing.")
+            if country.get("slug") in directory_by_slug:
+              raise SystemExit(f"{code}: pending research-only country leaked into the public directory.")
           print(f"DATABASE_AUDIT_VERIFIED total={post.get('total')} published={post.get('published_count')} country_rows={post.get('country_table_count')} public_directory={post.get('public_country_directory_count')}")
           print(f"PUBLIC_API_VERIFIED countries={len(directory_rows)} requirements={len(requirements)}")
           print("BATCH28_COMPLETE: 4 VERIFIED_AND_PUBLISHED; 3 PENDING_RESEARCH_ONLY")
