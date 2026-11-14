@@ -161,7 +161,7 @@ jobs:
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" ./unigo-production-backup.sql.gz
           docker run --name unigo-mysql-restore-test -e MYSQL_ROOT_PASSWORD=unigo_restore_test -p 3307:3306 -d mysql:8.0
           for attempt in $(seq 1 60); do
-            if docker exec unigo-mysql-restore-test mysqladmin ping -uroot -punigo_restore_test --silent; then break; fi
+            if docker exec unigo-mysql-restore-test mysql -uroot -punigo_restore_test -e "SELECT 1" >/dev/null 2>&1; then break; fi
             sleep 2
           done
           docker exec unigo-mysql-restore-test mysql -uroot -punigo_restore_test -e "CREATE DATABASE unigo_restore_verify"
