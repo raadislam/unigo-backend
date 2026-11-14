@@ -1,1 +1,1 @@
-Retry batch 29 after correcting applicant checklist document-name lengths to the production API limit. Allowlist: GF, GP, MQ, RE, PM. Research-only pending: BL, MF, YT.
+Batch 29 verified tourism import retry after shortening applicant checklist labels to the 200-character API limit. Allowlist unchanged: GF, GP, MQ, RE, PM.
