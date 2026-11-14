@@ -253,13 +253,16 @@ jobs:
           test -n "$CHECKSUM_PATH"
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" ./unigo-production-backup.sql.gz
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$CHECKSUM_PATH" ./unigo-production-backup.sql.gz.sha256
-          sha256sum -c ./unigo-production-backup.sql.gz.sha256
+          EXPECTED_SHA="$(awk '{print $1}' ./unigo-production-backup.sql.gz.sha256)"
+          ACTUAL_SHA="$(sha256sum ./unigo-production-backup.sql.gz | awk '{print $1}')"
+          test -n "$EXPECTED_SHA"
+          test "$EXPECTED_SHA" = "$ACTUAL_SHA"
           docker run --name unigo-mysql-restore-test -e MYSQL_ROOT_PASSWORD=unigo_restore_test -d mysql:8.0
           trap 'docker rm -f unigo-mysql-restore-test >/dev/null 2>&1 || true' EXIT
           for attempt in $(seq 1 60); do docker exec unigo-mysql-restore-test mysql -uroot -punigo_restore_test -e "SELECT 1" >/dev/null 2>&1 && break; sleep 2; done
           docker exec unigo-mysql-restore-test mysql -uroot -punigo_restore_test -e "CREATE DATABASE unigo_restore_verify"
           gzip -dc ./unigo-production-backup.sql.gz | docker exec -i unigo-mysql-restore-test mysql -uroot -punigo_restore_test unigo_restore_verify
-          TABLES="$(docker exec unigo-mysql-restore-test mysql -uroot -punugu_restore_test --batch --skip-column-names unigo_restore_verify -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema='unigo_restore_verify' AND table_type='BASE TABLE'")"
+          TABLES="$(docker exec unigo-mysql-restore-test mysql -uroot -punigo_restore_test --batch --skip-column-names unigo_restore_verify -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema='unigo_restore_verify' AND table_type='BASE TABLE'")"
           test -n "$TABLES"
           while IFS= read -r table; do
             count="$(docker exec unigo-mysql-restore-test mysql -uroot -punigo_restore_test --batch --skip-column-names unigo_restore_verify -e "SELECT COUNT(*) FROM \`$table\`")"
