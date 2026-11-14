@@ -710,6 +710,7 @@ jobs:
             batch29_seed_result.txt
             batch29_dry_run.json
             batch29_import_result.json
+            batch29_unpublish_result.json
             batch29_post_import_audit.json
             batch29_backup_path.txt
             batch29_backup_checksum_path.txt
