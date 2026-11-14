@@ -1,1 +1,1 @@
-Run reviewed verified-country batch 26. Publication allowlist: BY, PY, TW only. KG and TM remain research-only; do not create visa-requirement records for them.
+Retry batch 26 after correcting checked-date field names and documenting Belarus's conditional pre-arranged airport visa. Publication allowlist remains BY, PY, TW only; KG and TM remain research-only.
