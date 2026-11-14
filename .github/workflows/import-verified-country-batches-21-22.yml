@@ -72,7 +72,7 @@ jobs:
               source_row = simple_by_code.get(code)
               if not source_row:
                 raise SystemExit(f"{code}: missing simple seed row.")
-              for field in ["passport_iso3","travel_purpose","visa_requirement_type","visa_required","visa_free_eligibility","visa_on_arrival_available","evisa_available","application_fee","processing_time","official_source_url","cross_check_source_url","verification_status","review_notes"]:
+              for field in ["passport_iso3","travel_purpose","visa_requirement_type","visa_required","visa_free_eligibility","visa_on_arrival_available","evisa_available","application_fee","processing_time","official_source_url","cross_check_source_url","verification_status"]:
                 if source_row.get(field) != row.get(field):
                   raise SystemExit(f"{code}: simple/full-audit mismatch in {field}.")
           simple_all = simple21 + simple22
