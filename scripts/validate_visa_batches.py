@@ -1,8 +1,8 @@
 import csv,json,sys
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-files=[root/'database/data/visa_full_audit_batch_06.csv',root/'database/data/visa_full_audit_batch_07.csv']
-seed=root/'database/data/new_country_visa_batch_06_07.csv'
+files=[root/'database/data/visa_full_audit_batch_06.csv',root/'database/data/visa_full_audit_batch_07.csv',root/'database/data/visa_full_audit_batch_08.csv']
+seed_files=[root/'database/data/new_country_visa_batch_06_07.csv',root/'database/data/new_country_visa_batch_08.csv']
 required={'passport_iso3','passport_nationality','destination_iso2','destination_name','travel_purpose','visa_requirement_type','visa_required','visa_free_eligibility','visa_on_arrival_available','evisa_available','maximum_permitted_stay','entry_count','passport_validity_rule','blank_passport_pages_rule','return_ticket_rule','proof_of_funds_rule','accommodation_rule','travel_insurance_rule','yellow_fever_or_health_rule','transit_rule','application_channel','application_fee','processing_time','required_documents','official_source_url','official_immigration_source_name','official_source_last_checked','cross_check_source_url','cross_check_source_name','cross_check_source_last_checked','verification_status','publish_status','review_notes','full_audit','additional_sources'}
 limits={'visa_requirement_type':50,'entry_count':40,'maximum_permitted_stay':120,'passport_validity_rule':120,'blank_passport_pages_rule':120,'return_ticket_rule':120,'proof_of_funds_rule':120,'accommodation_rule':120,'travel_insurance_rule':120,'yellow_fever_or_health_rule':120,'transit_rule':120,'application_channel':120,'application_fee':120,'processing_time':120}
 seen=set(); all_rows=[]; errors=[]
@@ -35,9 +35,14 @@ for path in files:
     for source in sources:
      if source.get('source_type')!='official' or not source.get('source_url','').startswith('https://'): raise ValueError('non-official or invalid source')
    except Exception as exc: errors.append(f'{path.name}:{n}: invalid additional_sources: {exc}')
-with seed.open(encoding='utf-8-sig',newline='') as f:
- seed_rows=list(csv.DictReader(f))
- seed_keys={(r.get('passport_iso3'),r.get('destination_iso2'),r.get('travel_purpose')) for r in seed_rows}
+seed_rows=[]; seed_keys=set()
+for seed in seed_files:
+ with seed.open(encoding='utf-8-sig',newline='') as f:
+  current=list(csv.DictReader(f))
+  for n,row in enumerate(current,2):
+   key=(row.get('passport_iso3'),row.get('destination_iso2'),row.get('travel_purpose'))
+   if key in seed_keys: errors.append(f'{seed.name}:{n}: duplicate seed key {key}')
+   seed_keys.add(key); seed_rows.append(row)
  audit_keys={(r.get('passport_iso3'),r.get('destination_iso2'),r.get('travel_purpose')) for r in all_rows}
  if seed_keys!=audit_keys: errors.append(f'seed/full-audit key mismatch; seed-only={sorted(seed_keys-audit_keys)} audit-only={sorted(audit_keys-seed_keys)}')
 if errors:
