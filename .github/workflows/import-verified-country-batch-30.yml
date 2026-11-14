@@ -40,7 +40,7 @@ jobs:
           audit_by = {r["destination_iso2"]: r for r in audit}
           pending_rows = list(csv.DictReader(Path("database/data/pending_country_research_batch_30.csv").open(encoding="utf-8-sig", newline="")))
           pending_by = {r["destination_iso2"]: r for r in pending_rows}
-          ledger = {r["destination_iso2"]: r for r in csv.DictReader(Path("database/data/country_discovery_ledger.csv").open(encoding="utf-8-sig", newline=""))}
+          ledger = {r["iso2"]: r for r in csv.DictReader(Path("database/data/country_discovery_ledger.csv").open(encoding="utf-8-sig", newline=""))}
           if not (expected | set(pending_by)).issubset(ledger):
             raise SystemExit("Batch 30 codes are not all represented in the cumulative discovery ledger.")
           for code in {"MS", "PR", "VI"}:
