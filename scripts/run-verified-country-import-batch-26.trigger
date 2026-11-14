@@ -1,1 +1,1 @@
-Retry batch 26 after correcting the official_immigration_source_name schema field. Allowlist BY, PY, TW only; KG and TM remain research-only.
+Retry batch 26 after populating official_immigration_source_name and reconciling batch 24 pending DB rows in the discovery ledger. Allowlist BY, PY, TW only; KG and TM remain research-only.
