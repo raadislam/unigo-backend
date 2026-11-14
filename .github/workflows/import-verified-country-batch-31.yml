@@ -184,6 +184,10 @@ jobs:
           ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit > /var/www/unigo/backend/shared/imports/batch31_pre_import_audit.json'
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch31_pre_import_audit.json" ./batch31_pre_import_audit.json
       - name: Verify schema, country master rows, no duplicate keys and pending isolation
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           python3 - <<'PY'
           import csv, json
