@@ -365,13 +365,13 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes app/Console/Commands/VisaRequirementResearchCsvImportCommand.php "$VPS_USER@$VPS_HOST:/tmp/unigo-VisaRequirementResearchCsvImportCsvCommand.php"
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes app/Console/Commands/VisaRequirementResearchCsvImportCommand.php "$VPS_USER@$VPS_HOST:/tmp/unigo-VisaRequirementResearchCsvImportCommand.php"
           ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
           APP_DIR="/var/www/unigo/backend/current"
           SHARED_DIR="/var/www/unigo/backend/shared"
           TARGET="$APP_DIR/app/Console/Commands/VisaRequirementResearchCsvImportCommand.php"
-          SOURCE="/tmp/unigo-VisaRequirementResearchCsvCommand.php"
+          SOURCE="/tmp/unigo-VisaRequirementResearchCsvImportCommand.php"
           BACKUP="$SHARED_DIR/backups/VisaRequirementResearchCsvImportCommand.php.batch29-$(date -u +%Y%m%dT%H%M%SZ).bak"
           mkdir -p "$SHARED_DIR/backups"
           test -s "$SOURCE"
@@ -434,7 +434,7 @@ jobs:
           STORED_IMPORT_SUCCESS="0"
           if [ -s "$IMPORT_DIR/batch29_import_result.json" ]; then
             STORED_CSV_SHA="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); echo is_array($payload) ? ($payload["csv_sha256"] ?? "") : "";' "$IMPORT_DIR/batch29_import_result.json" 2>/dev/null || true)"
-            STORED_IMPORT_SUCCESS="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); $failures=is_array($payload) ? ($payload["failures"] ?? null) : null; $ok=is_array($payload) && is_array($failures) && count($failures) === 0 && (int)($payload["rows"] ?? 0) === 5 && (int)($payload["republished"] ?? 0) === 5 && (int)($payload["read_back"] ?? 0) === 5; echo $ok ? "1" : "0";' "$IMPORT_DIR/batch29_import_result.json" 2>/dev/null || echo 0)"
+            STORED_IMPORT_SUCCESS="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); $failures=is_array($payload) ? ($payload["failures"] ?? null) : null; $ok=is_array($payload) && is_array($failures) && count($failures) === 0 && (int)($payload["rows"] ?? 0) === 5 && (int)($payload["republished"] ?? 0) === 5 && (int)($payload["reverified"] ?? 0) === 5 && (int)($payload["read_back"] ?? 0) === 5; echo $ok ? "1" : "0";' "$IMPORT_DIR/batch29_import_result.json" 2>/dev/null || echo 0)"
           fi
           if [ "$STORED_CSV_SHA" = "$EXPECTED_CSV_SHA" ] && [ "$STORED_IMPORT_SUCCESS" = "1" ]; then
             echo "A successful batch 29 import result matches the exact CSV hash and complete database readback; skipping duplicate writes."
