@@ -1,0 +1,189 @@
+name: Import staged 12-country visa batch
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/run-staged-country-import-20261114.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-staged-country-import
+  cancel-in-progress: false
+
+jobs:
+  guarded-import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout backend
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_import
+          chmod 600 ~/.ssh/unigo_import
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'command -v php && command -v mysql && command -v mysqldump && command -v gzip'
+
+      - name: Upload staged data and guarded verifier
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'mkdir -p /var/www/unigo/backend/shared/imports'
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" \
+            database/data/new_country_visa_batch_06_07.csv \
+            database/data/new_country_visa_batch_08.csv \
+            scripts/import_staged_country_batch.php \
+            "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
+
+      - name: Backup, restore-test, import and verify
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+
+          APP_DIR="/var/www/unigo/backend/current"
+          SHARED_DIR="/var/www/unigo/backend/shared"
+          IMPORT_DIR="$SHARED_DIR/imports"
+          BACKUP_DIR="$SHARED_DIR/backups"
+          mkdir -p "$BACKUP_DIR"
+          test -f "$SHARED_DIR/.env"
+          test -d "$SHARED_DIR/storage"
+          test -f "$APP_DIR/vendor/autoload.php"
+          test -f "$IMPORT_DIR/new_country_visa_batch_06_07.csv"
+          test -f "$IMPORT_DIR/new_country_visa_batch_08.csv"
+          test -f "$IMPORT_DIR/import_staged_country_batch.php"
+
+          CNF="$(mktemp)"
+          DB_FILE="$(mktemp)"
+          RESTORE_DB=""
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+          BACKUP_FILE="$BACKUP_DIR/unigo-pre-12-country-import-$STAMP.sql.gz"
+          AUDIT_FILE="$BACKUP_DIR/unigo-post-12-country-import-$STAMP.json"
+
+          cleanup() {
+            if [[ -n "$RESTORE_DB" && -s "$CNF" ]]; then
+              mysql --defaults-extra-file="$CNF" -e "DROP DATABASE IF EXISTS `$RESTORE_DB`" >/dev/null 2>&1 || true
+            fi
+            rm -f "$CNF" "$DB_FILE"
+          }
+          trap cleanup EXIT
+
+          cd "$APP_DIR"
+
+          BACKUP_CNF="$CNF" DB_NAME_FILE="$DB_FILE" UNIGO_APP_DIR="$APP_DIR" php <<'PHP'
+          <?php
+          $root = getenv('UNIGO_APP_DIR');
+          chdir($root);
+          require $root . '/vendor/autoload.php';
+          $app = require $root . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $connection = config('database.connections.' . config('database.default'));
+          if (! is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') {
+              fwrite(STDERR, "Production database connection is not MySQL; import stopped.\n");
+              exit(1);
+          }
+          $database = (string) ($connection['database'] ?? '');
+          if ($database === '') {
+              fwrite(STDERR, "Production database name is unavailable; import stopped.\n");
+              exit(1);
+          }
+          $escape = static fn ($value) => '"' . str_replace(["\\", '"', "\n", "\r"], ["\\\\", '\\"', "\\n", "\\r"], (string) $value) . '"';
+          $options = ['host' => $connection['host'] ?? '127.0.0.1', 'port' => $connection['port'] ?? 3306, 'user' => $connection['username'] ?? '', 'password' => $connection['password'] ?? '', 'default-character-set' => $connection['charset'] ?? 'utf8mb4'];
+          if (! empty($connection['unix_socket'])) $options['socket'] = $connection['unix_socket'];
+          $content = "[client]\n";
+          foreach ($options as $key => $value) $content .= $key . '=' . $escape($value) . "\n";
+          if (file_put_contents(getenv('BACKUP_CNF'), $content, LOCK_EX) === false || file_put_contents(getenv('DB_NAME_FILE'), $database, LOCK_EX) === false) {
+              fwrite(STDERR, "Unable to prepare protected database backup configuration.\n");
+              exit(1);
+          }
+          chmod(getenv('BACKUP_CNF'), 0600);
+          chmod(getenv('DB_NAME_FILE'), 0600);
+          PHP
+
+          DB_NAME="$(cat "$DB_FILE")"
+          UNIGO_APP_DIR="$APP_DIR" php "$IMPORT_DIR/import_staged_country_batch.php" preflight | tee "$BACKUP_DIR/preflight-$STAMP.txt"
+
+          DB_BYTES="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT COALESCE(SUM(data_length+index_length),0) FROM information_schema.tables WHERE table_schema=DATABASE();")"
+          FREE_KB="$(df -Pk "$BACKUP_DIR" | awk 'NR==2 {print $4}')"
+          NEEDED_BYTES=$((DB_BYTES * 3 + 268435456))
+          FREE_BYTES=$((FREE_KB * 1024))
+          if [[ "$DB_BYTES" -le 0 || "$FREE_BYTES" -lt "$NEEDED_BYTES" ]]; then
+            echo "Insufficient free disk space for a full backup and isolated restore test; no production rows were changed."
+            exit 1
+          fi
+
+          mysqldump --defaults-extra-file="$CNF" --single-transaction --quick --routines --triggers --events --hex-blob --default-character-set=utf8mb4 "$DB_NAME" | gzip -1 > "$BACKUP_FILE"
+          test -s "$BACKUP_FILE"
+          gzip -t "$BACKUP_FILE"
+          gzip -dc "$BACKUP_FILE" | grep -m 1 -E 'CREATE TABLE|INSERT INTO' >/dev/null
+          sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
+
+          SCHEMA_INFO="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE();")"
+          read -r DB_CHARSET DB_COLLATION <<< "$SCHEMA_INFO"
+          RESTORE_DB="unigo_restore_verify_${STAMP//[^A-Za-z0-9_]/_}"
+          mysql --defaults-extra-file="$CNF" -e "CREATE DATABASE `$RESTORE_DB` CHARACTER SET $DB_CHARSET COLLATE $DB_COLLATION"
+          gzip -dc "$BACKUP_FILE" | mysql --defaults-extra-file="$CNF" --database="$RESTORE_DB"
+
+          table_counts() {
+            local database="$1"
+            local tables
+            tables="$(mysql --defaults-extra-file="$CNF" --database="$database" --batch --skip-column-names -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema=DATABASE() AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;")"
+            while IFS= read -r table; do
+              [[ -z "$table" ]] && continue
+              local count
+              count="$(mysql --defaults-extra-file="$CNF" --database="$database" --batch --skip-column-names -e "SELECT COUNT(*) FROM `$table`;")"
+              printf '%s\t%s\n' "$table" "$count"
+            done <<< "$tables"
+          }
+
+          diff -u <(table_counts "$DB_NAME") <(table_counts "$RESTORE_DB")
+          mysql --defaults-extra-file="$CNF" -e "DROP DATABASE `$RESTORE_DB`"
+          RESTORE_DB=""
+          echo "BACKUP_RESTORE_TEST_PASSED $BACKUP_FILE"
+
+          for FILE in new_country_visa_batch_06_07.csv new_country_visa_batch_08.csv; do
+            LINE="$(grep -F "PRECHECK_FILE $FILE " "$BACKUP_DIR/preflight-$STAMP.txt")"
+            TOTAL="$(sed -E 's/.*total=([0-9]+).*/\1/' <<< "$LINE")"
+            EXISTING="$(sed -E 's/.*existing=([0-9]+).*/\1/' <<< "$LINE")"
+            MISSING="$(sed -E 's/.*missing=([0-9]+).*/\1/' <<< "$LINE")"
+            cp "$IMPORT_DIR/$FILE" "$APP_DIR/storage/app/imports/unigo_visa_requirements_research_template.csv"
+            OUTPUT="$(php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force 2>&1)" || {
+              printf '%s\n' "$OUTPUT"
+              exit 1
+            }
+            printf '%s\n' "$OUTPUT"
+            EXPECTED_LINE="$MISSING visa requirement records imported or updated; $EXISTING rows skipped."
+            grep -F "$EXPECTED_LINE" <<< "$OUTPUT" >/dev/null
+            if [[ $((MISSING + EXISTING)) -ne "$TOTAL" ]]; then
+              echo "Importer count reconciliation failed for $FILE"
+              exit 1
+            fi
+          done
+
+          UNIGO_APP_DIR="$APP_DIR" php "$IMPORT_DIR/import_staged_country_batch.php" verify
+          php artisan visa:requirements-audit > "$AUDIT_FILE"
+          test -s "$AUDIT_FILE"
+          echo "IMPORT_AND_READBACK_PASSED total=12 pending_review=12 unpublished=12"
+          echo "DATABASE_BACKUP=$BACKUP_FILE"
+          echo "DATABASE_BACKUP_SHA256=$(cut -d ' ' -f 1 "$BACKUP_FILE.sha256")"
+          echo "POST_IMPORT_AUDIT=$AUDIT_FILE"
+          REMOTE
