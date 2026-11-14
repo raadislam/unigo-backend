@@ -1,1 +1,1 @@
-Retry validated 48-country import after correcting generated Batch 21 artifact paths. Checked 2026-11-14.
+Retry verified 48-country import after aligning Tonga's simple and full-audit visa type to the official pre-approval wording. Checked 2026-11-14.
