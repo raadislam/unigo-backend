@@ -227,6 +227,7 @@ class VisaRequirementManagementController extends Controller
             'photo_specifications.*' => ['nullable'],
             'applicant_checklists' => ['nullable', 'array'],
             'applicant_checklists.*.applicant_type' => ['required', 'string', 'max:80'],
+            'applicant_checklists.*.notes' => ['nullable', 'string', 'max:1000'],
             'applicant_checklists.*.documents' => ['required', 'array'],
             'applicant_checklists.*.documents.*.name' => ['required', 'string', 'max:200'],
             'applicant_checklists.*.documents.*.status' => ['required', 'in:required,conditional,if_applicable'],

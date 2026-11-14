@@ -176,6 +176,7 @@ jobs:
               "batch28_import_result.json",
               "batch28_post_import_audit.json",
               "batch29_import_result.json",
+              "batch29_unpublish_result.json",
               "batch29_post_import_audit.json",
           )
           for name in names:

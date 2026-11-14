@@ -11,8 +11,8 @@ on:
       - 'scripts/validate_visa_batches.py'
       - 'scripts/validate_production_visa_audit.py'
       - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
-      - 'scripts/validate_production_visa_audit.py'
-      - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
+      - 'app/Console/Commands/VisaRequirementAuditCommand.php'
+      - 'app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
@@ -24,6 +24,8 @@ on:
       - 'scripts/validate_visa_batches.py'
       - 'scripts/validate_production_visa_audit.py'
       - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
+      - 'app/Console/Commands/VisaRequirementAuditCommand.php'
+      - 'app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
@@ -39,7 +41,10 @@ jobs:
         with:
           php-version: '8.3'
       - name: Validate importer PHP syntax
-        run: php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
+        run: |
+          php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
+          php -l app/Console/Commands/VisaRequirementAuditCommand.php
+          php -l app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

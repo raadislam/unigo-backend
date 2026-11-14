@@ -358,7 +358,7 @@ jobs:
             test "$count" -ge 0
           done <<< "$TABLES"
           echo "BACKUP_SHA256_AND_RESTORE_TEST_PASSED_IN_ISOLATED_MYSQL"
-      - name: Deploy audited importer readback hotfix after database backup and restore verification
+      - name: Deploy backed-up checklist API, audit and importer hotfix after database restore verification
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
@@ -366,25 +366,48 @@ jobs:
         run: |
           set -euo pipefail
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes app/Console/Commands/VisaRequirementResearchCsvImportCommand.php "$VPS_USER@$VPS_HOST:/tmp/unigo-VisaRequirementResearchCsvImportCommand.php"
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes app/Console/Commands/VisaRequirementAuditCommand.php "$VPS_USER@$VPS_HOST:/tmp/unigo-VisaRequirementAuditCommand.php"
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php "$VPS_USER@$VPS_HOST:/tmp/unigo-VisaRequirementManagementController.php"
           ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
           APP_DIR="/var/www/unigo/backend/current"
           SHARED_DIR="/var/www/unigo/backend/shared"
-          TARGET="$APP_DIR/app/Console/Commands/VisaRequirementResearchCsvImportCommand.php"
-          SOURCE="/tmp/unigo-VisaRequirementResearchCsvImportCommand.php"
-          BACKUP="$SHARED_DIR/backups/VisaRequirementResearchCsvImportCommand.php.batch29-$(date -u +%Y%m%dT%H%M%SZ).bak"
+          TARGET_IMPORTER="$APP_DIR/app/Console/Commands/VisaRequirementResearchCsvImportCommand.php"
+          TARGET_AUDIT="$APP_DIR/app/Console/Commands/VisaRequirementAuditCommand.php"
+          TARGET_CONTROLLER="$APP_DIR/app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php"
+          SOURCE_IMPORTER="/tmp/unigo-VisaRequirementResearchCsvImportCommand.php"
+          SOURCE_AUDIT="/tmp/unigo-VisaRequirementAuditCommand.php"
+          SOURCE_CONTROLLER="/tmp/unigo-VisaRequirementManagementController.php"
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          BACKUP_IMPORTER="$SHARED_DIR/backups/VisaRequirementResearchCsvImportCommand.php.batch29-$STAMP.bak"
+          BACKUP_AUDIT="$SHARED_DIR/backups/VisaRequirementAuditCommand.php.batch29-$STAMP.bak"
+          BACKUP_CONTROLLER="$SHARED_DIR/backups/VisaRequirementManagementController.php.batch29-$STAMP.bak"
           mkdir -p "$SHARED_DIR/backups"
-          test -s "$SOURCE"
-          php -l "$SOURCE" >/dev/null
-          cp "$TARGET" "$BACKUP"
-          cp "$SOURCE" "$TARGET"
-          if ! php -l "$TARGET" >/dev/null; then
-            cp "$BACKUP" "$TARGET"
-            exit 1
-          fi
-          sha256sum "$BACKUP" "$TARGET"
-          rm -f "$SOURCE"
-          echo "BATCH29_IMPORTER_HOTFIX_INSTALLED backup=$BACKUP"
+          test -s "$SOURCE_IMPORTER"
+          test -s "$SOURCE_AUDIT"
+          test -s "$SOURCE_CONTROLLER"
+          php -l "$SOURCE_IMPORTER" >/dev/null
+          php -l "$SOURCE_AUDIT" >/dev/null
+          php -l "$SOURCE_CONTROLLER" >/dev/null
+          cp "$TARGET_IMPORTER" "$BACKUP_IMPORTER"
+          cp "$TARGET_AUDIT" "$BACKUP_AUDIT"
+          cp "$TARGET_CONTROLLER" "$BACKUP_CONTROLLER"
+          restore_hotfix() {
+            cp "$BACKUP_IMPORTER" "$TARGET_IMPORTER"
+            cp "$BACKUP_AUDIT" "$TARGET_AUDIT"
+            cp "$BACKUP_CONTROLLER" "$TARGET_CONTROLLER"
+          }
+          trap restore_hotfix ERR
+          cp "$SOURCE_IMPORTER" "$TARGET_IMPORTER"
+          cp "$SOURCE_AUDIT" "$TARGET_AUDIT"
+          cp "$SOURCE_CONTROLLER" "$TARGET_CONTROLLER"
+          php -l "$TARGET_IMPORTER" >/dev/null
+          php -l "$TARGET_AUDIT" >/dev/null
+          php -l "$TARGET_CONTROLLER" >/dev/null
+          trap - ERR
+          sha256sum "$BACKUP_IMPORTER" "$BACKUP_AUDIT" "$BACKUP_CONTROLLER" "$TARGET_IMPORTER" "$TARGET_AUDIT" "$TARGET_CONTROLLER"
+          rm -f "$SOURCE_IMPORTER" "$SOURCE_AUDIT" "$SOURCE_CONTROLLER"
+          echo "BATCH29_API_IMPORTER_AUDIT_HOTFIX_INSTALLED importer_backup=$BACKUP_IMPORTER audit_backup=$BACKUP_AUDIT controller_backup=$BACKUP_CONTROLLER"
           REMOTE
 
       - name: Seed research rows and run dry-run for verified allowlist only
@@ -444,6 +467,8 @@ jobs:
               mv "$IMPORT_DIR/batch29_import_result.json" "$FAILED_RESULT"
               echo "Previous incomplete or failed batch 29 result archived at $FAILED_RESULT."
             fi
+            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_29.csv" --base-url=https://api.unigo-bd.com --unpublish-only > "$IMPORT_DIR/batch29_unpublish_result.json"
+            php -r '$p=json_decode(file_get_contents($argv[1]), true); $f=is_array($p) ? ($p["failures"] ?? null) : null; $ok=is_array($p) && is_array($f) && count($f) === 0 && (int)($p["rows"] ?? 0) === 5 && (int)($p["unpublished"] ?? 0) === 5 && (int)($p["read_back"] ?? 0) === 5; if (!$ok) { fwrite(STDERR, "Batch 29 records were not all confirmed pending_review and unpublished before retry.\n"); exit(1); }' "$IMPORT_DIR/batch29_unpublish_result.json"
             php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_29.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch29_import_result.json"
           fi
           php artisan visa:requirements-audit > "$IMPORT_DIR/batch29_post_import_audit.json"
@@ -451,6 +476,7 @@ jobs:
           test -s "$IMPORT_DIR/batch29_post_import_audit.json"
           REMOTE
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch29_import_result.json" ./batch29_import_result.json
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch29_unpublish_result.json" ./batch29_unpublish_result.json
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch29_post_import_audit.json" ./batch29_post_import_audit.json
       - name: Read back photo and applicant checklist JSON from the production database
         env:
@@ -684,6 +710,7 @@ jobs:
             batch29_seed_result.txt
             batch29_dry_run.json
             batch29_import_result.json
+            batch29_unpublish_result.json
             batch29_post_import_audit.json
             batch29_backup_path.txt
             batch29_backup_checksum_path.txt

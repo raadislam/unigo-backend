@@ -29,6 +29,8 @@ on:
       - '.github/workflows/import-verified-country-batch-18.yml'
       - 'scripts/validate_visa_batches.py'
       - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
+      - 'app/Console/Commands/VisaRequirementAuditCommand.php'
+      - 'app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php'
       - '.github/workflows/validate-visa-batches.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
       - 'docs/visa-discovery-batch-*.md'
