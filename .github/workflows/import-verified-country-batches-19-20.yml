@@ -114,12 +114,23 @@ jobs:
           cd "$APP_DIR"
           BACKUP_CNF="$CNF" DB_NAME_FILE="$DB_FILE" UNIGO_APP_DIR="$APP_DIR" php <<'PHP'
           <?php
-          $root=getenv('UNIGO_APP_DIR'); chdir($root); require $root.'/vendor/autoload.php'; $app=require $root.'/bootstrap/app.php'; $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
-          $c=config('database.connections.'.config('database.default')); if(!is_array($c)||($c['driver']??'')!=='mysql') exit(1); $db=(string)($c['database']??''); if($db==='') exit(1);
-          $q=static fn($v)=>'"'.str_replace(["\\\\",'"',"\\n","\\r"],["\\\\\\\\",'\\\\"',"\\\\n","\\\\r"],(string)$v).'"';
-          $o=['host'=>$c['host']??'127.0.0.1','port'=>$c['port']??3306,'user'=>$c['username']??'','password'=>$c['password']??'','default-character-set'=>$c['charset']??'utf8mb4']; if(!empty($c['unix_socket']))$o['socket']=$c['unix_socket'];
-          $s="[client]\\n"; foreach($o as $k=>$v)$s.=$k.'='.$q($v)."\\n";
-          file_put_contents(getenv('BACKUP_CNF'),$s,LOCK_EX); file_put_contents(getenv('DB_NAME_FILE'),$db,LOCK_EX); chmod(getenv('BACKUP_CNF'),0600); chmod(getenv('DB_NAME_FILE'),0600);
+          $root = getenv('UNIGO_APP_DIR');
+          chdir($root);
+          require $root . '/vendor/autoload.php';
+          $app = require $root . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $connection = config('database.connections.' . config('database.default'));
+          if (!is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') { fwrite(STDERR, "Expected MySQL production connection.\n"); exit(1); }
+          $database = (string) ($connection['database'] ?? '');
+          if ($database === '') { fwrite(STDERR, "Production database name unavailable.\n"); exit(1); }
+          $escape = static fn ($value) => '"' . str_replace(["\\", '"', "\n", "\r"], ["\\\\", '\\"' , "\n", "\r"], (string) $value) . '"' ;
+          $options = ['host' => $connection['host'] ?? '127.0.0.1', 'port' => $connection['port'] ?? 3306, 'user' => $connection['username'] ?? '', 'password' => $connection['password'] ?? '', 'default-character-set' => $connection['charset'] ?? 'utf8mb4'];
+          if (!empty($connection['unix_socket'])) $options['socket'] = $connection['unix_socket'];
+          $content = "[client]\n";
+          foreach ($options as $key => $value) $content .= $key . '=' . $escape($value) . "\n";
+          if (file_put_contents(getenv('BACKUP_CNF'), $content, LOCK_EX) === false || file_put_contents(getenv('DB_NAME_FILE'), $database, LOCK_EX) === false) { fwrite(STDERR, "Unable to prepare protected backup configuration.\n"); exit(1); }
+          chmod(getenv('BACKUP_CNF'), 0600);
+          chmod(getenv('DB_NAME_FILE'), 0600);
           PHP
           DB_NAME="$(cat "$DB_FILE")"
           mysqldump --defaults-extra-file="$CNF" --no-tablespaces --single-transaction --quick --routines --triggers --events --hex-blob --default-character-set=utf8mb4 "$DB_NAME" | gzip -1 > "$BACKUP_FILE"
