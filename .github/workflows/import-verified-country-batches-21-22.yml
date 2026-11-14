@@ -447,12 +447,10 @@ jobs:
             detail_urls={s.get("source_url") for s in d.get("sources",[])}
             extra_sources = json.loads(row.get("additional_sources") or "[]")
             required_urls = {row.get("official_source_url")}
-            cross_url = row.get("cross_check_source_url")
-            if cross_url and "vfsglobal.com" not in cross_url.lower():
-              required_urls.add(cross_url)
             required_urls |= {s.get("source_url") for s in extra_sources if s.get("source_type") == "official"}
             if not required_urls.issubset(detail_urls):
-              raise SystemExit(f"{code}: public detail API is missing source URLs.")
+              missing = sorted(required_urls - detail_urls)
+              raise SystemExit(f"{code}: public detail API is missing official primary/additional URLs: {missing}. Cross-check/provider references are validated by database readback.")
             print(f"PUBLIC_API_VERIFIED {country['name']} ({code}) — {slug}")
           print(f"DATABASE_AUDIT_VERIFIED total={post.get('total')} published={post.get('published_count')} country_rows={post.get('country_table_count')} public_directory={post.get('public_country_directory_count')}")
           print(f"PUBLIC_API_VERIFIED countries={len(directory_rows)} requirements={len(requirements)}")
