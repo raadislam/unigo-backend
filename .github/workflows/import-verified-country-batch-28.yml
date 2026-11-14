@@ -469,7 +469,7 @@ jobs:
           echo json_encode(['count' => count($payload), 'records' => $payload], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
           PHP
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes batch28-json-readback.php "$VPS_USER@$VPS_HOST:/tmp/unigo-batch28-json-readback.php"
-          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php -l /tmp/unigo-batch28-json-readback.php >/dev/null && php /tmp/unigo-batch28-json-readback.php; rm -f /tmp/unigo-batch28-json-readback.php' > batch28_json_readback.json 2> batch28_json_readback.stderr
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php -l /tmp/unigo-batch28-json-readback.php >/dev/null && php /tmp/unigo-batch28-json-readback.php; status=$?; rm -f /tmp/unigo-batch28-json-readback.php; exit $status' > batch28_json_readback.json 2> batch28_json_readback.stderr
           python3 -m json.tool batch28_json_readback.json > /dev/null
 
       - name: Verify exact photo and applicant checklist values from production database
