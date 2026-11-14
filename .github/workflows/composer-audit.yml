@@ -1,0 +1,55 @@
+name: UniGo Backend Composer Security Audit
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/composer-audit.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up PHP and Composer
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          tools: composer:v2
+          coverage: none
+      - name: Validate lockfile
+        run: composer validate --no-check-publish --no-interaction
+      - name: Audit locked Composer dependencies
+        run: |
+          composer audit --locked --format=json > composer-audit.json || true
+          php -r '
+          $data = json_decode(file_get_contents("composer-audit.json"), true, 512, JSON_THROW_ON_ERROR);
+          $advisories = $data["advisories"] ?? [];
+          $total = 0;
+          foreach ($advisories as $package => $items) {
+              foreach ($items as $item) {
+                  $total++;
+                  echo "ADVISORY " . json_encode([
+                      "package" => $package,
+                      "title" => $item["title"] ?? null,
+                      "cve" => $item["cve"] ?? null,
+                      "link" => $item["link"] ?? null,
+                      "affectedVersions" => $item["affectedVersions"] ?? null
+                  ], JSON_UNESCAPED_SLASHES) . PHP_EOL;
+              }
+          }
+          echo "COMPOSER_ADVISORY_COUNT=" . $total . PHP_EOL;
+          echo "ABANDONED_PACKAGES=" . count($data["abandoned"] ?? []) . PHP_EOL;
+          '
+      - name: Upload full Composer audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: unigo-backend-composer-audit
+          path: composer-audit.json
+          if-no-files-found: error
