@@ -61,6 +61,17 @@ class ImportMajorVisaRequirementsSeeder extends Seeder
                         continue;
                     }
 
+                    $existing = VisaRequirement::query()
+                        ->where('country_id', $country->id)
+                        ->where('passport_nationality_iso3', 'BGD')
+                        ->where('travel_purpose', $row['travel_purpose'] ?: 'tourism')
+                        ->exists();
+
+                    if ($existing) {
+                        $skipped++;
+                        continue;
+                    }
+
                     $truthy = static fn ($value): ?bool => $value === '' || $value === null ? null : filter_var($value, FILTER_VALIDATE_BOOLEAN);
                     $documents = array_values(array_filter(array_map('trim', explode('|', $row['required_documents'] ?? ''))));
 
