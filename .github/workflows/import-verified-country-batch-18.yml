@@ -131,7 +131,7 @@ jobs:
           chdir($root);
           require $root . '/vendor/autoload.php';
           $app = require $root . '/bootstrap/app.php';
-          $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
           $connection = config('database.connections.' . config('database.default'));
           if (!is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') { fwrite(STDERR, "Expected MySQL production connection.\\n"); exit(1); }
           $database = (string) ($connection['database'] ?? '');
