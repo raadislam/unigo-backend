@@ -120,6 +120,48 @@ def main():
     if set(public_codes) != expected_public_codes:
         fail("Production public directory does not match published country flags and active verified BGD tourism requirements.")
 
+    ledger_public_codes = {
+        str(row.get("iso2") or "").strip().upper()
+        for row in ledger
+        if row.get("country_row_status") == "public_directory"
+    }
+    ledger_verified_codes = {
+        str(row.get("iso2") or "").strip().upper()
+        for row in ledger
+        if row.get("visa_record_status") == "verified_published"
+    }
+    ledger_represented_codes = {
+        str(row.get("iso2") or "").strip().upper()
+        for row in ledger
+        if row.get("discovery_status") == "represented"
+    }
+    ledger_pending_db_codes = {
+        str(row.get("iso2") or "").strip().upper()
+        for row in ledger
+        if str(row.get("visa_record_status") or "").startswith("pending_db_record_")
+    }
+    pending_codes = {
+        str((row.get("country") or {}).get("iso2") or "").strip().upper()
+        for row in pending_bgd
+        if (row.get("country") or {}).get("iso2")
+    }
+    if ledger_public_codes != set(public_codes):
+        fail("Discovery ledger public_directory codes do not match the production public country directory.")
+    if ledger_verified_codes != set(published_codes):
+        fail("Discovery ledger verified_published codes do not match active verified BGD tourism records.")
+    if ledger_represented_codes != set(published_codes):
+        fail("Discovery ledger represented codes do not match active verified BGD tourism records.")
+    if ledger_pending_db_codes != pending_codes:
+        fail("Discovery ledger pending_db_record codes do not match pending, expired or unpublished BGD tourism records.")
+
+    all_bgd_codes = [
+        str((row.get("country") or {}).get("iso2") or "").strip().upper()
+        for row in bgd_tourism
+        if (row.get("country") or {}).get("iso2")
+    ]
+    if len(all_bgd_codes) != len(set(all_bgd_codes)):
+        fail("Production contains duplicate BGD tourism requirement keys, including unpublished records.")
+
     status_counts = Counter(str(row.get("verification_status") or "missing") for row in records)
     summary = [
         "# UniGo read-only production visa audit",
@@ -138,6 +180,9 @@ def main():
         f"- BGD tourism actively published and verified: **{len(published_bgd)}**",
         f"- BGD tourism pending, unverified, expired or unpublished: **{len(pending_bgd)}**",
         f"- Published BGD tourism records missing primary official sources: **{len(missing_primary_sources)}**",
+        f"- Ledger/public directory parity: **{len(ledger_public_codes)} / {len(public_codes)} codes matched**",
+        f"- Ledger verified/published parity: **{len(ledger_verified_codes)} / {len(published_codes)} codes matched**",
+        f"- Ledger pending DB records: **{len(ledger_pending_db_codes)} / {len(pending_codes)} codes matched**",
         "",
         "The command used for this snapshot is read-only. No database rows, caches, migrations or application files were modified.",
     ]
