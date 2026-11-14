@@ -1,1 +1,1 @@
-Batch 29 verified tourism import: GF, GP, MQ, RE, PM. Pending research only: BL, MF, YT.
+Retry batch 29 after correcting applicant checklist document-name lengths to the production API limit. Allowlist: GF, GP, MQ, RE, PM. Research-only pending: BL, MF, YT.
