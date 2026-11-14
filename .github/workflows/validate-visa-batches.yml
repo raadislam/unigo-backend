@@ -2,15 +2,25 @@ name: Validate Visa Research Batches
 on:
   push:
     branches:
-      - automation/country-discovery-batches-06-07-20261114
+      - automation/country-discovery-batch-09-20261114
   pull_request:
     paths:
       - 'database/data/visa_full_audit_batch_06.csv'
       - 'database/data/visa_full_audit_batch_07.csv'
       - 'database/data/visa_full_audit_batch_08.csv'
+      - 'database/data/visa_full_audit_batch_09.csv'
       - 'database/data/new_country_visa_batch_06_07.csv'
       - 'database/data/new_country_visa_batch_08.csv'
+      - 'database/data/new_country_visa_batch_09.csv'
+      - 'database/data/country_discovery_ledger.csv'
+      - 'database/seeders/ImportMajorVisaRequirementsSeeder.php'
       - 'scripts/validate_visa_batches.py'
+      - 'scripts/preflight_visa_import.php'
+      - 'scripts/verify_visa_import_audit.php'
+      - 'scripts/dispatch_frontend_rebuild.py'
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/validate-visa-batches.yml'
+      - 'docs/visa-discovery-batch-09-release-checklist.md'
       - '.github/workflows/validate-visa-batches.yml'
 permissions:
   contents: read
