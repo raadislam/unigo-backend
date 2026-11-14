@@ -1,1 +1,1 @@
-Re-run batch 21-23 database and public API verification after limiting API source checks to official primary/additional sources; cross-check/provider references remain verified in database readback.
+Re-run batch 21-23 verification with public detail requiring the primary official source only; database readback separately validates every additional, cross-check and provider source.
