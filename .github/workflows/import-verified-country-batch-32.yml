@@ -29,7 +29,7 @@ jobs:
           from urllib.parse import urlparse
 
           expected = {"WS"}
-          pending_expected = {"IQ", "IR", "LB", "PE"}
+          pending_expected = {"IQ", "IR", "LB", "PE", "WS"}
           checked = "2026-11-15"
           def read(path):
               with Path(path).open(encoding="utf-8-sig", newline="") as f:
@@ -48,6 +48,8 @@ jobs:
               raise SystemExit("Batch 32 seed/full-audit rows must exactly match WS.")
           if set(pending_by) != pending_expected or len(pending) != 4:
               raise SystemExit("Batch 32 pending file must exactly contain IQ,IR,LB,PE.")
+          if "WS" in pending_expected:
+              raise SystemExit("Samoa WS is withheld: the official SAT$200 Visitor Entry Permit fee scope conflicts with the free 90-day Visitor Permit on arrival. Do not import until Samoa Immigration confirms the distinction in writing.")
           for code in expected:
               row = audit_by[code]
               seed_row = seed_by[code]
@@ -124,7 +126,7 @@ jobs:
               writer = csv.DictWriter(f, fieldnames=list(audit[0].keys()), lineterminator="\n")
               writer.writeheader()
               writer.writerows([audit_by[c] for c in sorted(expected)])
-          print("BATCH32_VALIDATION_PASSED verified_allowlist=WS pending_only=IQ,IR,LB,PE")
+          print("BATCH32_VALIDATION_PASSED verified_allowlist=WS pending_only=IQ,IR,LB,PE,WS")
           PY
       - uses: actions/upload-artifact@v4
         with:
