@@ -223,7 +223,8 @@ jobs:
                   raise SystemExit(f"{code}: pending research country master row missing.")
           existing_published={code for code,items in records_by.items() if items[0].get("verification_status")=="verified" and items[0].get("is_published") is True}
           new_codes=expected-set(records_by)
-          summary={"total_before":audit.get("total"),"published_before":audit.get("published_count"),"country_table_count_before":audit.get("country_table_count"),"public_directory_count_before":audit.get("public_country_directory_count"),"public_directory_codes_before":sorted(public_before),"expected_codes":sorted(expected),"existing_requirement_codes":sorted(records_by),"existing_published_codes":sorted(existing_published),"new_requirement_codes":sorted(new_codes),"pending_codes":sorted(pending)}
+          country_master_names={code:{"name":by_iso[code].get("name"),"slug":by_iso[code].get("slug")} for code in sorted(expected)}
+          summary={"total_before":audit.get("total"),"published_before":audit.get("published_count"),"country_table_count_before":audit.get("country_table_count"),"public_directory_count_before":audit.get("public_country_directory_count"),"public_directory_codes_before":sorted(public_before),"country_master_names":country_master_names,"expected_codes":sorted(expected),"existing_requirement_codes":sorted(records_by),"existing_published_codes":sorted(existing_published),"new_requirement_codes":sorted(new_codes),"pending_codes":sorted(pending)}
           Path("batch31_pre_import_summary.json").write_text(json.dumps(summary,indent=2))
           print(json.dumps(summary,indent=2))
           print("BATCH31_PRE_IMPORT_DATABASE_CHECK_PASSED")
