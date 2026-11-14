@@ -1,1 +1,1 @@
-Retry verified 48-country import after completing all optional field notes and retaining full-audit review notes as authoritative. Checked 2026-11-14.
+Retry verified 48-country import after correcting the backlog CSV writer to preserve the union of all research columns. Checked 2026-11-14.
