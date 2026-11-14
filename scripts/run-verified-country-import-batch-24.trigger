@@ -1,1 +1,1 @@
-Run the reviewed verified-country batch 24 workflow. Approved publication allowlist: TT, JE, GG. PE and IM remain pending and unpublished.
+Retry reviewed batch 24 after correcting Peru's unverified entry-count field. Approved publication allowlist remains TT, JE, GG. PE and IM remain pending and unpublished.
