@@ -63,7 +63,7 @@ for row in batch:
     if any(len(item) > 500 for item in row["required_documents"].split("|")):
         raise SystemExit(f"{slug}: a required-document item exceeds 500 characters.")
     for field in ("official_source_url", "cross_check_source_url"):
-        if not re.fullmatch(r"https://\\S+", row.get(field, "")):
+        if not re.fullmatch(r"https://\S+", row.get(field, "")):
             raise SystemExit(f"{slug}: {field} is not a valid HTTPS URL.")
     for field in ("official_source_last_checked", "cross_check_source_last_checked"):
         if row[field] != "2026-11-14":
@@ -75,7 +75,7 @@ for row in batch:
     if not isinstance(sources, list) or not sources:
         raise SystemExit(f"{slug}: additional_sources must be a non-empty array.")
     for source in sources:
-        if source.get("source_type") != "official" or not source.get("source_name") or not re.fullmatch(r"https://\\S+", source.get("source_url", "")):
+        if source.get("source_type") != "official" or not source.get("source_name") or not re.fullmatch(r"https://\S+", source.get("source_url", "")):
             raise SystemExit(f"{slug}: additional source is incomplete or not official.")
 
 if len(ledger) != 250:
