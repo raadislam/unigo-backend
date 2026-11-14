@@ -185,6 +185,22 @@ jobs:
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_04.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_04.csv --base-url=https://api.unigo-bd.com; else echo "No Schengen full-audit batch."; fi'
 
+      - name: Validate remaining-country full audit batch 05
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_05.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_05.csv --base-url=https://api.unigo-bd.com --dry-run; else echo "No remaining-country full-audit batch."; fi'
+
+      - name: Import and publish remaining-country full audit batch 05
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_05.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_05.csv --base-url=https://api.unigo-bd.com; else echo "No remaining-country full-audit batch."; fi'
+
       - name: Verify imported visa records by readback
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
