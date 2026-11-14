@@ -35,4 +35,11 @@ jobs:
         with:
           python-version: '3.12'
       - name: Validate CSV schema, field limits, sources and idempotency keys
-        run: python scripts/validate_visa_batches.py
+        run: python3 scripts/validate_visa_batches.py
+      - name: Validate PHP import scripts
+        run: |
+          php -l database/seeders/ImportMajorVisaRequirementsSeeder.php
+          php -l scripts/preflight_visa_import.php
+          php -l scripts/verify_visa_import_audit.php
+      - name: Validate frontend dispatch script
+        run: python3 -m py_compile scripts/dispatch_frontend_rebuild.py
