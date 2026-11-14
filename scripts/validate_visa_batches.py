@@ -131,6 +131,9 @@ for path in files:
                     if not applicant_type:
                         raise ValueError("applicant_type is required")
                     applicant_types.add(applicant_type)
+                    checklist_notes = checklist.get("notes")
+                    if checklist_notes is not None and (not isinstance(checklist_notes, str) or len(checklist_notes) > 1000):
+                        raise ValueError("applicant checklist notes exceed 1000 characters")
                     documents = checklist.get("documents")
                     if not isinstance(documents, list) or not documents:
                         raise ValueError("each applicant checklist needs documents")
