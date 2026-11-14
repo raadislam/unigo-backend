@@ -1,6 +1,6 @@
 batch,destination_iso2,field,value,reason
 10,PK,visa_on_arrival_available,false,Bangladesh is absent from the official 50-country tourist VOA list; Visa in Your Inbox is pre-arrival electronic authorization and business VOA is not a tourist route.
-10,PK,application_fee,"25 single; 37.50 multiple up to 1 year; 50 multiple over 1 year; currency unspecified.",Official fee schedule lists these Bangladesh values but does not label currency.
+10,PK,application_fee,25 single; 37.50 multiple up to 1 year; 50 multiple over 1 year; currency unspecified.,Official fee schedule lists these Bangladesh values but does not label currency.
 10,PK,processing_time,Usually 7-10 working days at missions abroad; portal timing can vary.,Official DGI&P guidance states this mission processing range.
 10,PK,review_notes,Bangladesh is listed for Pakistan eVisa / Visa in Your Inbox. The official 50-country tourist VOA list does not include Bangladesh; the separate business VOA is not a tourist route. Fee schedule lists 25/37.50/50 for Bangladesh but does not label currency; verify at checkout.,Official tourist and fee pages checked 2026-11-14.
 15,WS,verification_status,pending_review,Free on-arrival Visitor Permit conflicts with SAT$200 Visitor Entry Permit fee schedule; scope unresolved.
@@ -10,11 +10,15 @@ batch,destination_iso2,field,value,reason
 15,WS,review_notes,"PENDING: Samoa Immigration Border Services states the 90-day Visitor Permit on arrival is free, while the official fee schedule separately lists SAT$200 for a Visitor Entry Permit without clarifying whether it applies to the free on-arrival permit. Do not publish a fee or treat the routes as equivalent until Immigration confirms the scope.",Official source conflict.
 16,TK,application_fee,No fee stated in the published Tokelau entry-permit guidance; confirm with Support Services before travel.,No published amount; do not infer.
 16,TK,maximum_permitted_stay,No fixed stay limit stated in published guidance; duration is set by the approved entry permit and village consent.,No published fixed stay limit.
-16,TK,entry_count,Entry count is not stated in published guidance; confirm with Tokelau Support Services.,No published entry-count rule.
+16,TK,entry_count,Not specified; village approval required.,Official guidance requires entry permit and village approval; no entry-count rule is published.
 16,TK,processing_time,Apply at least one month before travel; no official decision SLA is published.,Official guidance asks visitors to apply one month ahead.
 16,TK,required_documents,Passport|entry-permit request|approval from the relevant village|travel itinerary|onward or return travel details|accommodation and support arrangements requested by Support Services,Official entry-permit process.
-16,CK,entry_count,Visitor permit is issued on arrival; no fixed single/multiple-entry rule is stated in the published visitor guidance.,Do not infer entry count.
-17,BJ,application_fee,"Current amount is displayed at eVisa checkout; the official published fee schedule reviewed is dated 11 Dec 2020 and lists EUR50/75/100 by visa category, so confirm current amount before payment.",Fee schedule is dated 2020; current amount is not guaranteed.
+16,CK,entry_count,Not specified; permit issued on arrival.,Full official visitor-permit guidance says Bangladeshi ordinary passport holders receive 31 days on arrival; no single/multiple-entry count is published.
+17,BJ,application_fee,Current fee at eVisa checkout; 2020 schedule EUR50/75/100.,The old EUR50/75/100 fee schedule is dated 11 Dec 2020; the current amount is shown at eVisa checkout and must be reconfirmed.
 17,BJ,review_notes,The official eVisa portal and FAQ support the electronic tourist visa route. The fee schedule located is dated 11 Dec 2020; do not treat EUR50/75/100 as a guaranteed current fee. Use the live portal checkout amount.,Fee caveat.
 17,GM,visa_on_arrival_available,false,Bangladesh ordinary-passport route requires prior visa and security clearance; no VOA route verified.
 17,MZ,visa_on_arrival_available,false,Bangladesh is not in the official eVisa/VOA eligible group; prior visa at a mission is required.
+21,AL,entry_count,Single/double/multiple as granted.,"The official visa regime permits single, double or multiple entry as granted; full detail retained in review notes."
+21,IE,entry_count,Single/multiple; eligibility applies.,Single or multiple entry as granted; multiple-entry visas are limited to qualifying circumstances.
+21,ME,entry_count,Single/double/multiple as granted.,"Single, double or multiple entry as granted; full detail retained in review notes."
+21,RS,entry_count,Single/double/multiple as granted.,"Single, double or multiple entry as granted; full detail retained in review notes."
