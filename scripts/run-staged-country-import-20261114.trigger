@@ -1,1 +1,1 @@
-Execute the guarded one-time import of the 12 verified staged BGD tourism country records. The workflow creates and restore-tests a production database backup, imports only missing records, and verifies that all 12 remain pending review and unpublished.
+Retry the guarded one-time import after excluding pending-review rows and using a privileged isolated MySQL restore test. Import only the 12 verified BGD tourism records.
