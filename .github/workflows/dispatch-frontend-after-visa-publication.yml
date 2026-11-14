@@ -8,6 +8,7 @@ on:
       - 'docs/frontend-content-dispatch.trigger'
   workflow_run:
     workflows:
+      - Deploy UniGo Backend
       - Import staged 12-country visa batch
       - Import verified country visa batch 18
       - Import verified tourism visa batch 24
