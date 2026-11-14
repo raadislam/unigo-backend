@@ -1,1 +1,1 @@
-Retry batch 26 after correcting checked-date field names and documenting Belarus's conditional pre-arranged airport visa. Publication allowlist remains BY, PY, TW only; KG and TM remain research-only.
+Retry batch 26 after correcting the official_immigration_source_name schema field. Allowlist BY, PY, TW only; KG and TM remain research-only.
