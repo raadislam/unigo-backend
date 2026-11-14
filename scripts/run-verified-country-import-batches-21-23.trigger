@@ -1,1 +1,1 @@
-Re-run batch 21-23 database/API verification after making the import step hash-idempotent; reuse the existing result only when its CSV SHA-256 exactly matches the allowlisted batch.
+Re-run batch 21-23 post-import verification. The workflow accepts either verified-ready or already-published ledger state, reuses the exact prior import result by CSV SHA-256, and performs readback/API checks.
