@@ -112,6 +112,56 @@ for path in files:
                 errors.append(f"{path.name}:{line}: {field} exceeds {limit} characters")
         if len(row.get("review_notes", "") or "") > 5000:
             errors.append(f"{path.name}:{line}: review_notes exceeds 5000 characters")
+        checklist_raw = (row.get("applicant_checklists", "") or "").strip()
+        photo_raw = (row.get("photo_specifications", "") or "").strip()
+        if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv"} and not checklist_raw:
+            errors.append(f"{path.name}:{line}: applicant_checklists is required for the new publishable batch")
+        if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv"} and not photo_raw:
+            errors.append(f"{path.name}:{line}: photo_specifications is required for the new publishable batch")
+        if checklist_raw:
+            try:
+                checklists = json.loads(checklist_raw)
+                if not isinstance(checklists, list) or not checklists:
+                    raise ValueError("expected a non-empty applicant checklist array")
+                applicant_types = set()
+                for checklist in checklists:
+                    if not isinstance(checklist, dict):
+                        raise ValueError("applicant checklist entry must be an object")
+                    applicant_type = checklist.get("applicant_type", "")
+                    if not applicant_type:
+                        raise ValueError("applicant_type is required")
+                    applicant_types.add(applicant_type)
+                    documents = checklist.get("documents")
+                    if not isinstance(documents, list) or not documents:
+                        raise ValueError("each applicant checklist needs documents")
+                    for document in documents:
+                        if not isinstance(document, dict):
+                            raise ValueError("checklist document must be an object")
+                        name = document.get("name", "")
+                        if not isinstance(name, str) or not name.strip() or len(name) > 200:
+                            raise ValueError("checklist document name is required and limited to 200 characters")
+                        if document.get("status") not in {"required", "conditional", "if_applicable"}:
+                            raise ValueError("checklist document status is invalid")
+                        notes = document.get("notes")
+                        if notes is not None and (not isinstance(notes, str) or len(notes) > 1000):
+                            raise ValueError("checklist document notes exceed 1000 characters")
+                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv"}:
+                    expected_applicant_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
+                    if applicant_types != expected_applicant_types:
+                        raise ValueError(f"expected four applicant types, got {sorted(applicant_types)}")
+            except Exception as exc:
+                errors.append(f"{path.name}:{line}: invalid applicant_checklists: {exc}")
+        if photo_raw:
+            try:
+                photo = json.loads(photo_raw)
+                if not isinstance(photo, dict) or not photo.get("status"):
+                    raise ValueError("photo specification needs a status")
+                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv"}:
+                    if not photo.get("source_name") or not (photo.get("source_url") or "").startswith("https://"):
+                        raise ValueError("new batch photo specification needs an official source name and HTTPS URL")
+                    date.fromisoformat(str(photo.get("checked_at", ""))[:10])
+            except Exception as exc:
+                errors.append(f"{path.name}:{line}: invalid photo_specifications: {exc}")
         for field in ("official_source_url", "cross_check_source_url"):
             value = row.get(field, "") or ""
             if not value.startswith("https://") or len(value) > 2000:
