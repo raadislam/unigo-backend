@@ -21,7 +21,6 @@ on:
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
-      - '.github/workflows/validate-visa-batches.yml'
 permissions:
   contents: read
 jobs:
