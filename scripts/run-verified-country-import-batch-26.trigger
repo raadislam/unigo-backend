@@ -1,0 +1,1 @@
+Run reviewed verified-country batch 26. Publication allowlist: BY, PY, TW only. KG and TM remain research-only; do not create visa-requirement records for them.
