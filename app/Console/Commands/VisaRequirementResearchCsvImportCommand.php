@@ -267,6 +267,17 @@ class VisaRequirementResearchCsvImportCommand extends Command
                     if (! array_key_exists($column, $row)) throw new RuntimeException('Missing full-audit column ' . $column . ' (line ' . $line . ').');
                 }
 
+                foreach (['photo_specifications', 'applicant_checklists'] as $column) {
+                    if (array_key_exists($column, $row) && trim((string) $row[$column]) !== '') {
+                        try {
+                            $decoded = json_decode($row[$column], true, 512, JSON_THROW_ON_ERROR);
+                        } catch (Throwable) {
+                            throw new RuntimeException('Invalid JSON in ' . $column . ' (line ' . $line . ').');
+                        }
+                        if (! is_array($decoded)) throw new RuntimeException($column . ' must be a JSON object or array (line ' . $line . ').');
+                    }
+                }
+
                 foreach (['visa_required', 'visa_free_eligibility', 'visa_on_arrival_available', 'evisa_available'] as $column) {
                     if (filter_var(trim($row[$column]), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE) === null) throw new RuntimeException('Invalid boolean ' . $column . ' (line ' . $line . ').');
                 }
@@ -381,6 +392,15 @@ class VisaRequirementResearchCsvImportCommand extends Command
         $documents = array_values(array_filter(array_map('trim', explode('|', (string) $row['required_documents']))));
         if ($documents === []) throw new RuntimeException('The full-audit required document list is empty.');
         $payload['required_documents'] = $documents;
+
+        foreach (['photo_specifications', 'applicant_checklists'] as $field) {
+            $raw = trim((string) ($row[$field] ?? ''));
+            if ($raw !== '') {
+                $decoded = json_decode($raw, true, 512, JSON_THROW_ON_ERROR);
+                if (! is_array($decoded)) throw new RuntimeException($field . ' must contain a JSON object or array.');
+                $payload[$field] = $decoded;
+            }
+        }
 
         foreach (['effective_from', 'effective_until'] as $field) {
             if (trim((string) ($row[$field] ?? '')) !== '') $payload[$field] = trim($row[$field]);
