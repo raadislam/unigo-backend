@@ -118,7 +118,7 @@ jobs:
           STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
           BACKUP_FILE="$BACKUP_DIR/unigo-pre-verified-batch-18-$STAMP.sql.gz"
           cleanup() {
-            if [[ -n "$RESTORE_DB" ]]; then sudo -n mysql -e "DROP DATABASE IF EXISTS $RESTORE_DB" >/dev/null 2>&1 || true; fi
+            if [[ -n "$RESTORE_DB" ]]; then mysql --defaults-extra-file="$CNF" -e "DROP DATABASE IF EXISTS $RESTORE_DB" >/dev/null 2>&1 || true; fi
             rm -f "$CNF" "$DB_FILE"
           }
           trap cleanup EXIT
@@ -154,19 +154,19 @@ jobs:
           SCHEMA_INFO="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE();")"
           read -r DB_CHARSET DB_COLLATION <<< "$SCHEMA_INFO"
           RESTORE_DB="unigo_restore_verify_${STAMP//[^A-Za-z0-9_]/_}"
-          sudo -n mysql -e "CREATE DATABASE $RESTORE_DB CHARACTER SET $DB_CHARSET COLLATE $DB_COLLATION"
-          gzip -dc "$BACKUP_FILE" | sudo -n mysql --database="$RESTORE_DB"
+          mysql --defaults-extra-file="$CNF" -e "CREATE DATABASE $RESTORE_DB CHARACTER SET $DB_CHARSET COLLATE $DB_COLLATION"
+          gzip -dc "$BACKUP_FILE" | mysql --defaults-extra-file="$CNF" --database="$RESTORE_DB"
           table_counts() {
             local database="$1"
             local tables
-            tables="$(sudo -n mysql --database="$database" --batch --skip-column-names -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema=DATABASE() AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;")"
+            tables="$(mysql --defaults-extra-file="$CNF" --database="$database" --batch --skip-column-names -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema=DATABASE() AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;")"
             while IFS= read -r table; do
               [[ -z "$table" ]] && continue
-              printf '%s\\t%s\\n' "$table" "$(sudo -n mysql --database="$database" --batch --skip-column-names -e "SELECT COUNT(*) FROM $table;")"
+              printf '%s\\t%s\\n' "$table" "$(mysql --defaults-extra-file="$CNF" --database="$database" --batch --skip-column-names -e "SELECT COUNT(*) FROM $table;")"
             done <<< "$tables"
           }
           diff -u <(table_counts "$DB_NAME") <(table_counts "$RESTORE_DB")
-          sudo -n mysql -e "DROP DATABASE $RESTORE_DB"
+          mysql --defaults-extra-file="$CNF" -e "DROP DATABASE $RESTORE_DB"
           RESTORE_DB=""
           echo "BACKUP_RESTORE_TEST_PASSED $BACKUP_FILE"
           REMOTE
