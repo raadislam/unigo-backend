@@ -39,7 +39,10 @@ jobs:
         with:
           php-version: '8.3'
       - name: Validate importer PHP syntax
-        run: php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
+        run: |
+          php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
+          php -l app/Console/Commands/VisaRequirementAuditCommand.php
+          php -l app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
