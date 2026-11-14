@@ -10,7 +10,7 @@ use Throwable;
 
 class VisaRequirementResearchCsvImportCommand extends Command
 {
-    protected $signature = 'visa:requirements-import-research {--file=database/data/visa_fee_processing_batch_01.csv} {--base-url=} {--dry-run}';
+    protected $signature = 'visa:requirements-import-research {--file=database/data/visa_fee_processing_batch_01.csv} {--base-url=} {--dry-run} {--unpublish-only}';
 
     protected $description = 'Import official visa fee and processing-time research through the signed UniGo admin API';
 
@@ -21,6 +21,12 @@ class VisaRequirementResearchCsvImportCommand extends Command
         $secret = (string) config('services.unigo_admin.secret');
         $base = rtrim((string) ($this->option('base-url') ?: config('app.url')), '/');
         $dry = (bool) $this->option('dry-run');
+        $unpublishOnly = (bool) $this->option('unpublish-only');
+
+        if ($dry && $unpublishOnly) {
+            $this->error('The unpublish-only mode cannot be combined with dry-run.');
+            return self::FAILURE;
+        }
 
         if (! is_file($file) || $secret === '' || $base === '') {
             $this->error('The research CSV, signed API secret, or API base URL is unavailable.');
@@ -29,7 +35,7 @@ class VisaRequirementResearchCsvImportCommand extends Command
 
         $hash = hash_file('sha256', $file);
         $marker = storage_path('logs/visa-imports-' . $hash . '.json');
-        if (! $dry && is_file($marker)) {
+        if (! $dry && ! $unpublishOnly && is_file($marker)) {
             $this->info('This exact CSV batch has already been imported and reconciled.');
             return self::SUCCESS;
         }
@@ -44,6 +50,38 @@ class VisaRequirementResearchCsvImportCommand extends Command
             }
 
             $byIso2 = collect($records)->keyBy(fn (array $record) => strtoupper((string) data_get($record, 'country.iso2', '')));
+
+            if ($unpublishOnly) {
+                $summary = ['mode' => 'unpublish_only', 'csv_sha256' => $hash, 'rows' => count($rows), 'unpublished' => 0, 'read_back' => 0, 'failures' => []];
+                foreach ($rows as $row) {
+                    $iso2 = strtoupper(trim($row['destination_iso2']));
+                    $record = $byIso2->get($iso2);
+                    if (! is_array($record)) {
+                        $summary['failures'][] = ['destination_iso2' => $iso2, 'error' => 'No matching BGD tourism record.'];
+                        continue;
+                    }
+                    $id = (int) $record['id'];
+                    try {
+                        $this->api('POST', $base . '/api/admin/visa-requirements/' . $id . '/unpublish', [], $secret);
+                        $this->api('POST', $base . '/api/admin/visa-requirements/' . $id . '/verification', [
+                            'verification_status' => 'pending_review',
+                            'change_summary' => 'Publication withheld pending complete field and source readback after a failed import verification.',
+                            'official_source_checked_at' => trim($row['official_source_last_checked']),
+                        ], $secret);
+                        $saved = data_get($this->api('GET', $base . '/api/admin/visa-requirements/' . $id, [], $secret), 'data', []);
+                        if (! is_array($saved) || ($saved['verification_status'] ?? null) !== 'pending_review' || (bool) ($saved['is_published'] ?? false)) {
+                            throw new RuntimeException('The record did not return to pending_review and unpublished status.');
+                        }
+                        $summary['unpublished']++;
+                        $summary['read_back']++;
+                    } catch (Throwable $exception) {
+                        $summary['failures'][] = ['destination_iso2' => $iso2, 'record_id' => $id, 'error' => $exception->getMessage()];
+                    }
+                }
+                $this->line(json_encode($summary, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+                return $summary['failures'] === [] ? self::SUCCESS : self::FAILURE;
+            }
+
             $summary = ['mode' => $dry ? 'dry_run' : 'import', 'csv_sha256' => $hash, 'rows' => count($rows), 'updated' => 0, 'sources_added' => 0, 'reverified' => 0, 'republished' => 0, 'read_back' => 0, 'failures' => []];
 
             foreach ($rows as $row) {
