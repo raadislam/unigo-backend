@@ -237,6 +237,14 @@ jobs:
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan db:seed --class=VisaPhotoChecklistSupplementSeeder --force'
 
+      - name: Import detailed applicant checklists from uploaded PDFs
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan db:seed --class=UploadedAgencyVisaChecklistSeeder --force'
+
       - name: Verify imported visa records by readback
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
