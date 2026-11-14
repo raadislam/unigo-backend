@@ -51,8 +51,8 @@ try:
             errors.append(f"coverage:{line}: generic unresearched service-scope placeholder remains")
         if code not in {"OM", "SR"} and not row.get("centre_address", "").strip():
             errors.append(f"coverage:{line}: centre address is missing")
-    if len(coverage) != 30:
-        errors.append(f"coverage: expected 30 scoped records, found {len(coverage)}")
+    if len(coverage) != 32:
+        errors.append(f"coverage: expected 32 scoped records, found {len(coverage)}")
 
     fee_rows = load(fees_path, fee_required)
     fee_seen = set()
@@ -69,8 +69,8 @@ try:
                 errors.append(f"fees:{line}: {field} must be HTTPS")
         if row.get("source_checked") != "2026-11-14":
             errors.append(f"fees:{line}: source_checked is not current batch date")
-    if len(fee_rows) != 8:
-        errors.append(f"fees: expected 8 fee/processing snapshots, found {len(fee_rows)}")
+    if len(fee_rows) != 13:
+        errors.append(f"fees: expected 13 fee/processing snapshots, found {len(fee_rows)}")
 except Exception as exc:
     errors.append(str(exc))
 

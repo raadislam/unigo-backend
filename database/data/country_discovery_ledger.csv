@@ -62,7 +62,7 @@ DM,DMA,Dominica,dominica,Americas,Latin America and the Caribbean,country_row_pr
 DO,DOM,Dominican Republic,dominican-republic,Americas,Latin America and the Caribbean,country_row_present_unpublished,not_researched,not_started,not_started,,,
 DZ,DZA,Algeria,algeria,Africa,Northern Africa,country_row_present_unpublished,not_researched,not_started,not_started,,,
 EC,ECU,Ecuador,ecuador,Americas,Latin America and the Caribbean,country_row_present_unpublished,not_researched,not_started,not_started,,,
-EE,EST,Estonia,estonia,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+EE,EST,Estonia,estonia,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.;https://visa.vfsglobal.com/one-pager/germany/bangladesh/english/index.html;https://visa.vfsglobal.com/bgd/en/deu/,Live BGD tourism requirement and public directory entry confirmed. Bangladesh VFS representation route added 2026-11-14: Germany VFS Bangladesh page explicitly states that it also represents Estonia Schengen visa cases. Apply through the Germany VFS information route only after confirming the Estonia-specific checklist and jurisdiction.
 EG,EGY,Egypt,egypt,Africa,Northern Africa,country_row_present_unpublished,not_researched,not_started,not_started,,,
 EH,ESH,Western Sahara,western-sahara,Africa,Northern Africa,country_row_present_unpublished,not_researched,not_started,not_started,,,
 ER,ERI,Eritrea,eritrea,Africa,Sub-Saharan Africa,country_row_present_unpublished,not_researched,not_started,not_started,,,
@@ -87,7 +87,7 @@ GM,GMB,Gambia,gambia,Africa,Sub-Saharan Africa,country_row_present_unpublished,n
 GN,GIN,Guinea,guinea,Africa,Sub-Saharan Africa,country_row_present_unpublished,not_researched,not_started,not_started,,,
 GP,GLP,Guadeloupe,guadeloupe,Americas,Latin America and the Caribbean,country_row_present_unpublished,not_researched,not_started,not_started,,,
 GQ,GNQ,Equatorial Guinea,equatorial-guinea,Africa,Sub-Saharan Africa,country_row_present_unpublished,not_researched,not_started,not_started,,,
-GR,GRC,Greece,greece,Europe,Southern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+GR,GRC,Greece,greece,Europe,Southern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.;https://visa.vfsglobal.com/bgd/en/ita/faq;https://visa.vfsglobal.com/bgd/en/ita/,Live BGD tourism requirement and public directory entry confirmed. Bangladesh VFS representation route added 2026-11-14: Italy VFS FAQ explicitly names Greece as a Schengen submission destination under the stated first-entry and maximum-stay rule. Applicants must confirm that their itinerary satisfies that rule before using Italy VFS.
 GS,SGS,South Georgia & South Sandwich Islands,south-georgia-south-sandwich-islands,Americas,Latin America and the Caribbean,country_row_present_unpublished,not_researched,not_started,not_started,,,
 GT,GTM,Guatemala,guatemala,Americas,Latin America and the Caribbean,country_row_present_unpublished,not_researched,not_started,not_started,,,
 GU,GUM,Guam,guam,Oceania,Micronesia,country_row_present_unpublished,not_researched,not_started,not_started,,,
