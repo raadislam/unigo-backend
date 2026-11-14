@@ -502,7 +502,7 @@ jobs:
           import json
           from pathlib import Path
 
-          with Path("visa_full_audit_batch_29.csv").open(encoding="utf-8", newline="") as handle:
+          with Path("verified_full_audit_batch_29.csv").open(encoding="utf-8", newline="") as handle:
               expected = {row["destination_iso2"]: row for row in csv.DictReader(handle)}
           payload = json.loads(Path("batch29_json_readback.json").read_text(encoding="utf-8"))
           actual = {row["iso2"]: row for row in payload.get("records", [])}
