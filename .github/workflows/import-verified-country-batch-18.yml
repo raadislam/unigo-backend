@@ -136,11 +136,11 @@ jobs:
           if (!is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') { fwrite(STDERR, "Expected MySQL production connection.\\n"); exit(1); }
           $database = (string) ($connection['database'] ?? '');
           if ($database === '') { fwrite(STDERR, "Production database name unavailable.\\n"); exit(1); }
-          $escape = static fn ($v) => '"' . str_replace(["\\", '"', "\\n", "\\r"], ["\\\\\\\\", '\\"', "\\n", "\\r"], (string) $v) . '"';
+          $escape = static fn ($v) => '"' . str_replace(["\\", '"', "\n", "\r"], ["\\\\", '\\"', "\n", "\r"], (string) $v) . '"';
           $options = ['host' => $connection['host'] ?? '127.0.0.1', 'port' => $connection['port'] ?? 3306, 'user' => $connection['username'] ?? '', 'password' => $connection['password'] ?? '', 'default-character-set' => $connection['charset'] ?? 'utf8mb4'];
           if (!empty($connection['unix_socket'])) $options['socket'] = $connection['unix_socket'];
-          $content = "[client]\\n";
-          foreach ($options as $key => $value) $content .= $key . '=' . $escape($value) . "\\n";
+          $content = "[client]\n";
+          foreach ($options as $key => $value) $content .= $key . '=' . $escape($value) . "\n";
           if (file_put_contents(getenv('BACKUP_CNF'), $content, LOCK_EX) === false || file_put_contents(getenv('DB_NAME_FILE'), $database, LOCK_EX) === false) { fwrite(STDERR, "Unable to prepare protected backup configuration.\\n"); exit(1); }
           chmod(getenv('BACKUP_CNF'), 0600);
           chmod(getenv('DB_NAME_FILE'), 0600);
