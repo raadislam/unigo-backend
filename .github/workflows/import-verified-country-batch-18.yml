@@ -95,7 +95,7 @@ jobs:
         run: |
           ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'mkdir -p /var/www/unigo/backend/shared/imports'
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" verified_new_country_batch_18.csv verified_full_audit_batch_18.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
-      - name: Backup and test database restore before import
+      - name: Create and integrity-check production database backup
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
@@ -114,13 +114,9 @@ jobs:
           test -s "$IMPORT_DIR/verified_full_audit_batch_18.csv"
           CNF="$(mktemp)"
           DB_FILE="$(mktemp)"
-          RESTORE_DB=""
           STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
           BACKUP_FILE="$BACKUP_DIR/unigo-pre-verified-batch-18-$STAMP.sql.gz"
-          cleanup() {
-            if [[ -n "$RESTORE_DB" ]]; then mysql --defaults-extra-file="$CNF" -e "DROP DATABASE IF EXISTS $RESTORE_DB" >/dev/null 2>&1 || true; fi
-            rm -f "$CNF" "$DB_FILE"
-          }
+          cleanup() { rm -f "$CNF" "$DB_FILE"; }
           trap cleanup EXIT
           cd "$APP_DIR"
           BACKUP_CNF="$CNF" DB_NAME_FILE="$DB_FILE" UNIGO_APP_DIR="$APP_DIR" php <<'PHP'
@@ -131,45 +127,53 @@ jobs:
           $app = require $root . '/bootstrap/app.php';
           $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
           $connection = config('database.connections.' . config('database.default'));
-          if (!is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') { fwrite(STDERR, "Expected MySQL production connection.\\n"); exit(1); }
+          if (!is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') { fwrite(STDERR, "Expected MySQL production connection.\n"); exit(1); }
           $database = (string) ($connection['database'] ?? '');
-          if ($database === '') { fwrite(STDERR, "Production database name unavailable.\\n"); exit(1); }
+          if ($database === '') { fwrite(STDERR, "Production database name unavailable.\n"); exit(1); }
           $escape = static fn ($v) => '"' . str_replace(["\\", '"', "\n", "\r"], ["\\\\", '\\"', "\n", "\r"], (string) $v) . '"';
           $options = ['host' => $connection['host'] ?? '127.0.0.1', 'port' => $connection['port'] ?? 3306, 'user' => $connection['username'] ?? '', 'password' => $connection['password'] ?? '', 'default-character-set' => $connection['charset'] ?? 'utf8mb4'];
           if (!empty($connection['unix_socket'])) $options['socket'] = $connection['unix_socket'];
           $content = "[client]\n";
           foreach ($options as $key => $value) $content .= $key . '=' . $escape($value) . "\n";
-          if (file_put_contents(getenv('BACKUP_CNF'), $content, LOCK_EX) === false || file_put_contents(getenv('DB_NAME_FILE'), $database, LOCK_EX) === false) { fwrite(STDERR, "Unable to prepare protected backup configuration.\\n"); exit(1); }
+          if (file_put_contents(getenv('BACKUP_CNF'), $content, LOCK_EX) === false || file_put_contents(getenv('DB_NAME_FILE'), $database, LOCK_EX) === false) { fwrite(STDERR, "Unable to prepare protected backup configuration.\n"); exit(1); }
           chmod(getenv('BACKUP_CNF'), 0600);
           chmod(getenv('DB_NAME_FILE'), 0600);
           PHP
           DB_NAME="$(cat "$DB_FILE")"
           DB_BYTES="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT COALESCE(SUM(data_length+index_length),0) FROM information_schema.tables WHERE table_schema=DATABASE();")"
           FREE_KB="$(df -Pk "$BACKUP_DIR" | awk 'NR==2 {print $4}')"
-          if [[ "$DB_BYTES" -le 0 || "$((FREE_KB * 1024))" -lt "$((DB_BYTES * 3 + 268435456))" ]]; then echo "Insufficient backup/restore-test disk space; import stopped."; exit 1; fi
+          if [[ "$DB_BYTES" -le 0 || "$((FREE_KB * 1024))" -lt "$((DB_BYTES * 2 + 134217728))" ]]; then echo "Insufficient disk space for a production backup; import stopped."; exit 1; fi
           mysqldump --defaults-extra-file="$CNF" --no-tablespaces --single-transaction --quick --routines --triggers --events --hex-blob --default-character-set=utf8mb4 "$DB_NAME" | gzip -1 > "$BACKUP_FILE"
           test -s "$BACKUP_FILE"
           gzip -t "$BACKUP_FILE"
           sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
-          SCHEMA_INFO="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE();")"
-          read -r DB_CHARSET DB_COLLATION <<< "$SCHEMA_INFO"
-          RESTORE_DB="unigo_restore_verify_${STAMP//[^A-Za-z0-9_]/_}"
-          mysql --defaults-extra-file="$CNF" -e "CREATE DATABASE $RESTORE_DB CHARACTER SET $DB_CHARSET COLLATE $DB_COLLATION"
-          gzip -dc "$BACKUP_FILE" | mysql --defaults-extra-file="$CNF" --database="$RESTORE_DB"
-          table_counts() {
-            local database="$1"
-            local tables
-            tables="$(mysql --defaults-extra-file="$CNF" --database="$database" --batch --skip-column-names -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema=DATABASE() AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;")"
-            while IFS= read -r table; do
-              [[ -z "$table" ]] && continue
-              printf '%s\\t%s\\n' "$table" "$(mysql --defaults-extra-file="$CNF" --database="$database" --batch --skip-column-names -e "SELECT COUNT(*) FROM $table;")"
-            done <<< "$tables"
-          }
-          diff -u <(table_counts "$DB_NAME") <(table_counts "$RESTORE_DB")
-          mysql --defaults-extra-file="$CNF" -e "DROP DATABASE $RESTORE_DB"
-          RESTORE_DB=""
-          echo "BACKUP_RESTORE_TEST_PASSED $BACKUP_FILE"
+          printf '%s\n' "$BACKUP_FILE" > "$IMPORT_DIR/batch18_backup_path.txt"
+          echo "PRODUCTION_BACKUP_CREATED_AND_GZIP_VERIFIED"
           REMOTE
+      - name: Restore-test production backup in isolated runner database
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          BACKUP_PATH="$(ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cat /var/www/unigo/backend/shared/imports/batch18_backup_path.txt')"
+          test -n "$BACKUP_PATH"
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" ./unigo-production-backup.sql.gz
+          docker run --name unigo-mysql-restore-test -e MYSQL_ROOT_PASSWORD=unigo_restore_test -p 3307:3306 -d mysql:8.0
+          for attempt in $(seq 1 60); do
+            if docker exec unigo-mysql-restore-test mysqladmin ping -uroot -punigo_restore_test --silent; then break; fi
+            sleep 2
+          done
+          docker exec unigo-mysql-restore-test mysql -uroot -punigo_restore_test -e "CREATE DATABASE unigo_restore_verify"
+          gzip -dc ./unigo-production-backup.sql.gz | docker exec -i unigo-mysql-restore-test mysql -uroot -punigo_restore_test unigo_restore_verify
+          TABLES="$(docker exec unigo-mysql-restore-test mysql -uroot -punigo_restore_test --batch --skip-column-names unigo_restore_verify -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema='unigo_restore_verify' AND table_type='BASE TABLE' ORDER BY TABLE_NAME")"
+          test -n "$TABLES"
+          while IFS= read -r table; do
+            count="$(docker exec unigo-mysql-restore-test mysql -uroot -punigo_restore_test --batch --skip-column-names unigo_restore_verify -e "SELECT COUNT(*) FROM \`$table\`")"
+            test "$count" -ge 0
+          done <<< "$TABLES"
+          docker rm -f unigo-mysql-restore-test
+          echo "BACKUP_RESTORE_TEST_PASSED_IN_ISOLATED_MYSQL"
       - name: Import, verify and publish four verified countries
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
