@@ -391,7 +391,8 @@ jobs:
                   code=(r.get("country") or {}).get("iso2","?")
                   spec=decode(r.get("photo_specifications"))
                   if not isinstance(spec,dict) or not spec: photo["missing_unresearched"]+=1
-                  elif spec.get("status") in {"not_published","no_fixed_size_published","no_fixed_size"} and spec.get("source_url"): photo["official_no_fixed_size_published"]+=1
+                  elif spec.get("status") in {"no_fixed_size_published","no_fixed_size"} and spec.get("source_url"): photo["official_no_fixed_size_published"]+=1
+                  elif spec.get("status") in {"not_published","not_specified"}: photo["not_specified_without_confirmation"]+=1
                   elif spec.get("status")=="verified" and spec.get("source_url") and spec.get("source_name") and any(spec.get(k) for k in ["dimensions_mm","dimensions_px","digital_dimensions_px","file_size","file_format","format","copies"]):
                       photo["structured_verified"]+=1
                       capture=str(spec.get("biometric_capture") or "").lower()
@@ -435,7 +436,8 @@ jobs:
           post_photo=audit_photo("batch31_post_import_audit.json","post")
           if post_photo["published_records"]!=pre_photo["published_records"]+3: raise SystemExit("Photo/checklist audit published count delta mismatch.")
           if post_photo["photo"].get("structured_verified",0)!=pre_photo["photo"].get("structured_verified",0)+2: raise SystemExit("Structured photo coverage did not improve by two.")
-          if post_photo["photo"].get("official_no_fixed_size_published",0)!=pre_photo["photo"].get("official_no_fixed_size_published",0)+1: raise SystemExit("Official no-fixed-size photo status did not improve by one.")
+          if post_photo["photo"].get("not_specified_without_confirmation",0)!=pre_photo["photo"].get("not_specified_without_confirmation",0)+1: raise SystemExit("The Falkland Islands photo status was not preserved as not specified rather than falsely confirmed no-fixed-size.")
+          if not {"CX","CC"}.issubset(set(post_photo["biometric_vac_capture_iso2"])) or len(post_photo["biometric_vac_capture_iso2"])!=len(pre_photo["biometric_vac_capture_iso2"])+2: raise SystemExit("Australian ABCC photo capture coverage did not improve by two.")
           if post_photo["checklists"].get("complete_four_type",0)!=pre_photo["checklists"].get("complete_four_type",0)+3: raise SystemExit("Four-type applicant checklist coverage did not improve by three.")
           Path("batch31_photo_checklist_audit.json").write_text(json.dumps({"pre":pre_photo,"post":post_photo},indent=2))
           base="https://api.unigo-bd.com/api"
