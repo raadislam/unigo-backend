@@ -1,13 +1,13 @@
 <?php
 
-use App\\Models\\Country;
-use App\\Models\\VisaRequirement;
+use App\Models\\Country;
+use App\Models\\VisaRequirement;
 
 $root = getenv('UNIGO_APP_DIR') ?: dirname(__DIR__);
 chdir($root);
 require $root . '/vendor/autoload.php';
 $app = require $root . '/bootstrap/app.php';
-$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
+$app->make(Illuminate\Contracts\\Console\\Kernel::class)->bootstrap();
 
 $mode = $argv[1] ?? '';
 if (! in_array($mode, ['preflight', 'verify'], true)) {
@@ -91,7 +91,8 @@ $missingCount = 0;
 $seen = [];
 
 foreach ($specs as $file => $expectedCodes) {
-    $path = $root . '/database/data/' . $file;
+    $importDir = getenv('UNIGO_IMPORT_DIR') ?: ($root . '/database/data');
+    $path = rtrim($importDir, '/') . '/' . $file;
     if (! is_file($path)) {
         throw new RuntimeException('Staged CSV is missing: ' . $file);
     }
