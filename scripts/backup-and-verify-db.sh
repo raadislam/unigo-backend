@@ -154,7 +154,7 @@ fi
 
 TABLE_COUNT=0
 while IFS= read -r TABLE_NAME; do
-  [ -n "$TABLE_NAME ] || continue
+  [ -n "$TABLE_NAME" ] || continue
   if ! [[ "$TABLE_NAME" =~ ^[A-Za-z0-9_]+$ ]]; then
     printf '%s\n' "Unsupported table identifier in production schema." >&2
     exit 1
