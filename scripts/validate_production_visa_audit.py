@@ -93,12 +93,26 @@ def main():
             fail("A published BGD tourism record has no destination ISO2.")
         published_codes.append(iso2)
         sources = row.get("sources") or []
-        if not any(source.get("source_type") == "official" and source.get("is_primary") is True for source in sources):
+        if not any(source.get("source_type") == "official" and bool(source.get("is_primary")) for source in sources):
             missing_primary_sources.append(iso2)
 
     if len(published_codes) != len(set(published_codes)):
         fail("Production has multiple active published BGD tourism requirements for the same destination.")
     if missing_primary_sources:
+        for row in published_bgd:
+            country = row.get("country") or {}
+            iso2 = str(country.get("iso2") or "").upper()
+            if iso2 in missing_primary_sources:
+                details = [
+                    {
+                        "source_type": source.get("source_type"),
+                        "is_primary": source.get("is_primary"),
+                        "source_url": source.get("source_url"),
+                        "source_last_checked_at": source.get("source_last_checked_at")
+                    }
+                    for source in (row.get("sources") or [])
+                ]
+                print("PRIMARY_SOURCE_DIAGNOSTIC " + iso2 + " " + json.dumps(details, ensure_ascii=False))
         fail("Published BGD tourism records missing a primary official source: " + ", ".join(sorted(missing_primary_sources)))
 
     country_by_id = {row.get("id"): row for row in countries}
