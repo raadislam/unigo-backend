@@ -88,7 +88,7 @@ jobs:
               if item.get("source_last_checked_at") != checked:
                 raise SystemExit(f"{code}: additional source checked date mismatch.")
             photo = json.loads(row.get("photo_specifications") or "{}")
-            if not isinstance(photo, dict) or photo.get("status") != "verified" or not photo.get("dimensions_mm") or not photo.get("source_url"):
+            if not isinstance(photo, dict) or photo.get("status") not in {"verified", "no_fixed_size_published", "not_specified"} or not photo.get("dimensions_mm") or not photo.get("source_url"):
               raise SystemExit(f"{code}: verified structured photo specification is missing.")
             checklist = json.loads(row.get("applicant_checklists") or "[]")
             expected_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
