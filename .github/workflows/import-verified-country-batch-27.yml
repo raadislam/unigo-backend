@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - scripts/run-verified-country-import-batch-26.trigger
+      - scripts/run-verified-country-import-batch-27.trigger
   workflow_dispatch:
 
 permissions:
@@ -32,8 +32,8 @@ jobs:
           verified = {"AI", "AW", "BQ", "CW", "SX"}
           pending = set()
           checked = "2026-11-14"
-          simple = list(csv.DictReader(Path("database/data/new_country_visa_batch_26.csv").open(encoding="utf-8-sig", newline="")))
-          audit = list(csv.DictReader(Path("database/data/visa_full_audit_batch_26.csv").open(encoding="utf-8-sig", newline="")))
+          simple = list(csv.DictReader(Path("database/data/new_country_visa_batch_27.csv").open(encoding="utf-8-sig", newline="")))
+          audit = list(csv.DictReader(Path("database/data/visa_full_audit_batch_27.csv").open(encoding="utf-8-sig", newline="")))
           if len(simple) != 5 or len(audit) != 5:
             raise SystemExit("Batch 27 must contain exactly five verified seed and full-audit rows.")
           simple_by = {r["destination_iso2"]: r for r in simple}
@@ -100,7 +100,7 @@ jobs:
             if code in pending and seed.get("cross_check_source_url") != row.get("cross_check_source_url"):
               raise SystemExit(f"{code}: pending seed must preserve its cross-check source.")
           verified_rows = [audit_by[c] for c in sorted(verified)]
-          with Path("verified_full_audit_batch_26.csv").open("w", encoding="utf-8", newline="") as handle:
+          with Path("verified_full_audit_batch_27.csv").open("w", encoding="utf-8", newline="") as handle:
             writer = csv.DictWriter(handle, fieldnames=list(audit[0].keys()), lineterminator="\n")
             writer.writeheader()
             writer.writerows(verified_rows)
@@ -109,12 +109,12 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: verified-country-batch-26
+          name: verified-country-batch-27
           path: |
-            database/data/new_country_visa_batch_26.csv
-            database/data/visa_full_audit_batch_26.csv
-            database/data/pending_country_research_batch_26.csv
-            verified_full_audit_batch_26.csv
+            database/data/new_country_visa_batch_27.csv
+            database/data/visa_full_audit_batch_27.csv
+            database/data/pending_country_research_batch_27.csv
+            verified_full_audit_batch_27.csv
 
   import-production:
     needs: validate
@@ -124,7 +124,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: verified-country-batch-26
+          name: verified-country-batch-27
       - name: Prepare SSH
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -155,7 +155,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'mkdir -p /var/www/unigo/backend/shared/imports'
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" database/data/new_country_visa_batch_26.csv verified_full_audit_batch_26.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" database/data/new_country_visa_batch_27.csv verified_full_audit_batch_27.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
       - name: Export fresh pre-import production audit
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -177,7 +177,7 @@ jobs:
           import csv
           import json
           from pathlib import Path
-          expected = {"BY","PY","TW"}
+          expected = {"AI","AW","BQ","CW","SX"}
           pending = set()
           ledger = list(csv.DictReader(Path("database/data/country_discovery_ledger.csv").open(encoding="utf-8-sig", newline="")))
           audit = json.loads(Path("batch27_pre_import_audit.json").read_text())
@@ -236,13 +236,13 @@ jobs:
           mkdir -p "$BACKUP_DIR"
           test -f "$SHARED_DIR/.env"
           test -f "$APP_DIR/vendor/autoload.php"
-          test -s "$IMPORT_DIR/new_country_visa_batch_26.csv"
-          test -s "$IMPORT_DIR/verified_full_audit_batch_26.csv"
+          test -s "$IMPORT_DIR/new_country_visa_batch_27.csv"
+          test -s "$IMPORT_DIR/verified_full_audit_batch_27.csv"
           test -s "$IMPORT_DIR/batch27_pre_import_audit.json"
           CNF="$(mktemp)"
           DB_FILE="$(mktemp)"
           STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
-          BACKUP_FILE="$BACKUP_DIR/unigo-pre-verified-batch-26-$STAMP.sql.gz"
+          BACKUP_FILE="$BACKUP_DIR/unigo-pre-verified-batch-27-$STAMP.sql.gz"
           trap 'rm -f "$CNF" "$DB_FILE"' EXIT
           cd "$APP_DIR"
           BACKUP_CNF="$CNF" DB_NAME_FILE="$DB_FILE" UNIGO_APP_DIR="$APP_DIR" php <<'PHP'
@@ -317,9 +317,9 @@ jobs:
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
           cd "$APP_DIR"
           mkdir -p storage/app/imports
-          cp "$IMPORT_DIR/new_country_visa_batch_26.csv" storage/app/imports/unigo_visa_requirements_research_template.csv
+          cp "$IMPORT_DIR/new_country_visa_batch_27.csv" storage/app/imports/unigo_visa_requirements_research_template.csv
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > "$IMPORT_DIR/batch27_seed_result.txt"
-          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_26.csv" --base-url=https://api.unigo-bd.com --dry-run > "$IMPORT_DIR/batch27_dry_run.json"
+          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_27.csv" --base-url=https://api.unigo-bd.com --dry-run > "$IMPORT_DIR/batch27_dry_run.json"
           test -s "$IMPORT_DIR/batch27_seed_result.txt"
           test -s "$IMPORT_DIR/batch27_dry_run.json"
           REMOTE
@@ -347,7 +347,7 @@ jobs:
           APP_DIR="/var/www/unigo/backend/current"
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
           cd "$APP_DIR"
-          EXPECTED_CSV_SHA="$(sha256sum "$IMPORT_DIR/verified_full_audit_batch_26.csv" | awk '{print $1}')"
+          EXPECTED_CSV_SHA="$(sha256sum "$IMPORT_DIR/verified_full_audit_batch_27.csv" | awk '{print $1}')"
           STORED_CSV_SHA=""
           if [ -s "$IMPORT_DIR/batch27_import_result.json" ]; then
             STORED_CSV_SHA="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); echo is_array($payload) ? ($payload["csv_sha256"] ?? "") : "";' "$IMPORT_DIR/batch27_import_result.json")"
@@ -355,7 +355,7 @@ jobs:
           if [ "$STORED_CSV_SHA" = "$EXPECTED_CSV_SHA" ]; then
             echo "Existing verified batch 27 import result matches the exact CSV hash; no production write is required."
           else
-            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_26.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch27_import_result.json"
+            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_27.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch27_import_result.json"
           fi
           php artisan visa:requirements-audit > "$IMPORT_DIR/batch27_post_import_audit.json"
           test -s "$IMPORT_DIR/batch27_import_result.json"
@@ -371,8 +371,8 @@ jobs:
           from pathlib import Path
           from urllib.request import Request, urlopen
 
-          rows = {r["destination_iso2"]: r for r in csv.DictReader(Path("verified_full_audit_batch_26.csv").open(encoding="utf-8-sig", newline=""))}
-          all_rows = {r["destination_iso2"]: r for r in csv.DictReader(Path("database/data/visa_full_audit_batch_26.csv").open(encoding="utf-8-sig", newline=""))}
+          rows = {r["destination_iso2"]: r for r in csv.DictReader(Path("verified_full_audit_batch_27.csv").open(encoding="utf-8-sig", newline=""))}
+          all_rows = {r["destination_iso2"]: r for r in csv.DictReader(Path("database/data/visa_full_audit_batch_27.csv").open(encoding="utf-8-sig", newline=""))}
           pre = json.loads(Path("batch27_pre_import_audit.json").read_text())
           post = json.loads(Path("batch27_post_import_audit.json").read_text())
           imported = json.loads(Path("batch27_import_result.json").read_text())
@@ -486,7 +486,7 @@ jobs:
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: verified-country-batch-26-production-audit
+          name: verified-country-batch-27-production-audit
           path: |
             batch27_pre_import_summary.json
             batch27_pre_import_audit.json
@@ -497,6 +497,6 @@ jobs:
             batch27_backup_path.txt
             batch27_backup_checksum_path.txt
             batch27_backup_sha256.txt
-            verified_full_audit_batch_26.csv
-            database/data/new_country_visa_batch_26.csv
-            database/data/pending_country_research_batch_26.csv
+            verified_full_audit_batch_27.csv
+            database/data/new_country_visa_batch_27.csv
+            database/data/pending_country_research_batch_27.csv
