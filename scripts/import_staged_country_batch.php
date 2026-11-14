@@ -1,13 +1,13 @@
 <?php
 
-use App\Models\\Country;
-use App\Models\\VisaRequirement;
+use App\Models\Country;
+use App\Models\VisaRequirement;
 
 $root = getenv('UNIGO_APP_DIR') ?: dirname(__DIR__);
 chdir($root);
 require $root . '/vendor/autoload.php';
 $app = require $root . '/bootstrap/app.php';
-$app->make(Illuminate\Contracts\\Console\\Kernel::class)->bootstrap();
+$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
 
 $mode = $argv[1] ?? '';
 if (! in_array($mode, ['preflight', 'verify'], true)) {
