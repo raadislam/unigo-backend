@@ -340,7 +340,16 @@ jobs:
           APP_DIR="/var/www/unigo/backend/current"
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
           cd "$APP_DIR"
-          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_26.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch26_import_result.json"
+          EXPECTED_CSV_SHA="$(sha256sum "$IMPORT_DIR/verified_full_audit_batch_26.csv" | awk '{print $1}')"
+          STORED_CSV_SHA=""
+          if [ -s "$IMPORT_DIR/batch26_import_result.json" ]; then
+            STORED_CSV_SHA="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); echo is_array($payload) ? ($payload["csv_sha256"] ?? "") : "";' "$IMPORT_DIR/batch26_import_result.json")"
+          fi
+          if [ "$STORED_CSV_SHA" = "$EXPECTED_CSV_SHA" ]; then
+            echo "Existing verified batch 26 import result matches the exact CSV hash; no production write is required."
+          else
+            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_26.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch26_import_result.json"
+          fi
           php artisan visa:requirements-audit > "$IMPORT_DIR/batch26_post_import_audit.json"
           test -s "$IMPORT_DIR/batch26_import_result.json"
           test -s "$IMPORT_DIR/batch26_post_import_audit.json"
