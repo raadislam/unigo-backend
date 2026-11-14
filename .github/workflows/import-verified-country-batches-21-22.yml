@@ -85,6 +85,17 @@ jobs:
           codes = [r["destination_iso2"] for r in audit_all]
           if len(codes) != 51 or len(set(codes)) != 51:
             raise SystemExit("Combined import must contain 51 unique country/nationality/purpose keys.")
+          for row in audit_all:
+            limits = {"application_fee": 120, "processing_time": 120, "official_immigration_source_name": 180, "cross_check_source_name": 180, "review_notes": 5000, "visa_requirement_type": 255, "entry_count": 40}
+            for field, limit in limits.items():
+              if len(str(row.get(field, ""))) > limit:
+                raise SystemExit(f"{row.get('destination_iso2')}: {field} exceeds importer limit {limit}.")
+            for document in filter(None, (item.strip() for item in str(row.get("required_documents", "")).split("|"))):
+              if len(document) > 500:
+                raise SystemExit(f"{row.get('destination_iso2')}: required document item exceeds 500 characters.")
+            for source in json.loads(row.get("additional_sources") or "[]"):
+              if len(str(source.get("source_name", ""))) > 180 or len(str(source.get("source_url", ""))) > 2000 or len(str(source.get("verification_notes", ""))) > 5000:
+                raise SystemExit(f"{row.get('destination_iso2')}: additional source field exceeds importer limits.")
           with Path("verified_new_country_backlog_batches_21_23.csv").open("w", encoding="utf-8", newline="") as f:
             simple_fields = list(dict.fromkeys(key for row in simple_all for key in row))
             writer = csv.DictWriter(f, fieldnames=simple_fields, extrasaction="raise")
