@@ -135,7 +135,8 @@ jobs:
           DB_NAME="$(cat "$DB_FILE")"
           mysqldump --defaults-extra-file="$CNF" --no-tablespaces --single-transaction --quick --routines --triggers --events --hex-blob --default-character-set=utf8mb4 "$DB_NAME" | gzip -1 > "$BACKUP_FILE"
           test -s "$BACKUP_FILE"; gzip -t "$BACKUP_FILE"; sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
-          printf '%s\\n' "$BACKUP_FILE" > "$IMPORT_DIR/batches_19_20_backup_path.txt"
+          printf '%s
+' "$BACKUP_FILE" > "$IMPORT_DIR/batches_19_20_backup_path.txt"
           echo "PRODUCTION_BACKUP_CREATED_AND_GZIP_VERIFIED $BACKUP_FILE"
           REMOTE
       - name: Restore-test backup in isolated runner MySQL
