@@ -1,1 +1,1 @@
-Batch 28 verified tourism import: AX, FO, GL, MC. Pending research only: SM, GI, VA.
+Batch 28 verified tourism import: AX, MC. Pending research only: FO, GL, SM, GI, VA.
