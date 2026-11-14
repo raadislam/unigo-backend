@@ -176,6 +176,32 @@ def main():
     if len(all_bgd_codes) != len(set(all_bgd_codes)):
         fail("Production contains duplicate BGD tourism requirement keys, including unpublished records.")
 
+    photo_status_counts = Counter()
+    photo_missing_codes = []
+    photo_not_published_codes = []
+    photo_unclassified_codes = []
+    photo_verified_codes = []
+    for row in published_bgd:
+        country = row.get("country") or {}
+        iso2 = str(country.get("iso2") or "").upper()
+        photo = row.get("photo_specifications")
+        if not isinstance(photo, dict) or not photo:
+            photo_status_counts["missing_structured_spec"] += 1
+            photo_missing_codes.append(iso2)
+            continue
+        photo_status = str(photo.get("status") or "").strip().lower()
+        if photo_status == "verified":
+            photo_status_counts["structured_verified"] += 1
+            photo_verified_codes.append(iso2)
+        elif photo_status in {"not_published", "no_fixed_size_published", "not_specified"}:
+            photo_status_counts[photo_status] += 1
+            photo_not_published_codes.append(iso2)
+        elif photo_status in {"biometric_capture", "captured_at_vac", "captured_at_application_centre"}:
+            photo_status_counts["biometric_capture"] += 1
+        else:
+            photo_status_counts["unclassified_status"] += 1
+            photo_unclassified_codes.append(iso2)
+
     status_counts = Counter(str(row.get("verification_status") or "missing") for row in records)
     summary = [
         "# UniGo read-only production visa audit",
@@ -194,6 +220,11 @@ def main():
         f"- BGD tourism actively published and verified: **{len(published_bgd)}**",
         f"- BGD tourism pending, unverified, expired or unpublished: **{len(pending_bgd)}**",
         f"- Published BGD tourism records missing primary official sources: **{len(missing_primary_sources)}**",
+        f"- Published BGD tourism photo status counts: **{dict(photo_status_counts)}**",
+        f"- Structured verified photo specifications: **{len(photo_verified_codes)} / {len(published_bgd)}**",
+        f"- Missing structured photo specifications: **{len(photo_missing_codes)}**" + (f" ({', '.join(sorted(photo_missing_codes))})" if photo_missing_codes else ""),
+        f"- No published fixed-size rule / not specified: **{len(photo_not_published_codes)}**" + (f" ({', '.join(sorted(photo_not_published_codes))})" if photo_not_published_codes else ""),
+        f"- Unclassified photo statuses: **{len(photo_unclassified_codes)}**" + (f" ({', '.join(sorted(photo_unclassified_codes))})" if photo_unclassified_codes else ""),
         f"- Ledger/public directory parity: **{len(ledger_public_codes)} / {len(public_codes)} codes matched**",
         f"- Ledger verified/published parity: **{len(ledger_verified_codes)} / {len(published_codes)} codes matched**",
         f"- Ledger pending DB records: **{len(ledger_pending_db_codes)} / {len(pending_codes)} codes matched**",
