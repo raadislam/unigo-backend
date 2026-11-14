@@ -1,0 +1,7 @@
+name: Import verified tourism visa batch 29
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
