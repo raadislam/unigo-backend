@@ -1,0 +1,696 @@
+name: Import verified tourism visa batch 29
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/run-verified-country-import-batch-30.trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-backend-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate batch 29 schema, evidence and strict allowlist
+        run: |
+          python3 - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+          from urllib.parse import urlparse
+
+          expected = {"CC", "CX", "MS", "PR", "TC", "VI"}
+          verified = {"CC", "CX", "MS", "PR", "TC", "VI"}
+          pending = set()
+          checked = "2026-11-15"
+          simple = list(csv.DictReader(Path("database/data/new_country_visa_batch_29.csv").open(encoding="utf-8-sig", newline="")))
+          audit = list(csv.DictReader(Path("database/data/visa_full_audit_batch_29.csv").open(encoding="utf-8-sig", newline="")))
+          if len(simple) != 6 or len(audit) != 6:
+            raise SystemExit("Batch 30 must contain exactly six verified seed and full-audit rows.")
+          simple_by = {r["destination_iso2"]: r for r in simple}
+          audit_by = {r["destination_iso2"]: r for r in audit}
+          pending_rows = list(csv.DictReader(Path("database/data/pending_country_research_batch_29.csv").open(encoding="utf-8-sig", newline="")))
+          pending_by = {r["destination_iso2"]: r for r in pending_rows}
+          if set(pending_by) != {"VG"} or len(pending_by) != 1 or len(pending_by) != len(pending_rows):
+            raise SystemExit("Batch 30 pending research file must contain VG with no duplicates.")
+          for code, row in pending_by.items():
+            if code in expected or row.get("discovery_status") != "research_in_progress_batch_30" or not row.get("exact_blocker", "").strip() or not row.get("next_research_action", "").strip():
+              raise SystemExit(f"{code}: pending country blocker or status is missing, or it leaked into the verified allowlist.")
+          if set(simple_by) != expected or set(audit_by) != expected:
+            raise SystemExit("Batch 30 country set does not match the CC, CX, MS, PR, TC and VI verified allowlist.")
+          if len(simple_by) != len(simple) or len(audit_by) != len(audit):
+            raise SystemExit("Duplicate country ISO2 in batch 29.")
+          for code, row in audit_by.items():
+            if row.get("passport_iso3") != "BGD" or row.get("passport_nationality") != "Bangladesh" or row.get("travel_purpose") != "tourism":
+              raise SystemExit(f"{code}: wrong nationality or purpose.")
+            if row.get("full_audit") != "true" or row.get("official_source_last_checked") != checked or row.get("cross_check_source_last_checked") != checked:
+              raise SystemExit(f"{code}: full-audit or source checked-date requirement failed.")
+            if row.get("effective_from") or row.get("effective_until"):
+              raise SystemExit(f"{code}: effective dates must remain blank until the schema's date representation is reconciled.")
+            for field in ("official_source_url", "cross_check_source_url"):
+              parsed = urlparse(row.get(field, ""))
+              if parsed.scheme != "https" or not parsed.netloc:
+                raise SystemExit(f"{code}: invalid {field}.")
+            for field in ("visa_required", "visa_free_eligibility", "visa_on_arrival_available", "evisa_available"):
+              if row.get(field) not in ("true", "false"):
+                raise SystemExit(f"{code}: invalid boolean {field}.")
+            required = ["visa_requirement_type","maximum_permitted_stay","entry_count","passport_validity_rule","blank_passport_pages_rule","return_ticket_rule","proof_of_funds_rule","accommodation_rule","travel_insurance_rule","yellow_fever_or_health_rule","transit_rule","application_channel","application_fee","processing_time","required_documents","official_immigration_source_name","cross_check_source_name","review_notes"]
+            for field in required:
+              if not row.get(field, "").strip():
+                raise SystemExit(f"{code}: missing {field}.")
+            limits = {"visa_requirement_type":255,"maximum_permitted_stay":60000,"entry_count":40,"passport_validity_rule":10000,"blank_passport_pages_rule":10000,"return_ticket_rule":10000,"proof_of_funds_rule":10000,"accommodation_rule":10000,"travel_insurance_rule":10000,"yellow_fever_or_health_rule":10000,"transit_rule":10000,"application_channel":60000,"application_fee":120,"processing_time":120}
+            for field, limit in limits.items():
+              if len(row[field]) > limit:
+                raise SystemExit(f"{code}: {field} exceeds {limit} characters.")
+            docs = [x.strip() for x in row["required_documents"].split("|") if x.strip()]
+            if not docs or any(len(x) > 500 for x in docs):
+              raise SystemExit(f"{code}: invalid required_documents.")
+            extra = json.loads(row.get("additional_sources") or "[]")
+            if not isinstance(extra, list) or len(extra) < 2:
+              raise SystemExit(f"{code}: at least two additional sources are required.")
+            for item in extra:
+              if item.get("source_type") not in {"official", "provider"} or not item.get("source_name") or not item.get("verification_notes"):
+                raise SystemExit(f"{code}: additional sources must be named official or authorized-provider records with verification notes.")
+              parsed = urlparse(item.get("source_url", ""))
+              if parsed.scheme != "https" or not parsed.netloc:
+                raise SystemExit(f"{code}: invalid additional source URL.")
+              if item.get("source_type") == "provider" and "vfsglobal.com" not in parsed.netloc.lower():
+                raise SystemExit(f"{code}: provider source is not an authorized VFS URL.")
+              if item.get("source_last_checked_at") != checked:
+                raise SystemExit(f"{code}: additional source checked date mismatch.")
+            photo = json.loads(row.get("photo_specifications") or "{}")
+            if not isinstance(photo, dict) or photo.get("status") != "verified" or not photo.get("dimensions_mm") or not photo.get("source_url"):
+              raise SystemExit(f"{code}: verified structured photo specification is missing.")
+            checklist = json.loads(row.get("applicant_checklists") or "[]")
+            expected_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
+            if not isinstance(checklist, list) or {item.get("applicant_type") for item in checklist if isinstance(item, dict)} != expected_types:
+              raise SystemExit(f"{code}: applicant checklist coverage is incomplete.")
+            for item in checklist:
+              if not isinstance(item, dict) or not isinstance(item.get("documents"), list) or not item["documents"]:
+                raise SystemExit(f"{code}: applicant checklist has no documents.")
+              for document in item["documents"]:
+                if not isinstance(document, dict) or not document.get("name") or document.get("status") not in {"required", "conditional", "if_applicable"}:
+                  raise SystemExit(f"{code}: applicant checklist document is invalid.")
+                if len(document["name"]) > 200:
+                  raise SystemExit(f"{code}: applicant checklist document name exceeds the 200-character API limit.")
+            if code in verified:
+              if row.get("verification_status") != "verified" or row.get("publish_status") != "published":
+                raise SystemExit(f"{code}: not explicitly verified and approved for publication.")
+            else:
+              if row.get("verification_status") != "pending_review" or row.get("publish_status") != "draft":
+                raise SystemExit(f"{code}: pending row must remain pending_review and draft.")
+            seed = simple_by[code]
+            for field in ("passport_iso3","passport_nationality","travel_purpose","visa_requirement_type","visa_required","visa_free_eligibility","visa_on_arrival_available","evisa_available","application_fee","processing_time","official_source_url","verification_status"):
+              if seed.get(field) != row.get(field):
+                raise SystemExit(f"{code}: seed/full-audit mismatch in {field}.")
+            if code in verified and (seed.get("cross_check_source_url") or seed.get("cross_check_source_name")):
+              raise SystemExit(f"{code}: seed cross-check must be blank so the importer can register it as an official source.")
+            if code in pending and seed.get("cross_check_source_url") != row.get("cross_check_source_url"):
+              raise SystemExit(f"{code}: pending seed must preserve its cross-check source.")
+          verified_rows = [audit_by[c] for c in sorted(verified)]
+          with Path("verified_full_audit_batch_29.csv").open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(audit[0].keys()), lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(verified_rows)
+          print("BATCH30_VALIDATION_PASSED seed=6 verified_allowlist=6 pending_research_only=1")
+          print("VERIFIED_ALLOWLIST " + ",".join(sorted(verified)))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-country-batch-30
+          path: |
+            database/data/new_country_visa_batch_29.csv
+            database/data/visa_full_audit_batch_29.csv
+            database/data/pending_country_research_batch_29.csv
+            verified_full_audit_batch_29.csv
+
+  import-production:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-country-batch-30
+      - name: Prepare SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_SSH_KEY"
+          test -n "$VPS_HOST"
+          test -n "$VPS_PORT"
+          test -n "$VPS_USER"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_import
+          chmod 600 ~/.ssh/unigo_import
+          for attempt in $(seq 1 5); do
+            if ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
+              break
+            fi
+            sleep 3
+          done
+          test -s ~/.ssh/known_hosts
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'command -v php && command -v mysql && command -v mysqldump && command -v gzip'
+      - name: Upload exact batch 29 files
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'mkdir -p /var/www/unigo/backend/shared/imports'
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" database/data/new_country_visa_batch_29.csv verified_full_audit_batch_29.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
+      - name: Export fresh pre-import production audit
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          IMPORT_DIR="/var/www/unigo/backend/shared/imports"
+          cd "$APP_DIR"
+          php artisan visa:requirements-audit > "$IMPORT_DIR/batch30_pre_import_audit.json"
+          test -s "$IMPORT_DIR/batch30_pre_import_audit.json"
+          REMOTE
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_pre_import_audit.json" ./batch30_pre_import_audit.json
+      - name: Confirm production schema, country rows and stable keys
+        run: |
+          python3 - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+          expected = {"CC","CX","MS","PR","TC","VI"}
+          pending = set()
+          ledger = list(csv.DictReader(Path("database/data/country_discovery_ledger.csv").open(encoding="utf-8-sig", newline="")))
+          audit = json.loads(Path("batch30_pre_import_audit.json").read_text())
+          if len(ledger) != audit.get("country_table_count"):
+            raise SystemExit("Country master count does not match the discovery ledger.")
+          countries = audit.get("country_table", [])
+          by_iso = {c.get("iso2"): c for c in countries}
+          if len(by_iso) != len(countries):
+            raise SystemExit("Production country table contains duplicate ISO2 rows.")
+          if expected - set(by_iso):
+            raise SystemExit(f"Country master rows missing before import: {sorted(expected - set(by_iso))}")
+          records_by_code = {}
+          for record in audit.get("records", []):
+            country = record.get("country") or {}
+            code = country.get("iso2")
+            if code in expected and record.get("passport_nationality_iso3") == "BGD" and record.get("travel_purpose") == "tourism":
+              records_by_code.setdefault(code, []).append(record)
+          duplicates = sorted(code for code, items in records_by_code.items() if len(items) > 1)
+          if duplicates:
+            raise SystemExit(f"Duplicate BGD tourism keys already exist: {duplicates}")
+          for code in pending:
+            if code in records_by_code:
+              record = records_by_code[code][0]
+              if record.get("is_published") is True or record.get("verification_status") == "verified":
+                raise SystemExit(f"{code}: existing published/verified record cannot be downgraded by this pending research batch.")
+              if record.get("verification_status") != "pending_review":
+                raise SystemExit(f"{code}: existing pending record has a non-pending status; manual reconciliation required.")
+          pre_public = {c.get("iso2") for c in audit.get("public_country_directory", []) if c.get("iso2")}
+          existing_published = sorted(code for code, items in records_by_code.items() if items[0].get("is_published") is True and items[0].get("verification_status") == "verified")
+          summary = {
+            "total_before": audit.get("total"),
+            "published_before": audit.get("published_count"),
+            "country_table_count_before": audit.get("country_table_count"),
+            "public_directory_count_before": audit.get("public_country_directory_count"),
+            "existing_requirement_codes": sorted(records_by_code),
+            "existing_published_codes": existing_published,
+            "public_directory_codes_before": sorted(pre_public),
+            "expected_codes": sorted(expected)
+          }
+          Path("batch30_pre_import_summary.json").write_text(json.dumps(summary, indent=2))
+          print(json.dumps(summary, indent=2))
+          print("PRE_IMPORT_DATABASE_CHECK_PASSED")
+          PY
+      - name: Confirm required production migrations and schema columns
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          IMPORT_DIR="/var/www/unigo/backend/shared/imports"
+          cd "$APP_DIR"
+          php artisan migrate:status --no-interaction > "$IMPORT_DIR/batch30_migration_status.txt"
+          php <<'PHP'
+          <?php
+          $root = getcwd();
+          require $root . '/vendor/autoload.php';
+          $app = require $root . '/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $required = [
+              '2026_11_13_180112_increase_requirement_type_length_in_visa_requirements_table',
+              '2026_11_13_180359_change_application_channel_to_text_in_visa_requirements_table',
+              '2026_11_13_180603_change_maximum_permitted_stay_to_text_in_visa_requirements_table',
+              '2026_11_14_160000_add_photo_and_applicant_checklists_to_visa_requirements',
+              '2026_11_14_170000_change_application_fee_to_text_in_visa_requirements',
+          ];
+          $applied = \Illuminate\Support\Facades\DB::table('migrations')->pluck('migration')->all();
+          $missing = array_values(array_diff($required, $applied));
+          $columns = ['requirement_type', 'maximum_permitted_stay', 'application_channel', 'application_fee', 'photo_specifications', 'applicant_checklists'];
+          $missingColumns = array_values(array_filter($columns, fn ($column) => !\Illuminate\Support\Facades\Schema::hasColumn('visa_requirements', $column)));
+          if ($missing || $missingColumns) {
+              fwrite(STDERR, json_encode(['missing_migrations' => $missing, 'missing_columns' => $missingColumns], JSON_PRETTY_PRINT) . PHP_EOL);
+              exit(1);
+          }
+          echo "BATCH30_SCHEMA_AND_MIGRATION_PREFLIGHT_PASSED" . PHP_EOL;
+          PHP
+          REMOTE
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_migration_status.txt" ./batch30_migration_status.txt
+      - name: Create fresh production database backup
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          SHARED_DIR="/var/www/unigo/backend/shared"
+          IMPORT_DIR="$SHARED_DIR/imports"
+          BACKUP_DIR="$SHARED_DIR/backups"
+          mkdir -p "$BACKUP_DIR"
+          test -f "$SHARED_DIR/.env"
+          test -f "$APP_DIR/vendor/autoload.php"
+          test -s "$IMPORT_DIR/new_country_visa_batch_29.csv"
+          test -s "$IMPORT_DIR/verified_full_audit_batch_29.csv"
+          test -s "$IMPORT_DIR/batch30_pre_import_audit.json"
+          CNF="$(mktemp)"
+          DB_FILE="$(mktemp)"
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+          BACKUP_FILE="$BACKUP_DIR/unigo-pre-verified-batch-30-$STAMP.sql.gz"
+          trap 'rm -f "$CNF" "$DB_FILE"' EXIT
+          cd "$APP_DIR"
+          BACKUP_CNF="$CNF" DB_NAME_FILE="$DB_FILE" UNIGO_APP_DIR="$APP_DIR" php <<'PHP'
+          <?php
+          $root = getenv('UNIGO_APP_DIR');
+          chdir($root);
+          require $root . '/vendor/autoload.php';
+          $app = require $root . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $connection = config('database.connections.' . config('database.default'));
+          if (!is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') { fwrite(STDERR, "Expected MySQL production connection.\n"); exit(1); }
+          $database = (string) ($connection['database'] ?? '');
+          if ($database === '') { fwrite(STDERR, "Production database name unavailable.\n"); exit(1); }
+          $escape = static fn ($value) => '"' . str_replace(["\\", '"', "\n", "\r"], ["\\\\", '\\"', "\n", "\r"], (string) $value) . '"';
+          $options = ['host' => $connection['host'] ?? '127.0.0.1', 'port' => $connection['port'] ?? 3306, 'user' => $connection['username'] ?? '', 'password' => $connection['password'] ?? '', 'default-character-set' => $connection['charset'] ?? 'utf8mb4'];
+          if (!empty($connection['unix_socket'])) $options['socket'] = $connection['unix_socket'];
+          $content = "[client]\n";
+          foreach ($options as $key => $value) $content .= $key . '=' . $escape($value) . "\n";
+          if (file_put_contents(getenv('BACKUP_CNF'), $content, LOCK_EX) === false || file_put_contents(getenv('DB_NAME_FILE'), $database, LOCK_EX) === false) { fwrite(STDERR, "Unable to prepare protected backup configuration.\n"); exit(1); }
+          chmod(getenv('BACKUP_CNF'), 0600);
+          chmod(getenv('DB_NAME_FILE'), 0600);
+          PHP
+          DB_NAME="$(cat "$DB_FILE")"
+          mysqldump --defaults-extra-file="$CNF" --no-tablespaces --single-transaction --quick --routines --triggers --events --hex-blob --default-character-set=utf8mb4 "$DB_NAME" | gzip -1 > "$BACKUP_FILE"
+          test -s "$BACKUP_FILE"
+          gzip -t "$BACKUP_FILE"
+          sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
+          printf '%s\n' "$BACKUP_FILE" > "$IMPORT_DIR/batch30_backup_path.txt"
+          printf '%s\n' "$BACKUP_FILE.sha256" > "$IMPORT_DIR/batch30_backup_checksum_path.txt"
+          printf '%s\n' "$(sha256sum "$BACKUP_FILE" | awk '{print $1}')" > "$IMPORT_DIR/batch30_backup_sha256.txt"
+          echo "PRODUCTION_BACKUP_CREATED_AND_GZIP_VERIFIED $BACKUP_FILE"
+          REMOTE
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_backup_path.txt" ./batch30_backup_path.txt
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_backup_checksum_path.txt" ./batch30_backup_checksum_path.txt
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_backup_sha256.txt" ./batch30_backup_sha256.txt
+      - name: Restore-test backup in isolated MySQL 8
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          BACKUP_PATH="$(ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cat /var/www/unigo/backend/shared/imports/batch30_backup_path.txt')"
+          CHECKSUM_PATH="$(ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cat /var/www/unigo/backend/shared/imports/batch30_backup_checksum_path.txt')"
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" ./unigo-production-backup.sql.gz
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$CHECKSUM_PATH" ./unigo-production-backup.sql.gz.sha256
+          EXPECTED_SHA="$(awk '{print $1}' ./unigo-production-backup.sql.gz.sha256)"
+          ACTUAL_SHA="$(sha256sum ./unigo-production-backup.sql.gz | awk '{print $1}')"
+          test -n "$EXPECTED_SHA"
+          test "$EXPECTED_SHA" = "$ACTUAL_SHA"
+          RESTORE_PASS="$(openssl rand -hex 24)"
+          docker run --name unigo-mysql-batch30-restore -e MYSQL_ROOT_PASSWORD="$RESTORE_PASS" -d mysql:8.0
+          trap 'docker rm -f unigo-mysql-batch30-restore >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 60); do docker exec unigo-mysql-batch30-restore mysql -uroot -p"$RESTORE_PASS" -e "SELECT 1" >/dev/null 2>&1 && break; sleep 2; done
+          docker exec unigo-mysql-batch30-restore mysql -uroot -p"$RESTORE_PASS" -e "CREATE DATABASE unigo_restore_verify"
+          gzip -dc ./unigo-production-backup.sql.gz | docker exec -i unigo-mysql-batch30-restore mysql -uroot -p"$RESTORE_PASS" unigo_restore_verify
+          TABLES="$(docker exec unigo-mysql-batch30-restore mysql -uroot -p"$RESTORE_PASS" --batch --skip-column-names unigo_restore_verify -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema='unigo_restore_verify' AND table_type='BASE TABLE'")"
+          test -n "$TABLES"
+          while IFS= read -r table; do
+            count="$(docker exec unigo-mysql-batch30-restore mysql -uroot -p"$RESTORE_PASS" --batch --skip-column-names unigo_restore_verify -e "SELECT COUNT(*) FROM \`$table\`")"
+            test "$count" -ge 0
+          done <<< "$TABLES"
+          echo "BACKUP_SHA256_AND_RESTORE_TEST_PASSED_IN_ISOLATED_MYSQL"
+      - name: Deploy audited importer readback hotfix after database backup and restore verification
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes app/Console/Commands/VisaRequirementResearchCsvImportCommand.php "$VPS_USER@$VPS_HOST:/tmp/unigo-VisaRequirementResearchCsvImportCommand.php"
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          SHARED_DIR="/var/www/unigo/backend/shared"
+          TARGET="$APP_DIR/app/Console/Commands/VisaRequirementResearchCsvImportCommand.php"
+          SOURCE="/tmp/unigo-VisaRequirementResearchCsvImportCommand.php"
+          BACKUP="$SHARED_DIR/backups/VisaRequirementResearchCsvImportCommand.php.batch30-$(date -u +%Y%m%dT%H%M%SZ).bak"
+          mkdir -p "$SHARED_DIR/backups"
+          test -s "$SOURCE"
+          php -l "$SOURCE" >/dev/null
+          cp "$TARGET" "$BACKUP"
+          cp "$SOURCE" "$TARGET"
+          if ! php -l "$TARGET" >/dev/null; then
+            cp "$BACKUP" "$TARGET"
+            exit 1
+          fi
+          sha256sum "$BACKUP" "$TARGET"
+          rm -f "$SOURCE"
+          echo "BATCH30_IMPORTER_HOTFIX_INSTALLED backup=$BACKUP"
+          REMOTE
+
+      - name: Seed research rows and run dry-run for verified allowlist only
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          IMPORT_DIR="/var/www/unigo/backend/shared/imports"
+          cd "$APP_DIR"
+          mkdir -p storage/app/imports
+          cp "$IMPORT_DIR/new_country_visa_batch_29.csv" storage/app/imports/unigo_visa_requirements_research_template.csv
+          php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > "$IMPORT_DIR/batch30_seed_result.txt"
+          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_29.csv" --base-url=https://api.unigo-bd.com --dry-run > "$IMPORT_DIR/batch30_dry_run.json"
+          test -s "$IMPORT_DIR/batch30_seed_result.txt"
+          test -s "$IMPORT_DIR/batch30_dry_run.json"
+          REMOTE
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_seed_result.txt" ./batch30_seed_result.txt
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_dry_run.json" ./batch30_dry_run.json
+      - name: Inspect dry-run result before production import
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result = json.loads(Path("batch30_dry_run.json").read_text())
+          if result.get("mode") != "dry_run" or result.get("rows") != 6 or result.get("failures"):
+            raise SystemExit(f"Batch 30 dry-run failed or did not match the 6-country allowlist: {result}")
+          print(json.dumps(result, indent=2))
+          print("BATCH30_DRY_RUN_PASSED_5_VERIFIED_ROWS_NO_FAILURES")
+          PY
+      - name: Import, verify and export post-import production audit
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          IMPORT_DIR="/var/www/unigo/backend/shared/imports"
+          cd "$APP_DIR"
+          EXPECTED_CSV_SHA="$(sha256sum "$IMPORT_DIR/verified_full_audit_batch_29.csv" | awk '{print $1}')"
+          STORED_CSV_SHA=""
+          STORED_IMPORT_SUCCESS="0"
+          if [ -s "$IMPORT_DIR/batch30_import_result.json" ]; then
+            STORED_CSV_SHA="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); echo is_array($payload) ? ($payload["csv_sha256"] ?? "") : "";' "$IMPORT_DIR/batch30_import_result.json" 2>/dev/null || true)"
+            STORED_IMPORT_SUCCESS="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); $failures=is_array($payload) ? ($payload["failures"] ?? null) : null; $ok=is_array($payload) && is_array($failures) && count($failures) === 0 && (int)($payload["rows"] ?? 0) === 6 && (int)($payload["republished"] ?? 0) === 6 && (int)($payload["reverified"] ?? 0) === 6 && (int)($payload["read_back"] ?? 0) === 6; echo $ok ? "1" : "0";' "$IMPORT_DIR/batch30_import_result.json" 2>/dev/null || echo 0)"
+          fi
+          if [ "$STORED_CSV_SHA" = "$EXPECTED_CSV_SHA" ] && [ "$STORED_IMPORT_SUCCESS" = "1" ]; then
+            echo "A successful batch 29 import result matches the exact CSV hash and complete database readback; skipping duplicate writes."
+          else
+            if [ -f "$IMPORT_DIR/batch30_import_result.json" ]; then
+              FAILED_RESULT="$IMPORT_DIR/batch30_import_result_failed_$(date -u +%Y%m%dT%H%M%SZ).json"
+              mv "$IMPORT_DIR/batch30_import_result.json" "$FAILED_RESULT"
+              echo "Previous incomplete or failed batch 29 result archived at $FAILED_RESULT."
+            fi
+            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_29.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch30_import_result.json"
+          fi
+          php artisan visa:requirements-audit > "$IMPORT_DIR/batch30_post_import_audit.json"
+          test -s "$IMPORT_DIR/batch30_import_result.json"
+          test -s "$IMPORT_DIR/batch30_post_import_audit.json"
+          REMOTE
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_import_result.json" ./batch30_import_result.json
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_post_import_audit.json" ./batch30_post_import_audit.json
+      - name: Read back photo and applicant checklist JSON from the production database
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          cat > batch30-json-readback.php <<'PHP'
+          <?php
+          $base = getcwd();
+          require $base . '/vendor/autoload.php';
+          $app = require $base . '/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $codes = ['CC', 'CX', 'MS', 'PR', 'TC', 'VI'];
+          $rows = \App\Models\VisaRequirement::query()
+              ->with(['country:id,name,slug,iso2', 'sources'])
+              ->where('passport_nationality_iso3', 'BGD')
+              ->where('travel_purpose', 'tourism')
+              ->whereHas('country', fn ($query) => $query->whereIn('iso2', $codes))
+              ->get();
+          $payload = $rows->map(fn ($row) => [
+              'iso2' => $row->country?->iso2,
+              'slug' => $row->country?->slug,
+              'passport_nationality_iso3' => $row->passport_nationality_iso3,
+              'travel_purpose' => $row->travel_purpose,
+              'verification_status' => $row->verification_status,
+              'is_published' => (bool) $row->is_published,
+              'photo_specifications' => $row->photo_specifications,
+              'applicant_checklists' => $row->applicant_checklists,
+              'sources' => $row->sources->map(fn ($source) => [
+                  'source_type' => $source->source_type,
+                  'source_name' => $source->source_name,
+                  'source_url' => $source->source_url,
+                  'source_last_checked_at' => (string) $source->source_last_checked_at,
+                  'is_primary' => (bool) $source->is_primary,
+              ])->values()->all(),
+          ])->values()->all();
+          echo json_encode(['count' => count($payload), 'records' => $payload], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+          PHP
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes batch30-json-readback.php "$VPS_USER@$VPS_HOST:/tmp/unigo-batch30-json-readback.php"
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php -l /tmp/unigo-batch30-json-readback.php >/dev/null && php /tmp/unigo-batch30-json-readback.php; status=$?; rm -f /tmp/unigo-batch30-json-readback.php; exit $status' > batch30_json_readback.json 2> batch30_json_readback.stderr
+          python3 -m json.tool batch30_json_readback.json > /dev/null
+
+      - name: Verify exact photo and applicant checklist values from production database
+        run: |
+          python3 - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+
+          with Path("verified_full_audit_batch_29.csv").open(encoding="utf-8", newline="") as handle:
+              expected = {row["destination_iso2"]: row for row in csv.DictReader(handle)}
+          payload = json.loads(Path("batch30_json_readback.json").read_text(encoding="utf-8"))
+          actual = {row["iso2"]: row for row in payload.get("records", [])}
+          allowed = {"CC", "CX", "MS", "PR", "TC", "VI"}
+          if payload.get("count") != 6 or set(actual) != allowed:
+              raise SystemExit("Production database JSON readback did not return the exact six-country allowlist.")
+          for code in sorted(allowed):
+              row = expected[code]
+              saved = actual[code]
+              if saved.get("passport_nationality_iso3") != "BGD" or saved.get("travel_purpose") != "tourism":
+                  raise SystemExit(f"{code}: production DB nationality/purpose mismatch.")
+              if saved.get("verification_status") != "verified" or saved.get("is_published") is not True:
+                  raise SystemExit(f"{code}: production DB verification/publication flags mismatch.")
+              if saved.get("photo_specifications") != json.loads(row["photo_specifications"]):
+                  raise SystemExit(f"{code}: production DB photo specifications differ from the approved audit file.")
+              if saved.get("applicant_checklists") != json.loads(row["applicant_checklists"]):
+                  raise SystemExit(f"{code}: production DB applicant checklists differ from the approved audit file.")
+              sources = saved.get("sources", [])
+              actual_urls = {source.get("source_url") for source in sources}
+              required_urls = {row["official_source_url"], row["cross_check_source_url"]}
+              required_urls.update(source["source_url"] for source in json.loads(row["additional_sources"]))
+              if not required_urls.issubset(actual_urls):
+                  raise SystemExit(f"{code}: production DB source records are incomplete.")
+              expected_types = {row["official_source_url"]: "official", row["cross_check_source_url"]: "official"}
+              expected_types.update({source["source_url"]: source["source_type"] for source in json.loads(row["additional_sources"])})
+              actual_types = {source.get("source_url"): source.get("source_type") for source in sources}
+              for url, source_type in expected_types.items():
+                  if actual_types.get(url) != source_type:
+                      raise SystemExit(f"{code}: production DB source type mismatch for {url}.")
+              if not any(source.get("source_url") == row["official_source_url"] and source.get("is_primary") is True for source in sources):
+                  raise SystemExit(f"{code}: production DB primary source flag is missing.")
+          print("BATCH30_DATABASE_JSON_READBACK_PASSED: 6 records, photo specifications, applicant checklists and all official sources match.")
+          PY
+
+      - name: Verify database, source records and public API
+        run: |
+          python3 - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+
+          rows = {r["destination_iso2"]: r for r in csv.DictReader(Path("verified_full_audit_batch_29.csv").open(encoding="utf-8-sig", newline=""))}
+          all_rows = {r["destination_iso2"]: r for r in csv.DictReader(Path("database/data/visa_full_audit_batch_29.csv").open(encoding="utf-8-sig", newline=""))}
+          pre = json.loads(Path("batch30_pre_import_audit.json").read_text())
+          post = json.loads(Path("batch30_post_import_audit.json").read_text())
+          imported = json.loads(Path("batch30_import_result.json").read_text())
+          summary = json.loads(Path("batch30_pre_import_summary.json").read_text())
+          verified_codes = set(rows)
+          pending_codes = set()
+          pending_research_codes = {"VG"}
+          expected_codes = set(all_rows)
+          if pending_research_codes & set(summary.get("public_directory_codes_before", [])):
+            raise SystemExit("A pending research-only country is already present in the public directory.")
+          if imported.get("mode") != "import" or imported.get("rows") != 6 or imported.get("failures") or imported.get("read_back") != 6 or imported.get("reverified") != 6 or imported.get("republished") != 6:
+            raise SystemExit(f"Importer readback did not confirm all six verified rows: {imported}")
+          if post.get("country_table_count") != pre.get("country_table_count"):
+            raise SystemExit("Country master row count changed during a visa-requirement-only import.")
+          expected_total = int(pre.get("total", 0)) + len(expected_codes - set(summary["existing_requirement_codes"]))
+          expected_published = int(pre.get("published_count", 0)) + len(verified_codes - set(summary["existing_published_codes"]))
+          if post.get("total") != expected_total:
+            raise SystemExit(f"Requirement count mismatch: expected {expected_total}, got {post.get('total')}.")
+          if post.get("published_count") != expected_published:
+            raise SystemExit(f"Published count mismatch: expected {expected_published}, got {post.get('published_count')}.")
+          records = post.get("records", [])
+          keys = [(r.get("country",{}).get("iso2"),r.get("passport_nationality_iso3"),r.get("travel_purpose")) for r in records]
+          if len(keys) != len(set(keys)):
+            raise SystemExit("Database contains duplicate country/passport/purpose requirement keys.")
+          by_iso = {}
+          for record in records:
+            country = record.get("country") or {}
+            code = country.get("iso2")
+            if code in expected_codes and record.get("passport_nationality_iso3") == "BGD" and record.get("travel_purpose") == "tourism":
+              by_iso.setdefault(code, []).append(record)
+          if set(by_iso) != expected_codes or any(len(items) != 1 for items in by_iso.values()):
+            raise SystemExit(f"Database readback country set mismatch: {sorted(by_iso)}")
+          for code, row in rows.items():
+            record = by_iso[code][0]
+            if record.get("verification_status") != "verified" or record.get("is_published") is not True:
+              raise SystemExit(f"{code}: database record is not verified and published.")
+            if record.get("application_fee") != row.get("application_fee") or record.get("processing_time") != row.get("processing_time"):
+              raise SystemExit(f"{code}: database fee or processing-time readback mismatch.")
+            urls = {s.get("source_url") for s in record.get("sources",[])}
+            expected_urls = {row.get("official_source_url"),row.get("cross_check_source_url")} | {s.get("source_url") for s in json.loads(row.get("additional_sources") or "[]")}
+            if not expected_urls.issubset(urls):
+              raise SystemExit(f"{code}: one or more official source records are missing from database.")
+            if not any(s.get("source_type") == "official" and s.get("is_primary") is True and s.get("source_url") == row.get("official_source_url") for s in record.get("sources",[])):
+              raise SystemExit(f"{code}: primary official source flag missing.")
+            expected_source_types = {row.get("official_source_url"): "official", row.get("cross_check_source_url"): "official"}
+            expected_source_types.update({source.get("source_url"): source.get("source_type") for source in json.loads(row.get("additional_sources") or "[]")})
+            actual_source_types = {source.get("source_url"): source.get("source_type") for source in record.get("sources", [])}
+            for url, expected_type in expected_source_types.items():
+              if actual_source_types.get(url) != expected_type:
+                raise SystemExit(f"{code}: database source type mismatch for {url}.")
+          for code in pending_codes:
+            record = by_iso[code][0]
+            if record.get("verification_status") != "pending_review" or record.get("is_published") is True:
+              raise SystemExit(f"{code}: pending record was accidentally verified or published.")
+            urls = {s.get("source_url") for s in record.get("sources",[])}
+            if all_rows[code].get("official_source_url") not in urls:
+              raise SystemExit(f"{code}: pending primary source record missing.")
+          public_before = set(summary["public_directory_codes_before"])
+          public_after = {c.get("iso2") for c in post.get("public_country_directory",[]) if c.get("iso2")}
+          expected_public = public_before | verified_codes
+          if public_after != expected_public or post.get("public_country_directory_count") != len(expected_public):
+            raise SystemExit("Post-import public directory set/count does not match verified allowlist.")
+
+          base = "https://api.unigo-bd.com/api"
+          def get(path):
+            request = Request(base + path, headers={"Accept":"application/json","User-Agent":"UniGo-Verified-Batch-30/1.0"})
+            with urlopen(request, timeout=45) as response:
+              if response.status != 200:
+                raise SystemExit(f"Public API HTTP {response.status}: {path}")
+              return json.loads(response.read().decode("utf-8"))
+
+          directory = get("/countries")
+          directory_rows = directory.get("data")
+          if directory.get("success") is not True or not isinstance(directory_rows, list):
+            raise SystemExit("Public country directory API response is invalid.")
+          directory_by_slug = {c.get("slug"): c for c in directory_rows}
+          if len(directory_by_slug) != len(directory_rows) or len(directory_rows) != len(expected_public):
+            raise SystemExit("Public directory API count or slug uniqueness mismatch.")
+          requirement_payload = get("/visa-requirements?passport=BGD&purpose=tourism")
+          requirements = requirement_payload.get("data")
+          if requirement_payload.get("success") is not True or not isinstance(requirements, list):
+            raise SystemExit("Public BGD tourism requirements API response is invalid.")
+          requirement_by_slug = {r.get("country",{}).get("slug"): r for r in requirements if (r.get("country") or {}).get("slug")}
+          if len(requirement_by_slug) != len(requirements) or set(requirement_by_slug) != set(directory_by_slug):
+            raise SystemExit("Public requirements and country directory slug sets do not match.")
+          country_by_iso = {c.get("iso2"): c for c in post.get("country_table",[])}
+          for code, row in rows.items():
+            country = country_by_iso.get(code)
+            if not country or not country.get("slug"):
+              raise SystemExit(f"{code}: country slug missing in database readback.")
+            slug = country["slug"]
+            record = requirement_by_slug.get(slug)
+            if not record or record.get("verification_status") != "verified" or record.get("is_published") is not True:
+              raise SystemExit(f"{code}: public listing does not expose verified published record.")
+            if record.get("passport_nationality_iso3") != "BGD" or record.get("travel_purpose") != "tourism":
+              raise SystemExit(f"{code}: public listing nationality/purpose mismatch.")
+            if record.get("application_fee") != row.get("application_fee") or record.get("processing_time") != row.get("processing_time"):
+              raise SystemExit(f"{code}: public listing fee/processing mismatch.")
+            if record.get("photo_specifications") != json.loads(row.get("photo_specifications") or "{}") or record.get("applicant_checklists") != json.loads(row.get("applicant_checklists") or "[]"):
+              raise SystemExit(f"{code}: public listing photo specifications or applicant checklists do not match approved data.")
+            primary = row.get("official_source_url")
+            if not any(s.get("source_type") == "official" and s.get("is_primary") is True and s.get("source_url") == primary for s in record.get("sources",[])):
+              raise SystemExit(f"{code}: public listing lacks primary official source.")
+            detail = get(f"/visa-requirements/{code}?passport=BGD&purpose=tourism")
+            data = detail.get("data")
+            if detail.get("success") is not True or not isinstance(data, dict) or data.get("id") != record.get("id") or data.get("verification_status") != "verified" or data.get("is_published") is not True:
+              raise SystemExit(f"{code}: public detail API mismatch.")
+            if data.get("photo_specifications") != json.loads(row.get("photo_specifications") or "{}") or data.get("applicant_checklists") != json.loads(row.get("applicant_checklists") or "[]"):
+              raise SystemExit(f"{code}: public detail photo specifications or applicant checklists do not match approved data.")
+            detail_urls = {s.get("source_url") for s in data.get("sources",[])}
+            official_urls = {row.get("official_source_url"),row.get("cross_check_source_url")} | {s.get("source_url") for s in json.loads(row.get("additional_sources") or "[]") if s.get("source_type") == "official"}
+            if not official_urls.issubset(detail_urls):
+              raise SystemExit(f"{code}: public detail API lacks one or more official source URLs.")
+            print(f"PUBLIC_API_VERIFIED {country.get('name')} ({code}) — {slug}")
+          for code in pending_codes:
+            country = country_by_iso.get(code)
+            if country and country.get("slug") in directory_by_slug:
+              raise SystemExit(f"{code}: pending record leaked into public country directory.")
+          for code in pending_research_codes:
+            country = country_by_iso.get(code)
+            if not country or not country.get("slug"):
+              raise SystemExit(f"{code}: pending research country master row is missing.")
+            if country.get("slug") in directory_by_slug:
+              raise SystemExit(f"{code}: pending research-only country leaked into the public directory.")
+          print(f"DATABASE_AUDIT_VERIFIED total={post.get('total')} published={post.get('published_count')} country_rows={post.get('country_table_count')} public_directory={post.get('public_country_directory_count')}")
+          print(f"PUBLIC_API_VERIFIED countries={len(directory_rows)} requirements={len(requirements)}")
+          print("BATCH30_COMPLETE: 5 VERIFIED_AND_PUBLISHED; 3 PENDING_RESEARCH_ONLY")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-country-batch-30-production-audit
+          path: |
+            batch30_pre_import_summary.json
+            batch30_pre_import_audit.json
+            batch30_seed_result.txt
+            batch30_dry_run.json
+            batch30_import_result.json
+            batch30_post_import_audit.json
+            batch30_backup_path.txt
+            batch30_backup_checksum_path.txt
+            batch30_backup_sha256.txt
+            batch30_migration_status.txt
+            verified_full_audit_batch_29.csv
+            database/data/new_country_visa_batch_29.csv
+            database/data/pending_country_research_batch_29.csv
