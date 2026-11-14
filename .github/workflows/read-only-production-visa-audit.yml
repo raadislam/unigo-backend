@@ -61,8 +61,19 @@ jobs:
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_audit
           chmod 600 ~/.ssh/unigo_audit
-          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/known_hosts
+          for attempt in 1 2 3 4 5; do
+            if ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>~/.ssh/audit-keyscan.log; then
+              if [ -s ~/.ssh/known_hosts ]; then
+                chmod 600 ~/.ssh/known_hosts
+                exit 0
+              fi
+            fi
+            echo "Read-only audit SSH host-key scan attempt $attempt failed."
+            cat ~/.ssh/audit-keyscan.log
+            sleep 5
+          done
+          echo "Unable to retrieve the VPS SSH host key for the read-only audit."
+          exit 1
 
       - name: Export read-only production database snapshot
         env:
