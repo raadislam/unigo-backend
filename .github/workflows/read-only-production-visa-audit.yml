@@ -131,7 +131,7 @@ jobs:
           ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
           PHP
           scp -i ~/.ssh/unigo_audit -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes applicant-checklist-audit.php "$VPS_USER@$VPS_HOST:/tmp/unigo-applicant-checklist-audit.php"
-          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php -l /tmp/unigo-applicant-checklist-audit.php >/dev/null && php /tmp/unigo-applicant-checklist-audit.php; rm -f /tmp/unigo-applicant-checklist-audit.php' > applicant-checklist-audit.json
+          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php -l /tmp/unigo-applicant-checklist-audit.php >/dev/null && php /tmp/unigo-applicant-checklist-audit.php; status=$?; rm -f /tmp/unigo-applicant-checklist-audit.php; exit $status' > applicant-checklist-audit.json
           python3 -m json.tool applicant-checklist-audit.json > /dev/null
           python3 - <<'PY'
           import json
