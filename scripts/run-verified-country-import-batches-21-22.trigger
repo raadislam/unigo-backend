@@ -1,1 +1,1 @@
-Retry verified 48-country import after aligning Tonga's simple and full-audit visa type to the official pre-approval wording. Checked 2026-11-14.
+Retry verified 48-country import after completing all optional field notes and retaining full-audit review notes as authoritative. Checked 2026-11-14.
