@@ -358,6 +358,35 @@ jobs:
             test "$count" -ge 0
           done <<< "$TABLES"
           echo "BACKUP_SHA256_AND_RESTORE_TEST_PASSED_IN_ISOLATED_MYSQL"
+      - name: Deploy audited importer readback hotfix after database backup and restore verification
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes app/Console/Commands/VisaRequirementResearchCsvImportCommand.php "$VPS_USER@$VPS_HOST:/tmp/unigo-VisaRequirementResearchCsvImportCsvCommand.php"
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          SHARED_DIR="/var/www/unigo/backend/shared"
+          TARGET="$APP_DIR/app/Console/Commands/VisaRequirementResearchCsvImportCommand.php"
+          SOURCE="/tmp/unigo-VisaRequirementResearchCsvCommand.php"
+          BACKUP="$SHARED_DIR/backups/VisaRequirementResearchCsvImportCommand.php.batch29-$(date -u +%Y%m%dT%H%M%SZ).bak"
+          mkdir -p "$SHARED_DIR/backups"
+          test -s "$SOURCE"
+          php -l "$SOURCE" >/dev/null
+          cp "$TARGET" "$BACKUP"
+          cp "$SOURCE" "$TARGET"
+          if ! php -l "$TARGET" >/dev/null; then
+            cp "$BACKUP" "$TARGET"
+            exit 1
+          fi
+          sha256sum "$BACKUP" "$TARGET"
+          rm -f "$SOURCE"
+          echo "BATCH29_IMPORTER_HOTFIX_INSTALLED backup=$BACKUP"
+          REMOTE
+
       - name: Seed research rows and run dry-run for verified allowlist only
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -402,12 +431,19 @@ jobs:
           cd "$APP_DIR"
           EXPECTED_CSV_SHA="$(sha256sum "$IMPORT_DIR/verified_full_audit_batch_29.csv" | awk '{print $1}')"
           STORED_CSV_SHA=""
+          STORED_IMPORT_SUCCESS="0"
           if [ -s "$IMPORT_DIR/batch29_import_result.json" ]; then
-            STORED_CSV_SHA="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); echo is_array($payload) ? ($payload["csv_sha256"] ?? "") : "";' "$IMPORT_DIR/batch29_import_result.json")"
+            STORED_CSV_SHA="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); echo is_array($payload) ? ($payload["csv_sha256"] ?? "") : "";' "$IMPORT_DIR/batch29_import_result.json" 2>/dev/null || true)"
+            STORED_IMPORT_SUCCESS="$(php -r '$payload=json_decode(file_get_contents($argv[1]), true); $failures=is_array($payload) ? ($payload["failures"] ?? null) : null; $ok=is_array($payload) && is_array($failures) && count($failures) === 0 && (int)($payload["rows"] ?? 0) === 5 && (int)($payload["republished"] ?? 0) === 5 && (int)($payload["read_back"] ?? 0) === 5; echo $ok ? "1" : "0";' "$IMPORT_DIR/batch29_import_result.json" 2>/dev/null || echo 0)"
           fi
-          if [ "$STORED_CSV_SHA" = "$EXPECTED_CSV_SHA" ]; then
-            echo "Existing verified batch 29 import result matches the exact CSV hash; no production write is required."
+          if [ "$STORED_CSV_SHA" = "$EXPECTED_CSV_SHA" ] && [ "$STORED_IMPORT_SUCCESS" = "1" ]; then
+            echo "A successful batch 29 import result matches the exact CSV hash and complete database readback; skipping duplicate writes."
           else
+            if [ -f "$IMPORT_DIR/batch29_import_result.json" ]; then
+              FAILED_RESULT="$IMPORT_DIR/batch29_import_result_failed_$(date -u +%Y%m%dT%H%M%SZ).json"
+              mv "$IMPORT_DIR/batch29_import_result.json" "$FAILED_RESULT"
+              echo "Previous incomplete or failed batch 29 result archived at $FAILED_RESULT."
+            fi
             php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_29.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch29_import_result.json"
           fi
           php artisan visa:requirements-audit > "$IMPORT_DIR/batch29_post_import_audit.json"
