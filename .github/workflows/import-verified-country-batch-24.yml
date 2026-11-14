@@ -131,7 +131,7 @@ jobs:
           test -n "$VPS_PORT"
           test -n "$VPS_USER"
           install -m 700 -d ~/.ssh
-          printf '%s\\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_import
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_import
           chmod 600 ~/.ssh/unigo_import
           for attempt in $(seq 1 5); do
             if ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then
@@ -244,17 +244,17 @@ jobs:
           chdir($root);
           require $root . '/vendor/autoload.php';
           $app = require $root . '/bootstrap/app.php';
-          $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
           $connection = config('database.connections.' . config('database.default'));
-          if (!is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') { fwrite(STDERR, "Expected MySQL production connection.\\n"); exit(1); }
+          if (!is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') { fwrite(STDERR, "Expected MySQL production connection.\n"); exit(1); }
           $database = (string) ($connection['database'] ?? '');
-          if ($database === '') { fwrite(STDERR, "Production database name unavailable.\\n"); exit(1); }
-          $escape = static fn ($value) => '"' . str_replace(["\\\\", '"', "\\n", "\\r"], ["\\\\\\\\", '\\"', "\\n", "\\r"], (string) $value) . '"';
+          if ($database === '') { fwrite(STDERR, "Production database name unavailable.\n"); exit(1); }
+          $escape = static fn ($value) => '"' . str_replace(["\\", '"', "\n", "\r"], ["\\\\", '\\"', "\n", "\r"], (string) $value) . '"';
           $options = ['host' => $connection['host'] ?? '127.0.0.1', 'port' => $connection['port'] ?? 3306, 'user' => $connection['username'] ?? '', 'password' => $connection['password'] ?? '', 'default-character-set' => $connection['charset'] ?? 'utf8mb4'];
           if (!empty($connection['unix_socket'])) $options['socket'] = $connection['unix_socket'];
-          $content = "[client]\\n";
-          foreach ($options as $key => $value) $content .= $key . '=' . $escape($value) . "\\n";
-          if (file_put_contents(getenv('BACKUP_CNF'), $content, LOCK_EX) === false || file_put_contents(getenv('DB_NAME_FILE'), $database, LOCK_EX) === false) { fwrite(STDERR, "Unable to prepare protected backup configuration.\\n"); exit(1); }
+          $content = "[client]\n";
+          foreach ($options as $key => $value) $content .= $key . '=' . $escape($value) . "\n";
+          if (file_put_contents(getenv('BACKUP_CNF'), $content, LOCK_EX) === false || file_put_contents(getenv('DB_NAME_FILE'), $database, LOCK_EX) === false) { fwrite(STDERR, "Unable to prepare protected backup configuration.\n"); exit(1); }
           chmod(getenv('BACKUP_CNF'), 0600);
           chmod(getenv('DB_NAME_FILE'), 0600);
           PHP
@@ -263,9 +263,9 @@ jobs:
           test -s "$BACKUP_FILE"
           gzip -t "$BACKUP_FILE"
           sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
-          printf '%s\\n' "$BACKUP_FILE" > "$IMPORT_DIR/batch24_backup_path.txt"
-          printf '%s\\n' "$BACKUP_FILE.sha256" > "$IMPORT_DIR/batch24_backup_checksum_path.txt"
-          printf '%s\\n' "$(sha256sum "$BACKUP_FILE" | awk '{print $1}')" > "$IMPORT_DIR/batch24_backup_sha256.txt"
+          printf '%s\n' "$BACKUP_FILE" > "$IMPORT_DIR/batch24_backup_path.txt"
+          printf '%s\n' "$BACKUP_FILE.sha256" > "$IMPORT_DIR/batch24_backup_checksum_path.txt"
+          printf '%s\n' "$(sha256sum "$BACKUP_FILE" | awk '{print $1}')" > "$IMPORT_DIR/batch24_backup_sha256.txt"
           echo "PRODUCTION_BACKUP_CREATED_AND_GZIP_VERIFIED $BACKUP_FILE"
           REMOTE
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch24_backup_path.txt" ./batch24_backup_path.txt
