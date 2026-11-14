@@ -206,7 +206,7 @@ class VisaPhotoChecklistSupplementSeeder extends Seeder
                     'applicant_type' => $type,
                     'documents' => array_merge($baseDocuments, $documents),
                     'source_name' => 'UniGo preparation guide based on the uploaded agency checklists; items are conditional unless the destination authority makes them mandatory.',
-                    'source_url' => $details['photo']['source_url'] ?? null,
+                    'source_url' => null,
                     'checked_at' => '2026-11-14',
                 ];
             }
