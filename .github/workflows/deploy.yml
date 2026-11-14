@@ -30,6 +30,7 @@ on:
       - '.github/workflows/validate-visa-batches.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
       - 'docs/visa-discovery-batch-*.md'
+      - 'docs/frontend-content-dispatch.trigger'
   workflow_dispatch:
 
 concurrency:
