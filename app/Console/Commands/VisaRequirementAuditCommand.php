@@ -65,6 +65,7 @@ class VisaRequirementAuditCommand extends Command
             'application_fee',
             'processing_time',
             'required_documents',
+            'photo_specifications',
             'verification_status',
             'is_published',
             'effective_from',
