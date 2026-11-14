@@ -206,7 +206,6 @@ def main():
             photo_missing_codes.append(iso2)
         elif photo_status in {"biometric_capture", "captured_at_vac", "captured_at_application_centre"}:
             photo_status_counts["biometric_capture_status"] += 1
-            photo_vac_capture_codes.append(iso2)
         else:
             photo_status_counts["unclassified_status"] += 1
             photo_unclassified_codes.append(iso2)
