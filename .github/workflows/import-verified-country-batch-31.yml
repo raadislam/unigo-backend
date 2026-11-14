@@ -312,10 +312,13 @@ jobs:
           for attempt in $(seq 1 60); do docker exec -e MYSQL_PWD="$RESTORE_PASS" unigo-mysql-batch31-restore mysql -uroot -e "SELECT 1" >/dev/null 2>&1 && break; sleep 2; done
           docker exec -e MYSQL_PWD="$RESTORE_PASS" unigo-mysql-batch31-restore mysql -uroot -e "CREATE DATABASE unigo_restore_verify"
           gzip -dc ./unigo-production-backup.sql.gz | docker exec -i -e MYSQL_PWD="$RESTORE_PASS" unigo-mysql-batch31-restore mysql -uroot unigo_restore_verify
-          TABLES="$(docker exec -e MYSQL_PWD="$RESTORE_PASS" unigo-mysql-batch31-restore mysql -uroot --batch --skip-column-names unigo_restore_verify -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema='unigo_restore_verify' AND table_type='BASE TABLE'")"
-          test -n "$TABLES"
-          while IFS= read -r table; do count="$(docker exec -e MYSQL_PWD="$RESTORE_PASS" unigo-mysql-batch31-restore mysql -uroot --batch --skip-column-names unigo_restore_verify -e "SELECT COUNT(*) FROM `$table`")"; test "$count" -ge 0; done <<< "$TABLES"
-          echo "BATCH31_BACKUP_SHA256_AND_ISOLATED_MYSQL_RESTORE_TEST_PASSED"
+          TABLE_COUNT="$(docker exec -e MYSQL_PWD="$RESTORE_PASS" unigo-mysql-batch31-restore mysql -uroot --batch --skip-column-names -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='unigo_restore_verify' AND table_type='BASE TABLE'")"
+          COUNTRY_COUNT="$(docker exec -e MYSQL_PWD="$RESTORE_PASS" unigo-mysql-batch31-restore mysql -uroot --batch --skip-column-names unigo_restore_verify -e "SELECT COUNT(*) FROM countries")"
+          REQUIREMENT_COUNT="$(docker exec -e MYSQL_PWD="$RESTORE_PASS" unigo-mysql-batch31-restore mysql -uroot --batch --skip-column-names unigo_restore_verify -e "SELECT COUNT(*) FROM visa_requirements")"
+          test "$TABLE_COUNT" -gt 0
+          test "$COUNTRY_COUNT" -gt 0
+          test "$REQUIREMENT_COUNT" -ge 0
+          echo "BATCH31_BACKUP_SHA256_AND_ISOLATED_MYSQL_RESTORE_TEST_PASSED tables=$TABLE_COUNT countries=$COUNTRY_COUNT visa_requirements=$REQUIREMENT_COUNT"
       - name: Seed existing master rows and run importer dry-run only
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
