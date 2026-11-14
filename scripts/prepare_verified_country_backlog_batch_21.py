@@ -96,8 +96,9 @@ if len(new_simple) != 5 or len(new_audit) != 5 or {r["destination_iso2"] for r i
 pending = read(PENDING)
 if {r["destination_iso2"] for r in pending} != {"BA","MK","MM","WS"}:
     raise SystemExit("Pending research batch must contain BA, MK, MM and WS")
-if not any(x["batch"] == "15" and x["destination_iso2"] == "WS" and x["field"] == "verification_status" and x["value"] == "pending_review" for x in overrides):
-    raise SystemExit("Samoa pending override missing")
+samoa = [row for row in read("database/data/visa_full_audit_batch_15.csv") if row.get("destination_iso2") == "WS"]
+if len(samoa) != 1 or samoa[0].get("verification_status") != "pending_review" or samoa[0].get("publish_status") != "draft":
+    raise SystemExit("Samoa fee-scope conflict must remain pending and unpublished")
 print("VALIDATION_PASSED: 44 verified rows; 5 new verified destinations; 3 new pending candidates plus Samoa; no duplicate ISO2 keys.")
 write(SIMPLE_OUT, simple)
 write(AUDIT_OUT, audit)
