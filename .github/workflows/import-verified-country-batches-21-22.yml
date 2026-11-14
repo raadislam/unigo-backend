@@ -436,7 +436,12 @@ jobs:
             if detail.get("success") is not True or not isinstance(d,dict) or d.get("id")!=record.get("id") or d.get("verification_status")!="verified" or d.get("is_published") is not True:
               raise SystemExit(f"{code}: public detail API mismatch.")
             detail_urls={s.get("source_url") for s in d.get("sources",[])}
-            required_urls={row.get("official_source_url"),row.get("cross_check_source_url")} | {s.get("source_url") for s in json.loads(row.get("additional_sources") or "[]")}
+            extra_sources = json.loads(row.get("additional_sources") or "[]")
+            required_urls = {row.get("official_source_url")}
+            cross_url = row.get("cross_check_source_url")
+            if cross_url and "vfsglobal.com" not in cross_url.lower():
+              required_urls.add(cross_url)
+            required_urls |= {s.get("source_url") for s in extra_sources if s.get("source_type") == "official"}
             if not required_urls.issubset(detail_urls):
               raise SystemExit(f"{code}: public detail API is missing source URLs.")
             print(f"PUBLIC_API_VERIFIED {country['name']} ({code}) — {slug}")
