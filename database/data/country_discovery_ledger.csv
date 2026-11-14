@@ -1,250 +1,251 @@
 iso2,iso3,destination_name,slug,region,subregion,country_row_status,visa_record_status,discovery_status,source_status,last_checked,source_urls,notes
-AF,AFG,Afghanistan,afghanistan,Asia,Southern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AX,ALA,Åland Islands,aland-islands,Europe,Northern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AL,ALB,Albania,albania,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-DZ,DZA,Algeria,algeria,Africa,Northern Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AS,ASM,American Samoa,american-samoa,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AD,AND,Andorra,andorra,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AO,AGO,Angola,angola,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AI,AIA,Anguilla,anguilla,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AG,ATG,Antigua & Barbuda,antigua-barbuda,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AR,ARG,Argentina,argentina,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AM,ARM,Armenia,armenia,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AW,ABW,Aruba,aruba,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AU,AUS,Australia,australia,Oceania,Australia and New Zealand,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-AT,AUT,Austria,austria,Europe,Western Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-AZ,AZE,Azerbaijan,azerbaijan,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BS,BHS,Bahamas,bahamas,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BH,BHR,Bahrain,bahrain,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BD,BGD,Bangladesh,bangladesh,Asia,Southern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BB,BRB,Barbados,barbados,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BY,BLR,Belarus,belarus,Europe,Eastern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BE,BEL,Belgium,belgium,Europe,Western Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-BZ,BLZ,Belize,belize,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BJ,BEN,Benin,benin,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BM,BMU,Bermuda,bermuda,Americas,Northern America,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BT,BTN,Bhutan,bhutan,Asia,Southern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BO,BOL,Bolivia,bolivia,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BQ,BES,Caribbean Netherlands,caribbean-netherlands,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BA,BIH,Bosnia,bosnia,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BW,BWA,Botswana,botswana,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BV,BVT,Bouvet Island,bouvet-island,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BR,BRA,Brazil,brazil,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-IO,IOT,British Indian Ocean Territory,british-indian-ocean-territory,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-VG,VGB,British Virgin Islands,british-virgin-islands,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BN,BRN,Brunei,brunei,Asia,South-eastern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BG,BGR,Bulgaria,bulgaria,Europe,Eastern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-BF,BFA,Burkina Faso,burkina-faso,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BI,BDI,Burundi,burundi,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CV,CPV,Cape Verde,cape-verde,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-KH,KHM,Cambodia,cambodia,Asia,South-eastern Asia,not_in_public_directory_country_table_audit_pending,not_added_pending_research,pending_official_eligibility_check,official_source_review_incomplete,2026-11-14,https://www.cambodiaembassycbr.org/all-visa-services,Visa is required for Bangladeshi ordinary passports; tourist T-class route exists. Official sources reviewed do not conclusively establish Bangladesh-specific eligibility for the eVisa portal and the appropriate Dhaka application channel. Do not publish eVisa availability until confirmed.
-CM,CMR,Cameroon,cameroon,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CA,CAN,Canada,canada,Americas,Northern America,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-KY,CYM,Cayman Islands,cayman-islands,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CF,CAF,Central African Republic,central-african-republic,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TD,TCD,Chad,chad,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CL,CHL,Chile,chile,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CN,CHN,China,china,Asia,Eastern Asia,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-HK,HKG,Hong Kong,hong-kong,Asia,Eastern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MO,MAC,Macao,macao,Asia,Eastern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CX,CXR,Christmas Island,christmas-island,Oceania,Australia and New Zealand,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CC,CCK,Cocos Islands,cocos-islands,Oceania,Australia and New Zealand,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CO,COL,Colombia,colombia,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-KM,COM,Comoros,comoros,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CG,COG,Congo - Brazzaville,congo-brazzaville,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CK,COK,Cook Islands,cook-islands,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CR,CRI,Costa Rica,costa-rica,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-HR,HRV,Croatia,croatia,Europe,Southern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-CU,CUB,Cuba,cuba,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CW,CUW,Curaçao,curacao,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CY,CYP,Cyprus,cyprus,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CZ,CZE,Czechia,czechia,Europe,Eastern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-KP,PRK,North Korea,north-korea,Asia,Eastern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-CD,COD,Congo - Kinshasa,congo-kinshasa,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-DK,DNK,Denmark,denmark,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-DJ,DJI,Djibouti,djibouti,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-DM,DMA,Dominica,dominica,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-DO,DOM,Dominican Republic,dominican-republic,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-EC,ECU,Ecuador,ecuador,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-EG,EGY,Egypt,egypt,Africa,Northern Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SV,SLV,El Salvador,el-salvador,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GQ,GNQ,Equatorial Guinea,equatorial-guinea,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-ER,ERI,Eritrea,eritrea,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-EE,EST,Estonia,estonia,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-SZ,SWZ,Eswatini,eswatini,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-ET,ETH,Ethiopia,ethiopia,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-FK,FLK,Falkland Islands,falkland-islands,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-FO,FRO,Faroe Islands,faroe-islands,Europe,Northern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-FJ,FJI,Fiji,fiji,Oceania,Melanesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-FI,FIN,Finland,finland,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-FR,FRA,France,france,Europe,Western Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-GF,GUF,French Guiana,french-guiana,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PF,PYF,French Polynesia,french-polynesia,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TF,ATF,French Southern Territories,french-southern-territories,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GA,GAB,Gabon,gabon,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GM,GMB,Gambia,gambia,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GE,GEO,Georgia,georgia,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-DE,DEU,Germany,germany,Europe,Western Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-GH,GHA,Ghana,ghana,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GI,GIB,Gibraltar,gibraltar,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GR,GRC,Greece,greece,Europe,Southern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-GL,GRL,Greenland,greenland,Americas,Northern America,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GD,GRD,Grenada,grenada,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GP,GLP,Guadeloupe,guadeloupe,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GU,GUM,Guam,guam,Oceania,Micronesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GT,GTM,Guatemala,guatemala,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GG,GGY,Guernsey,guernsey,Europe,Northern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GN,GIN,Guinea,guinea,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GW,GNB,Guinea-Bissau,guinea-bissau,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GY,GUY,Guyana,guyana,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-HT,HTI,Haiti,haiti,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-HM,HMD,Heard & McDonald Islands,heard-mcdonald-islands,Oceania,Australia and New Zealand,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-VA,VAT,Vatican City,vatican-city,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-HN,HND,Honduras,honduras,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-HU,HUN,Hungary,hungary,Europe,Eastern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-IS,ISL,Iceland,iceland,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-IN,IND,India,india,Asia,Southern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-ID,IDN,Indonesia,indonesia,Asia,South-eastern Asia,not_in_public_directory_country_table_audit_pending,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_review,2026-11-14,https://bontang.imigrasi.go.id/layanan-publik/kategori/wna/sub/informasi-visa-republik-indonesia;https://bontang.imigrasi.go.id/layanan-publik/kategori/wna/sub/daftar-subjek-voa-bvk-calling-visa;https://ngurahrai.imigrasi.go.id/layanan-wna/,"Bangladesh is absent from Indonesia's current visa-free and 97-country VOA lists; C1 single-entry tourist eVisa is available through the official portal, 60-day initial stay, Rp1,000,000, extendable up to 180 days."
-IR,IRN,Iran,iran,Asia,Southern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-IQ,IRQ,Iraq,iraq,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-IE,IRL,Ireland,ireland,Europe,Northern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-IM,IMN,Isle of Man,isle-of-man,Europe,Northern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-IL,ISR,Israel,israel,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-IT,ITA,Italy,italy,Europe,Southern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-CI,CIV,Côte d’Ivoire,cote-d-ivoire,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-JM,JAM,Jamaica,jamaica,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-JP,JPN,Japan,japan,Asia,Eastern Asia,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-JE,JEY,Jersey,jersey,Europe,Northern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-JO,JOR,Jordan,jordan,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-KZ,KAZ,Kazakhstan,kazakhstan,Asia,Central Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-KE,KEN,Kenya,kenya,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-KI,KIR,Kiribati,kiribati,Oceania,Micronesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-KW,KWT,Kuwait,kuwait,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-KG,KGZ,Kyrgyzstan,kyrgyzstan,Asia,Central Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-LA,LAO,Laos,laos,Asia,South-eastern Asia,not_in_public_directory_country_table_audit_pending,not_added_pending_research,pending_official_eligibility_check,official_source_review_incomplete,2026-11-14,https://laoevisa.gov.la/faq,"Official Lao eVisa FAQ describes tourist eVisa terms, but the linked nationality eligibility list could not be retrieved and Bangladesh-specific eVisa/VOA eligibility is not conclusively established. Keep pending until confirmed by Lao immigration or mission."
-LV,LVA,Latvia,latvia,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-LB,LBN,Lebanon,lebanon,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-LS,LSO,Lesotho,lesotho,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-LR,LBR,Liberia,liberia,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-LY,LBY,Libya,libya,Africa,Northern Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-LI,LIE,Liechtenstein,liechtenstein,Europe,Western Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-LT,LTU,Lithuania,lithuania,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-LU,LUX,Luxembourg,luxembourg,Europe,Western Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-MG,MDG,Madagascar,madagascar,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MW,MWI,Malawi,malawi,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MY,MYS,Malaysia,malaysia,Asia,South-eastern Asia,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-MV,MDV,Maldives,maldives,Asia,Southern Asia,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-ML,MLI,Mali,mali,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MT,MLT,Malta,malta,Europe,Southern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-MH,MHL,Marshall Islands,marshall-islands,Oceania,Micronesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MQ,MTQ,Martinique,martinique,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MR,MRT,Mauritania,mauritania,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MU,MUS,Mauritius,mauritius,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_review,2026-11-14,https://civil-aviation.govmu.org/eAIP/eAIPMauritius/final/2026-07-23-Extended/html/eAIP/GEN-1.3-en-GB.html;https://passport.govmu.org/passport/?page_id=605,"Bangladesh is explicitly listed as requiring a visa before travel. Official Mauritius eAIP gives passport, return ticket, funds, accommodation and application rules; PIO states visa is free and processing target is 12 working days."
-YT,MYT,Mayotte,mayotte,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MX,MEX,Mexico,mexico,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-FM,FSM,Micronesia,micronesia,Oceania,Micronesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MC,MCO,Monaco,monaco,Europe,Western Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MN,MNG,Mongolia,mongolia,Asia,Eastern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-ME,MNE,Montenegro,montenegro,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MS,MSR,Montserrat,montserrat,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MA,MAR,Morocco,morocco,Africa,Northern Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MZ,MOZ,Mozambique,mozambique,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MM,MMR,Myanmar,myanmar,Asia,South-eastern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NA,NAM,Namibia,namibia,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NR,NRU,Nauru,nauru,Oceania,Micronesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NP,NPL,Nepal,nepal,Asia,Southern Asia,not_in_public_directory_country_table_audit_pending,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_review,2026-11-14,https://bd.nepalembassy.gov.np/pages/visa-1/;https://immigration.gov.np/visa-information;https://immigration.gov.np/eta-visa-nepal,Bangladeshi nationals eligible for tourist visa on arrival; first SAARC tourist visa up to 30 days once per calendar year is gratis. Standard 15/30/90-day options and 150-day annual maximum.
-NL,NLD,Netherlands,netherlands,Europe,Western Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-NC,NCL,New Caledonia,new-caledonia,Oceania,Melanesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NZ,NZL,New Zealand,new-zealand,Oceania,Australia and New Zealand,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NI,NIC,Nicaragua,nicaragua,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NE,NER,Niger,niger,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NG,NGA,Nigeria,nigeria,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NU,NIU,Niue,niue,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NF,NFK,Norfolk Island,norfolk-island,Oceania,Australia and New Zealand,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MP,MNP,Northern Mariana Islands,northern-mariana-islands,Oceania,Micronesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MK,MKD,North Macedonia,north-macedonia,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-NO,NOR,Norway,norway,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-OM,OMN,Oman,oman,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PK,PAK,Pakistan,pakistan,Asia,Southern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PW,PLW,Palau,palau,Oceania,Micronesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PA,PAN,Panama,panama,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PG,PNG,Papua New Guinea,papua-new-guinea,Oceania,Melanesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PY,PRY,Paraguay,paraguay,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PE,PER,Peru,peru,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PH,PHL,Philippines,philippines,Asia,South-eastern Asia,not_in_public_directory_country_table_audit_pending,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_review,2026-11-14,https://dhakape.dfa.gov.ph/images/VISA-translation_05July2022.pdf;https://www.visa.gov.ph/;https://dhakape.dfa.gov.ph/,Bangladeshi ordinary passport holders require a visa. Embassy Dhaka guidance provides 9(a) tourist application channel and documents; fee table is dated 2022 and will not be presented as a current 2026 fee.
-PN,PCN,Pitcairn,pitcairn,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PL,POL,Poland,poland,Europe,Eastern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-PT,PRT,Portugal,portugal,Europe,Southern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-PR,PRI,Puerto Rico,puerto-rico,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-QA,QAT,Qatar,qatar,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-KR,KOR,South Korea,south-korea,Asia,Eastern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MD,MDA,Moldova,moldova,Europe,Eastern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-RE,REU,Réunion,reunion,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-RO,ROU,Romania,romania,Europe,Eastern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-RU,RUS,Russian Federation,russian-federation,Europe,Eastern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-RW,RWA,Rwanda,rwanda,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-BL,BLM,St. Barthélemy,st-barthelemy,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SH,SHN,St. Helena,st-helena,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-KN,KNA,St. Kitts & Nevis,st-kitts-nevis,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-LC,LCA,St. Lucia,st-lucia,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-MF,MAF,St. Martin,st-martin,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-PM,SPM,St. Pierre & Miquelon,st-pierre-miquelon,Americas,Northern America,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-VC,VCT,St. Vincent & Grenadines,st-vincent-grenadines,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-WS,WSM,Samoa,samoa,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SM,SMR,San Marino,san-marino,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-ST,STP,São Tomé & Príncipe,sao-tome-principe,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SA,SAU,Saudi Arabia,saudi-arabia,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SN,SEN,Senegal,senegal,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-RS,SRB,Serbia,serbia,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SC,SYC,Seychelles,seychelles,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SL,SLE,Sierra Leone,sierra-leone,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SG,SGP,Singapore,singapore,Asia,South-eastern Asia,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-SX,SXM,Sint Maarten,sint-maarten,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SK,SVK,Slovakia,slovakia,Europe,Eastern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-SI,SVN,Slovenia,slovenia,Europe,Southern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-SB,SLB,Solomon Islands,solomon-islands,Oceania,Melanesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SO,SOM,Somalia,somalia,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-ZA,ZAF,South Africa,south-africa,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GS,SGS,South Georgia & South Sandwich Islands,south-georgia-south-sandwich-islands,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SS,SSD,South Sudan,south-sudan,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-ES,ESP,Spain,spain,Europe,Southern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-LK,LKA,Sri Lanka,sri-lanka,Asia,Southern Asia,not_in_public_directory_country_table_audit_pending,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_review,2026-11-14,https://www.eta.gov.lk/slvisa/visainfo/apply.jsp;https://www.eta.gov.lk/slvisa/visainfo/fees.jsp;https://www.eta.gov.lk/etaslvisa/etaNavServ,"Bangladesh is not in the 40-country free ETA scheme; SAARC tourist ETA fee applies. Official ETA guidance specifies 30-day initial stay, double entry, six-month passport validity and return-ticket/funds requirements; limited airport ETA facility exists."
-PS,PSE,Palestine,palestine,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SD,SDN,Sudan,sudan,Africa,Northern Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SR,SUR,Suriname,suriname,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SJ,SJM,Svalbard & Jan Mayen,svalbard-jan-mayen,Europe,Northern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-SE,SWE,Sweden,sweden,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-CH,CHE,Switzerland,switzerland,Europe,Western Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-SY,SYR,Syria,syria,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TW,TWN,Taiwan,taiwan,Asia,Eastern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TJ,TJK,Tajikistan,tajikistan,Asia,Central Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TH,THA,Thailand,thailand,Asia,South-eastern Asia,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-TL,TLS,Timor-Leste,timor-leste,Asia,South-eastern Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TG,TGO,Togo,togo,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TK,TKL,Tokelau,tokelau,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TO,TON,Tonga,tonga,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TT,TTO,Trinidad & Tobago,trinidad-tobago,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TN,TUN,Tunisia,tunisia,Africa,Northern Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TR,TUR,Türkiye,turkiye,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_review,2026-11-14,https://www.mfa.gov.tr/visa-information-for-foreigners.en.mfa;https://dhaka-emb.mfa.gov.tr/Mission/ShowInfoNote/359632;https://www.evisa.gov.tr/,Bangladeshi ordinary passports require a visa. Conditional single-entry one-month eVisa is available only with valid Schengen/US/UK/Ireland visa or residence permit and other official conditions; otherwise apply through a Turkish mission.
-TM,TKM,Turkmenistan,turkmenistan,Asia,Central Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TC,TCA,Turks & Caicos Islands,turks-caicos-islands,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-TV,TUV,Tuvalu,tuvalu,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-UG,UGA,Uganda,uganda,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-UA,UKR,Ukraine,ukraine,Europe,Eastern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-AE,ARE,United Arab Emirates,united-arab-emirates,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-GB,GBR,United Kingdom,united-kingdom,Europe,Northern Europe,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-TZ,TZA,Tanzania,tanzania,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-UM,UMI,U.S. Outlying Islands,u-s-outlying-islands,Oceania,Micronesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-US,USA,United States,united-states,Americas,Northern America,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-VI,VIR,U.S. Virgin Islands,u-s-virgin-islands,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-UY,URY,Uruguay,uruguay,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-UZ,UZB,Uzbekistan,uzbekistan,Asia,Central Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-VU,VUT,Vanuatu,vanuatu,Oceania,Melanesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-VE,VEN,Venezuela,venezuela,Americas,Latin America and the Caribbean,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-VN,VNM,Viet Nam,viet-nam,Asia,South-eastern Asia,public_directory,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
-WF,WLF,Wallis & Futuna,wallis-futuna,Oceania,Polynesia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-EH,ESH,Western Sahara,western-sahara,Africa,Northern Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-YE,YEM,Yemen,yemen,Asia,Western Asia,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-ZM,ZMB,Zambia,zambia,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-ZW,ZWE,Zimbabwe,zimbabwe,Africa,Sub-Saharan Africa,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,
-XK,XKX,Kosovo,kosovo,Europe,Southern Europe,not_in_public_directory_country_table_audit_pending,not_researched,not_started,not_started,,,Relevant destination added beyond ISO 3166-1; use Turkish/European mission sources as applicable.
+AD,AND,Andorra,andorra,Europe,Southern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AE,ARE,United Arab Emirates,united-arab-emirates,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AF,AFG,Afghanistan,afghanistan,Asia,Southern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AG,ATG,Antigua & Barbuda,antigua-barbuda,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AI,AIA,Anguilla,anguilla,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AL,ALB,Albania,albania,Europe,Southern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AM,ARM,Armenia,armenia,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AO,AGO,Angola,angola,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AQ,ATA,Antarctica,antarctica,Antarctica,Antarctica,present_in_country_table_unpublished,not_applicable_non_sovereign_destination,not_applicable_special_destination,official_antarctic_treaty_authority,2026-11-14,https://www.ats.aq/e/tourism.html;https://www.ats.aq/devAS/e/Ats/NationalCompetentAuthorities,"Antarctica is a special destination, not a sovereign state and has no national visa authority. Tourist visits are regulated under the Antarctic Treaty System and relevant national competent authorities; expedition operators arrange applicable prior authorizations. No Bangladesh-passport national visa record should be created. Entry/transit visas for departure and embarkation countries remain separate."
+AR,ARG,Argentina,argentina,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AS,ASM,American Samoa,american-samoa,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AT,AUT,Austria,austria,Europe,Western Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+AU,AUS,Australia,australia,Oceania,Australia and New Zealand,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+AW,ABW,Aruba,aruba,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AX,ALA,Åland Islands,aland-islands,Europe,Northern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+AZ,AZE,Azerbaijan,azerbaijan,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BA,BIH,Bosnia,bosnia,Europe,Southern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BB,BRB,Barbados,barbados,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BD,BGD,Bangladesh,bangladesh,Asia,Southern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BE,BEL,Belgium,belgium,Europe,Western Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+BF,BFA,Burkina Faso,burkina-faso,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BG,BGR,Bulgaria,bulgaria,Europe,Eastern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+BH,BHR,Bahrain,bahrain,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BI,BDI,Burundi,burundi,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BJ,BEN,Benin,benin,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BL,BLM,St. Barthélemy,st-barthelemy,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BM,BMU,Bermuda,bermuda,Americas,Northern America,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BN,BRN,Brunei,brunei,Asia,South-eastern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BO,BOL,Bolivia,bolivia,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BQ,BES,Caribbean Netherlands,caribbean-netherlands,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BR,BRA,Brazil,brazil,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BS,BHS,Bahamas,bahamas,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BT,BTN,Bhutan,bhutan,Asia,Southern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BV,BVT,Bouvet Island,bouvet-island,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BW,BWA,Botswana,botswana,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BY,BLR,Belarus,belarus,Europe,Eastern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+BZ,BLZ,Belize,belize,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CA,CAN,Canada,canada,Americas,Northern America,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+CC,CCK,Cocos Islands,cocos-islands,Oceania,Australia and New Zealand,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CD,COD,Congo - Kinshasa,congo-kinshasa,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CF,CAF,Central African Republic,central-african-republic,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CG,COG,Congo - Brazzaville,congo-brazzaville,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CH,CHE,Switzerland,switzerland,Europe,Western Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+CI,CIV,Côte d’Ivoire,cote-d-ivoire,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CK,COK,Cook Islands,cook-islands,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CL,CHL,Chile,chile,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CM,CMR,Cameroon,cameroon,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CN,CHN,China,china,Asia,Eastern Asia,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+CO,COL,Colombia,colombia,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CR,CRI,Costa Rica,costa-rica,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CU,CUB,Cuba,cuba,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CV,CPV,Cape Verde,cape-verde,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CW,CUW,Curaçao,curacao,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CX,CXR,Christmas Island,christmas-island,Oceania,Australia and New Zealand,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CY,CYP,Cyprus,cyprus,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+CZ,CZE,Czechia,czechia,Europe,Eastern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+DE,DEU,Germany,germany,Europe,Western Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+DJ,DJI,Djibouti,djibouti,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+DK,DNK,Denmark,denmark,Europe,Northern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+DM,DMA,Dominica,dominica,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+DO,DOM,Dominican Republic,dominican-republic,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+DZ,DZA,Algeria,algeria,Africa,Northern Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+EC,ECU,Ecuador,ecuador,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+EE,EST,Estonia,estonia,Europe,Northern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+EG,EGY,Egypt,egypt,Africa,Northern Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+EH,ESH,Western Sahara,western-sahara,Africa,Northern Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+ER,ERI,Eritrea,eritrea,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+ES,ESP,Spain,spain,Europe,Southern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+ET,ETH,Ethiopia,ethiopia,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+FI,FIN,Finland,finland,Europe,Northern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+FJ,FJI,Fiji,fiji,Oceania,Melanesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+FK,FLK,Falkland Islands,falkland-islands,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+FM,FSM,Micronesia,micronesia,Oceania,Micronesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+FO,FRO,Faroe Islands,faroe-islands,Europe,Northern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+FR,FRA,France,france,Europe,Western Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+GA,GAB,Gabon,gabon,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GB,GBR,United Kingdom,united-kingdom,Europe,Northern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+GD,GRD,Grenada,grenada,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GE,GEO,Georgia,georgia,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GF,GUF,French Guiana,french-guiana,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GG,GGY,Guernsey,guernsey,Europe,Northern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GH,GHA,Ghana,ghana,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GI,GIB,Gibraltar,gibraltar,Europe,Southern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GL,GRL,Greenland,greenland,Americas,Northern America,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GM,GMB,Gambia,gambia,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GN,GIN,Guinea,guinea,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GP,GLP,Guadeloupe,guadeloupe,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GQ,GNQ,Equatorial Guinea,equatorial-guinea,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GR,GRC,Greece,greece,Europe,Southern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+GS,SGS,South Georgia & South Sandwich Islands,south-georgia-south-sandwich-islands,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GT,GTM,Guatemala,guatemala,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GU,GUM,Guam,guam,Oceania,Micronesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GW,GNB,Guinea-Bissau,guinea-bissau,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+GY,GUY,Guyana,guyana,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+HK,HKG,Hong Kong,hong-kong,Asia,Eastern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+HM,HMD,Heard & McDonald Islands,heard-mcdonald-islands,Oceania,Australia and New Zealand,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+HN,HND,Honduras,honduras,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+HR,HRV,Croatia,croatia,Europe,Southern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+HT,HTI,Haiti,haiti,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+HU,HUN,Hungary,hungary,Europe,Eastern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+ID,IDN,Indonesia,indonesia,Asia,South-eastern Asia,present_in_country_table_unpublished,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_batch_06,2026-11-14,https://jakartapusat.imigrasi.go.id/layanan/warga-negara-asing-wna/visa-republik-indonesia/c1-visa-wisata;https://bontang.imigrasi.go.id/layanan-publik/kategori/wna/sub/daftar-subjek-voa-bvk-calling-visa;https://kemlu.go.id/en/doha/pelayanan-perwakilan/visa/visa-kunjungan;https://evisa.imigrasi.go.id/,"Bangladesh is not listed among current official VoA/BVK eligible nationalities. C1 is the single-entry tourist route for applicants not eligible for VoA. The online C1 channel requires an Indonesian sponsor/guarantor. C1 approval is valid 90 days from issue; initial stay is 60 days and may be extended several times up to 180 days. Government fee IDR 1,000,000; published processing four working days after payment. Embassy handling and local payment instructions may differ."
+IE,IRL,Ireland,ireland,Europe,Northern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+IL,ISR,Israel,israel,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+IM,IMN,Isle of Man,isle-of-man,Europe,Northern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+IN,IND,India,india,Asia,Southern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+IO,IOT,British Indian Ocean Territory,british-indian-ocean-territory,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+IQ,IRQ,Iraq,iraq,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+IR,IRN,Iran,iran,Asia,Southern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+IS,ISL,Iceland,iceland,Europe,Northern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+IT,ITA,Italy,italy,Europe,Southern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+JE,JEY,Jersey,jersey,Europe,Northern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+JM,JAM,Jamaica,jamaica,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+JO,JOR,Jordan,jordan,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+JP,JPN,Japan,japan,Asia,Eastern Asia,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+KE,KEN,Kenya,kenya,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+KG,KGZ,Kyrgyzstan,kyrgyzstan,Asia,Central Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+KH,KHM,Cambodia,cambodia,Asia,South-eastern Asia,present_in_country_table_unpublished,not_added_pending_official_eligibility_confirmation,pending_official_eligibility_check,official_source_review_incomplete,2026-11-14,https://www.cambodiaembassyuk.org/faq/;https://www.cambodiaembassyuk.org/visa-cosular-services/tourist-visa-t-class/;https://www.evisa.gov.kh/,"The Royal Embassy of Cambodia in London lists Bangladesh ordinary passport holders as not visa-exempt; its T-class tourist visa is single-entry, valid for three months before departure and allows 30 days on entry. The Embassy advertises eVisa and selected-port VOA generally, but Bangladesh-specific eVisa and VOA eligibility was not independently confirmed. Keep pending until BGD-specific eVisa/VOA eligibility, current fee and Bangladesh application route are confirmed."
+KI,KIR,Kiribati,kiribati,Oceania,Micronesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+KM,COM,Comoros,comoros,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+KN,KNA,St. Kitts & Nevis,st-kitts-nevis,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+KP,PRK,North Korea,north-korea,Asia,Eastern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+KR,KOR,South Korea,south-korea,Asia,Eastern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+KW,KWT,Kuwait,kuwait,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+KY,CYM,Cayman Islands,cayman-islands,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+KZ,KAZ,Kazakhstan,kazakhstan,Asia,Central Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+LA,LAO,Laos,laos,Asia,South-eastern Asia,present_in_country_table_unpublished,not_added_pending_official_eligibility_confirmation,pending_official_eligibility_check,official_source_review_incomplete,2026-11-14,https://laoevisa.gov.la/faq;https://laoevisa.gov.la/article/who_can_apply,"Official Lao eVisa FAQ states the tourist eVisa is limited to an eligible-nationality list, but the linked eligibility list currently returns 404, so Bangladesh eligibility cannot be confirmed. The FAQ confirms single entry, 30-day stay, 60-day approval-letter validity and three-working-day processing for eligible nationalities; these details must not be applied to Bangladesh until eligibility is confirmed. VOA eligibility and the Bangladesh sticker-visa route/fee also remain unconfirmed."
+LB,LBN,Lebanon,lebanon,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+LC,LCA,St. Lucia,st-lucia,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+LI,LIE,Liechtenstein,liechtenstein,Europe,Western Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+LK,LKA,Sri Lanka,sri-lanka,Asia,Southern Asia,present_in_country_table_unpublished,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_batch_06,2026-11-14,https://www.hc-dhaka.gov.lk/en/visa-service;https://eta.gov.lk/slvisa/visainfo/fees.jsp;https://eta.gov.lk/;https://www.immigration.gov.lk/,"The High Commission confirms that all foreign nationals must obtain ETA before arrival. Its notice effective 25 May 2026 lists 40 nationalities eligible for free 30-day ETA; Bangladesh is not included and remains subject to general ETA fee rules. Bangladesh is a SAARC country and the official fee schedule lists USD 20 for an online SAARC tourist ETA. The High Commission says approvals may be received within three working days and ETA holders may enter within three months of issue. Although the fee table shows an arrival fee, the High Commission instructs travellers to obtain ETA before arrival; do not rely on airport issuance."
+LR,LBR,Liberia,liberia,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+LS,LSO,Lesotho,lesotho,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+LT,LTU,Lithuania,lithuania,Europe,Northern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+LU,LUX,Luxembourg,luxembourg,Europe,Western Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+LV,LVA,Latvia,latvia,Europe,Northern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+LY,LBY,Libya,libya,Africa,Northern Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MA,MAR,Morocco,morocco,Africa,Northern Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MC,MCO,Monaco,monaco,Europe,Western Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MD,MDA,Moldova,moldova,Europe,Eastern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+ME,MNE,Montenegro,montenegro,Europe,Southern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MF,MAF,St. Martin,st-martin,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MG,MDG,Madagascar,madagascar,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MH,MHL,Marshall Islands,marshall-islands,Oceania,Micronesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MK,MKD,North Macedonia,north-macedonia,Europe,Southern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+ML,MLI,Mali,mali,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MM,MMR,Myanmar,myanmar,Asia,South-eastern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MN,MNG,Mongolia,mongolia,Asia,Eastern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MO,MAC,Macao,macao,Asia,Eastern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MP,MNP,Northern Mariana Islands,northern-mariana-islands,Oceania,Micronesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MQ,MTQ,Martinique,martinique,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MR,MRT,Mauritania,mauritania,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MS,MSR,Montserrat,montserrat,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MT,MLT,Malta,malta,Europe,Southern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+MU,MUS,Mauritius,mauritius,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_batch_06,2026-11-14,https://civil-aviation.govmu.org/eAIP/eAIPMauritius/final/2026-07-23-Extended/html/eAIP/GEN-1.3-en-GB.html;https://passport.govmu.org/passport/?page_id=620;https://passport.govmu.org/passport/?page_id=605,"Bangladesh is explicitly listed among nationalities requiring a visa before travel. PIO states visas are free of cost, are issued within 12 working days where practicable after complete documents, and applicants should apply at least one month before travel. Tourist stay may be granted up to six months in a calendar year case by case; this is not guaranteed. The AIP requires a return ticket, accommodation, financial evidence and passport validity of at least six months beyond intended stay."
+MV,MDV,Maldives,maldives,Asia,Southern Asia,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+MW,MWI,Malawi,malawi,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MX,MEX,Mexico,mexico,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+MY,MYS,Malaysia,malaysia,Asia,South-eastern Asia,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+MZ,MOZ,Mozambique,mozambique,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+NA,NAM,Namibia,namibia,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+NC,NCL,New Caledonia,new-caledonia,Oceania,Melanesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+NE,NER,Niger,niger,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+NF,NFK,Norfolk Island,norfolk-island,Oceania,Australia and New Zealand,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+NG,NGA,Nigeria,nigeria,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+NI,NIC,Nicaragua,nicaragua,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+NL,NLD,Netherlands,netherlands,Europe,Western Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+NO,NOR,Norway,norway,Europe,Northern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+NP,NPL,Nepal,nepal,Asia,Southern Asia,present_in_country_table_unpublished,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_batch_06,2026-11-14,https://bd.nepalembassy.gov.np/pages/visa-1/;https://immigration.gov.np/eta-visa-nepal;https://nepaliport.immigration.gov.np/;https://immigration.gov.np/,"The Embassy of Nepal in Dhaka explicitly confirms that Bangladeshi nationals are eligible for tourist visa on arrival at Tribhuvan International Airport and other designated entry points. SAARC nationals receive the first tourist visa of each visa year (1 January to 31 December) free of charge. Embassy eTA fees effective 1 April 2026 are BDT 3,630/6,050/15,125 for 15/30/90-day multiple-entry options. Embassy eTA processing is two working days; additional documents may be requested."
+NR,NRU,Nauru,nauru,Oceania,Micronesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+NU,NIU,Niue,niue,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+NZ,NZL,New Zealand,new-zealand,Oceania,Australia and New Zealand,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+OM,OMN,Oman,oman,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PA,PAN,Panama,panama,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PE,PER,Peru,peru,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PF,PYF,French Polynesia,french-polynesia,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PG,PNG,Papua New Guinea,papua-new-guinea,Oceania,Melanesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PH,PHL,Philippines,philippines,Asia,South-eastern Asia,present_in_country_table_unpublished,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_batch_06,2026-11-14,https://immigration.gov.ph/wp-content/uploads/2025/03/BUREAU-OF-IMMIGRATION-CITIZENS-CHARTER-2025-1ST-EDITION.pdf;https://dhakape.dfa.gov.ph/images/VISA-translation_05July2022.pdf;https://www.visa.gov.ph/,The Bureau of Immigration's 2025 Citizens Charter includes Bangladesh among visa-required nationalities. The Embassy of the Philippines in Dhaka's Bangladesh-specific guide identifies the 9(a) temporary visitor/tourist visa route and supporting documents. The Embassy PDF is dated July 2022; its fee table and dated processing estimates are not treated as current. Diplomatic/official passport exemptions do not apply to ordinary passports.
+PK,PAK,Pakistan,pakistan,Asia,Southern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PL,POL,Poland,poland,Europe,Eastern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+PM,SPM,St. Pierre & Miquelon,st-pierre-miquelon,Americas,Northern America,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PN,PCN,Pitcairn,pitcairn,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PR,PRI,Puerto Rico,puerto-rico,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PS,PSE,Palestine,palestine,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PT,PRT,Portugal,portugal,Europe,Southern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+PW,PLW,Palau,palau,Oceania,Micronesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+PY,PRY,Paraguay,paraguay,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+QA,QAT,Qatar,qatar,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+RE,REU,Réunion,reunion,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+RO,ROU,Romania,romania,Europe,Eastern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+RS,SRB,Serbia,serbia,Europe,Southern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+RU,RUS,Russian Federation,russian-federation,Europe,Eastern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+RW,RWA,Rwanda,rwanda,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SA,SAU,Saudi Arabia,saudi-arabia,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SB,SLB,Solomon Islands,solomon-islands,Oceania,Melanesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SC,SYC,Seychelles,seychelles,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SD,SDN,Sudan,sudan,Africa,Northern Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SE,SWE,Sweden,sweden,Europe,Northern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+SG,SGP,Singapore,singapore,Asia,South-eastern Asia,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+SH,SHN,St. Helena,st-helena,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SI,SVN,Slovenia,slovenia,Europe,Southern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+SJ,SJM,Svalbard & Jan Mayen,svalbard-jan-mayen,Europe,Northern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SK,SVK,Slovakia,slovakia,Europe,Eastern Europe,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+SL,SLE,Sierra Leone,sierra-leone,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SM,SMR,San Marino,san-marino,Europe,Southern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SN,SEN,Senegal,senegal,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SO,SOM,Somalia,somalia,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SR,SUR,Suriname,suriname,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SS,SSD,South Sudan,south-sudan,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+ST,STP,São Tomé & Príncipe,sao-tome-principe,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SV,SLV,El Salvador,el-salvador,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SX,SXM,Sint Maarten,sint-maarten,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SY,SYR,Syria,syria,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+SZ,SWZ,Eswatini,eswatini,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TC,TCA,Turks & Caicos Islands,turks-caicos-islands,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TD,TCD,Chad,chad,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TF,ATF,French Southern Territories,french-southern-territories,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TG,TGO,Togo,togo,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TH,THA,Thailand,thailand,Asia,South-eastern Asia,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+TJ,TJK,Tajikistan,tajikistan,Asia,Central Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TK,TKL,Tokelau,tokelau,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TL,TLS,Timor-Leste,timor-leste,Asia,South-eastern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TM,TKM,Turkmenistan,turkmenistan,Asia,Central Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TN,TUN,Tunisia,tunisia,Africa,Northern Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TO,TON,Tonga,tonga,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TR,TUR,Türkiye,turkiye,Asia,Western Asia,present_in_country_table_unpublished,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_batch_06,2026-11-14,https://www.mfa.gov.tr/visa-information-for-foreigners.en.mfa;https://dhaka-emb.mfa.gov.tr/Mission/ShowAnnouncement/418402;https://www.evisa.gov.tr/en/info/what-are-the-criteria-for-the-validity-of-my-supporting-document-visa-or-residence-permit-from-schengen-or-oecd-member-countries/;https://www.evisa.gov.tr/,"The MFA's country-specific table states that Bangladeshi ordinary passport holders require a visa. A conditional single-entry e-Visa valid for one month may be available to holders of a valid Schengen, US, UK or Ireland visa/residence permit, subject to additional eVisa-system conditions. The supporting document must remain valid on entry; eVisas issued by other jurisdictions are not accepted as supporting documents. Other applicants use the sticker-visa route through Mosaic Visa, announced as the sole authorized application centre in Bangladesh from 1 February 2026. Diplomatic/service passport exemptions do not apply to ordinary passports."
+TT,TTO,Trinidad & Tobago,trinidad-tobago,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TV,TUV,Tuvalu,tuvalu,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TW,TWN,Taiwan,taiwan,Asia,Eastern Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+TZ,TZA,Tanzania,tanzania,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+UA,UKR,Ukraine,ukraine,Europe,Eastern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+UG,UGA,Uganda,uganda,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+UM,UMI,U.S. Outlying Islands,u-s-outlying-islands,Oceania,Micronesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+US,USA,United States,united-states,Americas,Northern America,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+UY,URY,Uruguay,uruguay,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+UZ,UZB,Uzbekistan,uzbekistan,Asia,Central Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+VA,VAT,Vatican City,vatican-city,Europe,Southern Europe,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+VC,VCT,St. Vincent & Grenadines,st-vincent-grenadines,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+VE,VEN,Venezuela,venezuela,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+VG,VGB,British Virgin Islands,british-virgin-islands,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+VI,VIR,U.S. Virgin Islands,u-s-virgin-islands,Americas,Latin America and the Caribbean,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+VN,VNM,Viet Nam,viet-nam,Asia,South-eastern Asia,present_in_country_table_unpublished,verified_published,represented,official_source_on_file,2026-11-14,See visa requirement source rows in the live database.,Live BGD tourism requirement and public directory entry confirmed.
+VU,VUT,Vanuatu,vanuatu,Oceania,Melanesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+WF,WLF,Wallis & Futuna,wallis-futuna,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+WS,WSM,Samoa,samoa,Oceania,Polynesia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+XK,XKX,Kosovo,kosovo,Europe,Southern Europe,missing_from_country_table_add_in_batch_06,not_added_ready_for_batch_06,research_complete_ready_for_batch_06,official_sources_checked_ready_for_batch_06,2026-11-14,https://arkivi.mfa-ks.net/en/sherbimet_konsullore/503/kush-ka-nevoj-pr-viza-t-kosovs/503.html;https://arkivi.mfa-ks.net/en/sherbimet_konsullore/506/paraqitja-e-krkess-pr-viz/506.html;https://arkivi.mfa-ks.net/en/sherbimet_konsullore/506/paraqitja-e-krkess-pr-viz/506.html,"The Kosovo MFA country-specific page lists Bangladesh among nationalities requiring a visa for ordinary passport holders. A qualifying valid biometric Schengen residence permit or valid multiple-entry Schengen visa allows entry or transit for up to 15 days without a Kosovo visa. Standard fee is EUR 40; applications are submitted in person and should be lodged no more than three months before travel. The Bangladesh-specific MFA page names Tirana and Istanbul as visa-issuing posts. Kosovo uses the user-assigned ISO2 code XK; it has no official ISO3 code, so the new country row will leave iso3 null. XK is user-assigned ISO2; no official ISO3 code. The country row will be inserted with iso3 null."
+YE,YEM,Yemen,yemen,Asia,Western Asia,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+YT,MYT,Mayotte,mayotte,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+ZA,ZAF,South Africa,south-africa,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+ZM,ZMB,Zambia,zambia,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
+ZW,ZWE,Zimbabwe,zimbabwe,Africa,Sub-Saharan Africa,present_in_country_table_unpublished,not_researched,not_started,not_started,,,
