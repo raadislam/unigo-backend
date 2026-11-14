@@ -364,7 +364,7 @@ jobs:
           from pathlib import Path
           result=json.loads(Path("batch32_dry_run.json").read_text())
           if result.get("mode")!="dry_run" or result.get("rows")!=1 or result.get("failures"):
-              raise SystemExit(f"Batch 32 dry-run did not pass the exact three-country allowlist: {result}")
+              raise SystemExit(f"Batch 32 dry-run did not pass the exact one-country allowlist: {result}")
           print(json.dumps(result,indent=2))
           print("BATCH32_DRY_RUN_PASSED rows=1 failures=0")
           PY
