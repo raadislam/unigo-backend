@@ -1,0 +1,23 @@
+name: Validate Visa Research Batches
+on:
+  pull_request:
+    paths:
+      - 'database/data/visa_full_audit_batch_06.csv'
+      - 'database/data/visa_full_audit_batch_07.csv'
+      - 'database/data/new_country_visa_batch_06_07.csv'
+      - 'scripts/validate_visa_batches.py'
+      - '.github/workflows/validate-visa-batches.yml'
+permissions:
+  contents: read
+jobs:
+  validate-visa-batches:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate CSV schema, field limits, sources and idempotency keys
+        run: python scripts/validate_visa_batches.py
