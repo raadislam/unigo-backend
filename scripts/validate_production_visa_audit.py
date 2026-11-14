@@ -178,9 +178,11 @@ def main():
 
     photo_status_counts = Counter()
     photo_missing_codes = []
-    photo_not_published_codes = []
+    photo_no_fixed_size_codes = []
+    photo_not_specified_codes = []
     photo_unclassified_codes = []
     photo_verified_codes = []
+    photo_vac_capture_codes = []
     for row in published_bgd:
         country = row.get("country") or {}
         iso2 = str(country.get("iso2") or "").upper()
@@ -193,14 +195,31 @@ def main():
         if photo_status == "verified":
             photo_status_counts["structured_verified"] += 1
             photo_verified_codes.append(iso2)
-        elif photo_status in {"not_published", "no_fixed_size_published", "not_specified"}:
+        elif photo_status == "no_fixed_size_published":
+            photo_status_counts["no_fixed_size_published"] += 1
+            photo_no_fixed_size_codes.append(iso2)
+        elif photo_status in {"not_published", "not_specified"}:
             photo_status_counts[photo_status] += 1
-            photo_not_published_codes.append(iso2)
+            photo_not_specified_codes.append(iso2)
+        elif photo_status in {"unresearched", "missing", "unverified"}:
+            photo_status_counts["unresearched"] += 1
+            photo_missing_codes.append(iso2)
         elif photo_status in {"biometric_capture", "captured_at_vac", "captured_at_application_centre"}:
-            photo_status_counts["biometric_capture"] += 1
+            photo_status_counts["biometric_capture_status"] += 1
+            photo_vac_capture_codes.append(iso2)
         else:
             photo_status_counts["unclassified_status"] += 1
             photo_unclassified_codes.append(iso2)
+
+        capture_value = photo.get("biometric_capture") or photo.get("captured_at_vac") or photo.get("photo_capture_method")
+        capture_text = str(capture_value or "").strip().lower()
+        capture_negative = any(term in capture_text for term in ("not captured", "no capture", "not taken", "not required", "not applicable", "not at vac", "not at the vac"))
+        capture_positive = photo.get("captured_at_vac") is True or photo_status in {"biometric_capture", "captured_at_vac", "captured_at_application_centre"}
+        if not capture_negative and any(term in capture_text for term in ("captur", "biometric booth", "vfs", "vac", "application centre", "application center")):
+            capture_positive = True
+        if capture_positive and iso2 not in photo_vac_capture_codes:
+            photo_vac_capture_codes.append(iso2)
+            photo_status_counts["biometric_or_vac_capture"] += 1
 
     status_counts = Counter(str(row.get("verification_status") or "missing") for row in records)
     summary = [
@@ -222,8 +241,10 @@ def main():
         f"- Published BGD tourism records missing primary official sources: **{len(missing_primary_sources)}**",
         f"- Published BGD tourism photo status counts: **{dict(photo_status_counts)}**",
         f"- Structured verified photo specifications: **{len(photo_verified_codes)} / {len(published_bgd)}**",
-        f"- Missing structured photo specifications: **{len(photo_missing_codes)}**" + (f" ({', '.join(sorted(photo_missing_codes))})" if photo_missing_codes else ""),
-        f"- No published fixed-size rule / not specified: **{len(photo_not_published_codes)}**" + (f" ({', '.join(sorted(photo_not_published_codes))})" if photo_not_published_codes else ""),
+        f"- Officially confirmed no fixed-size photo rule: **{len(photo_no_fixed_size_codes)}**" + (f" ({', '.join(sorted(photo_no_fixed_size_codes))})" if photo_no_fixed_size_codes else ""),
+        f"- Biometric/VAC photo capture confirmed: **{len(photo_vac_capture_codes)}**" + (f" ({', '.join(sorted(photo_vac_capture_codes))})" if photo_vac_capture_codes else ""),
+        f"- Missing/unresearched photo specifications: **{len(photo_missing_codes)}**" + (f" ({', '.join(sorted(photo_missing_codes))})" if photo_missing_codes else ""),
+        f"- Not specified without confirmed no-fixed-size status: **{len(photo_not_specified_codes)}**" + (f" ({', '.join(sorted(photo_not_specified_codes))})" if photo_not_specified_codes else ""),
         f"- Unclassified photo statuses: **{len(photo_unclassified_codes)}**" + (f" ({', '.join(sorted(photo_unclassified_codes))})" if photo_unclassified_codes else ""),
         f"- Ledger/public directory parity: **{len(ledger_public_codes)} / {len(public_codes)} codes matched**",
         f"- Ledger verified/published parity: **{len(ledger_verified_codes)} / {len(published_codes)} codes matched**",
