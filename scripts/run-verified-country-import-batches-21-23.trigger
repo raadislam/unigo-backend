@@ -1,1 +1,1 @@
-Re-run batch 21-23 post-import verification. The workflow accepts either verified-ready or already-published ledger state, reuses the exact prior import result by CSV SHA-256, and performs readback/API checks.
+Re-run batch 21-23 database and public API verification after limiting API source checks to official primary/additional sources; cross-check/provider references remain verified in database readback.
