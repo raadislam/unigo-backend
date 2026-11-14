@@ -13,13 +13,13 @@ Last confirmed production state: 250 master destinations; 249 country rows; 41 v
 ## Run result
 
 - Ten previously unstarted African destinations were progressed.
-- Seven Bangladesh ordinary-passport tourism requirement records are supported by current official source material and staged as research-verified, ready for controlled import.
-- One Cameroon record is staged as pending review because two official sources conflict on tourist visa fee and stay/validity.
+- Six Bangladesh ordinary-passport tourism requirement records are supported by current official source material and staged as research-verified, ready for controlled import.
+- Two records are staged as pending review: Côte d’Ivoire because ONECI and SNEDAI publish conflicting tourist routes, fees, entry counts and stays; Cameroon because two official sources conflict on tourist visa fee and stay/validity.
 - Gabon and Madagascar are recorded as research-in-progress without requirement rows because the reviewed official portals did not establish the current Bangladesh ordinary-passport exemption/eligibility position.
 - All ten destination country rows already exist in the UniGo master table. No country-table records were added.
 - The eight staged rows are research-file classifications only. They have not been imported, read back, verified or published in production.
 
-## Seven research-verified records
+## Six research-verified records
 
 | Destination | Bangladesh ordinary-passport route | Confirmed details |
 |---|---|---|
@@ -31,7 +31,7 @@ Last confirmed production state: 250 master destinations; 249 country rows; 41 v
 | Mozambique | Prior visa from nearest embassy; online eVisa unavailable to Bangladesh | The official National Immigration Service portal expressly lists Bangladesh among nationalities not allowed to apply for a visa through the eVisa portal and directs them to request a visa at the nearest embassy. Bangladesh-specific embassy fee, stay, checklist and processing time are not published on the reviewed portal. |
 | Nigeria | F5A tourist eVisa | NIS F5A is a single-entry tourist visa for non-ECOWAS and non-waiver nationals. Bangladesh is listed in the April 2026 NIS fee schedule at USD253 single-entry. Validity 90 days from issuance; stay 30 days; not extendable. Processing target 48 hours if there is no local objection. Documents include 6-month passport, photo, return ticket, hotel/host address and 180-day bank statement. |
 
-## Pending Cameroon record
+## Pending Côte d’Ivoire record\n\nThe ONECI official portal lists Bangladesh among nationalities eligible for tourist visa on arrival and currently describes a single-entry tourist eVisa with 30- or 90-day options, FCFA60,000 or FCFA110,000 fees and a normal three-day processing time. SNEDAI's official procedure instead describes prior pre-enrolment, EUR73 including bank charges, a three-month multiple-entry visa and airport biometric issuance, with a 48-working-hour response. Because these official procedures conflict on route, fee, entry count and stay, the record remains pending review and draft. The current Bangladesh-specific procedure must be confirmed before verification.\n\n## Pending Cameroon record
 
 The Cameroon Ministry of Tourism and Leisure says a tourist visa is mandatory, with a 30-day non-renewable multiple-entry visa, a 50,000 XAF fee, return ticket, yellow-fever certificate, two photos, accommodation and application form. The Ministry of External Relations MINREX eVisa page lists an ordinary short-stay visa valid up to six months at 100,000 XAF (express 150,000 XAF), with 72-hour ordinary or 24-hour express processing. The official fee and stay descriptions conflict. The record is pending and unpublished until the competent mission confirms the current tourist category, permitted stay and applicable tariff for Bangladesh ordinary passports.
 
