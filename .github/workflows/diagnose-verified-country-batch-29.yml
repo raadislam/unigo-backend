@@ -1,0 +1,131 @@
+name: Diagnose failed verified tourism batch 29
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/run-batch29-diagnostics.trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-batch29-diagnostics
+  cancel-in-progress: false
+
+jobs:
+  collect-read-only-production-diagnostics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Prepare SSH
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set -euo pipefail
+          umask 077
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_import
+          chmod 600 ~/.ssh/unigo_import
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Run read-only audit and collect existing batch 29 result files
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          mkdir -p diagnostics
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          IMPORT_DIR="/var/www/unigo/backend/shared/imports"
+          cd "$APP_DIR"
+          php artisan visa:requirements-audit > "$IMPORT_DIR/batch29_diagnostic_audit.json"
+          test -s "$IMPORT_DIR/batch29_diagnostic_audit.json"
+          REMOTE
+          files="$(ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          IMPORT_DIR="/var/www/unigo/backend/shared/imports"
+          for file in "$IMPORT_DIR"/batch29_import_result*.json; do
+            if test -s "$file"; then basename "$file"; fi
+          done
+          for file in batch29_seed_result.txt batch29_dry_run.json batch29_post_import_audit.json batch29_pre_import_audit.json batch29_diagnostic_audit.json; do
+            if test -s "$IMPORT_DIR/$file"; then printf '%s\n' "$file"; fi
+          done
+          REMOTE
+          )"
+          test -n "$files"
+          while IFS= read -r file; do
+            test -n "$file"
+            scp -i ~/.ssh/unigo_import -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/$file" "diagnostics/$file"
+          done <<< "$files"
+
+      - name: Summarise import result and live database state
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("diagnostics")
+          result_paths = sorted(root.glob("batch29_import_result*.json"))
+          if result_paths:
+              for result_path in result_paths:
+                  try:
+                      result = json.loads(result_path.read_text())
+                      print("BATCH29_IMPORT_RESULT", result_path.name)
+                      print(json.dumps({k: result.get(k) for k in ["mode", "csv_sha256", "rows", "updated", "sources_added", "reverified", "republished", "read_back", "failures"]}, indent=2))
+                  except Exception as exc:
+                      print("BATCH29_IMPORT_RESULT_PARSE_ERROR", result_path.name, str(exc))
+          else:
+              print("BATCH29_IMPORT_RESULT_MISSING_OR_EMPTY")
+          audit_path = root / "batch29_diagnostic_audit.json"
+          if audit_path.exists():
+              audit = json.loads(audit_path.read_text())
+              print("CURRENT_PRODUCTION_AUDIT")
+              print(json.dumps({
+                  "generated_at": audit.get("generated_at"),
+                  "total": audit.get("total"),
+                  "verification_status_counts": audit.get("verification_status_counts"),
+                  "published_count": audit.get("published_count"),
+                  "public_country_directory_count": audit.get("public_country_directory_count"),
+                  "country_table_count": audit.get("country_table_count"),
+                  "country_table_published_count": audit.get("country_table_published_count"),
+                  "country_table_unpublished_count": audit.get("country_table_unpublished_count"),
+                  "public_country_codes": sorted(str(x.get("iso2") or "").upper() for x in audit.get("public_country_directory", [])),
+                  "pending_bgd_codes": sorted(str((x.get("country") or {}).get("iso2") or "").upper() for x in audit.get("records", []) if x.get("passport_nationality_iso3") == "BGD" and x.get("travel_purpose") == "tourism" and not (x.get("verification_status") == "verified" and x.get("is_published") is True))
+              }, indent=2))
+              targets = {"GF", "GP", "MQ", "PM", "RE"}
+              matches = []
+              for record in audit.get("records", []):
+                  country = record.get("country") or {}
+                  if country.get("iso2") in targets and record.get("passport_nationality_iso3") == "BGD" and record.get("travel_purpose") == "tourism":
+                      matches.append({
+                          "iso2": country.get("iso2"),
+                          "country": country.get("name"),
+                          "id": record.get("id"),
+                          "verification_status": record.get("verification_status"),
+                          "is_published": record.get("is_published"),
+                          "sources": len(record.get("sources") or []),
+                          "photo_specifications_present": bool(record.get("photo_specifications")),
+                          "updated_at": record.get("updated_at")
+                      })
+              print("BATCH29_COUNTRY_READBACK")
+              print(json.dumps(matches, indent=2))
+          else:
+              print("CURRENT_PRODUCTION_AUDIT_MISSING")
+          PY
+
+      - name: Upload diagnostic artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: batch29-production-diagnostics
+          path: diagnostics/
+          if-no-files-found: error
+          retention-days: 14
