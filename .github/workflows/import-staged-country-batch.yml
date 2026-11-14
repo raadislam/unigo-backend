@@ -81,7 +81,7 @@ jobs:
 
           cleanup() {
             if [[ -n "$RESTORE_DB" && -s "$CNF" ]]; then
-              mysql --defaults-extra-file="$CNF" -e "DROP DATABASE IF EXISTS `$RESTORE_DB`" >/dev/null 2>&1 || true
+              mysql --defaults-extra-file="$CNF" -e "DROP DATABASE IF EXISTS $RESTORE_DB" >/dev/null 2>&1 || true
             fi
             rm -f "$CNF" "$DB_FILE"
           }
@@ -120,7 +120,7 @@ jobs:
           PHP
 
           DB_NAME="$(cat "$DB_FILE")"
-          UNIGO_APP_DIR="$APP_DIR" php "$IMPORT_DIR/import_staged_country_batch.php" preflight | tee "$BACKUP_DIR/preflight-$STAMP.txt"
+          UNIGO_APP_DIR="$APP_DIR" UNIGO_IMPORT_DIR="$IMPORT_DIR" php "$IMPORT_DIR/import_staged_country_batch.php" preflight | tee "$BACKUP_DIR/preflight-$STAMP.txt"
 
           DB_BYTES="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT COALESCE(SUM(data_length+index_length),0) FROM information_schema.tables WHERE table_schema=DATABASE();")"
           FREE_KB="$(df -Pk "$BACKUP_DIR" | awk 'NR==2 {print $4}')"
@@ -140,7 +140,7 @@ jobs:
           SCHEMA_INFO="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE();")"
           read -r DB_CHARSET DB_COLLATION <<< "$SCHEMA_INFO"
           RESTORE_DB="unigo_restore_verify_${STAMP//[^A-Za-z0-9_]/_}"
-          mysql --defaults-extra-file="$CNF" -e "CREATE DATABASE `$RESTORE_DB` CHARACTER SET $DB_CHARSET COLLATE $DB_COLLATION"
+          mysql --defaults-extra-file="$CNF" -e "CREATE DATABASE $RESTORE_DB CHARACTER SET $DB_CHARSET COLLATE $DB_COLLATION"
           gzip -dc "$BACKUP_FILE" | mysql --defaults-extra-file="$CNF" --database="$RESTORE_DB"
 
           table_counts() {
@@ -150,13 +150,13 @@ jobs:
             while IFS= read -r table; do
               [[ -z "$table" ]] && continue
               local count
-              count="$(mysql --defaults-extra-file="$CNF" --database="$database" --batch --skip-column-names -e "SELECT COUNT(*) FROM `$table`;")"
+              count="$(mysql --defaults-extra-file="$CNF" --database="$database" --batch --skip-column-names -e "SELECT COUNT(*) FROM $table;")"
               printf '%s\t%s\n' "$table" "$count"
             done <<< "$tables"
           }
 
           diff -u <(table_counts "$DB_NAME") <(table_counts "$RESTORE_DB")
-          mysql --defaults-extra-file="$CNF" -e "DROP DATABASE `$RESTORE_DB`"
+          mysql --defaults-extra-file="$CNF" -e "DROP DATABASE $RESTORE_DB"
           RESTORE_DB=""
           echo "BACKUP_RESTORE_TEST_PASSED $BACKUP_FILE"
 
@@ -179,7 +179,7 @@ jobs:
             fi
           done
 
-          UNIGO_APP_DIR="$APP_DIR" php "$IMPORT_DIR/import_staged_country_batch.php" verify
+          UNIGO_APP_DIR="$APP_DIR" UNIGO_IMPORT_DIR="$IMPORT_DIR" php "$IMPORT_DIR/import_staged_country_batch.php" verify
           php artisan visa:requirements-audit > "$AUDIT_FILE"
           test -s "$AUDIT_FILE"
           echo "IMPORT_AND_READBACK_PASSED total=12 pending_review=12 unpublished=12"
