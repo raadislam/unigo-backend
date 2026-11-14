@@ -92,8 +92,10 @@ for row in audit:
 ledger = {row["iso2"]: row for row in read(LEDGER)}
 for code in ALLOWLIST:
     row = ledger.get(code)
-    if not row or row.get("country_row_status") != "present_in_production" or row.get("visa_record_status") != "verified_ready_for_import_batch_21":
-        raise SystemExit(f"{code}: ledger readiness or production country row missing")
+    ready_for_import = bool(row) and row.get("country_row_status") == "present_in_production" and row.get("visa_record_status") == "verified_ready_for_import_batch_21"
+    already_published = bool(row) and row.get("country_row_status") == "public_directory" and row.get("visa_record_status") == "verified_published" and row.get("discovery_status") == "represented"
+    if not (ready_for_import or already_published):
+        raise SystemExit(f"{code}: ledger must show either verified-ready or already-published state")
 new_simple = read("database/data/new_country_visa_batch_21.csv")
 new_audit = read("database/data/visa_full_audit_batch_21.csv")
 if len(new_simple) != 5 or len(new_audit) != 5 or {r["destination_iso2"] for r in new_simple} != {"AL","IE","MD","ME","RS"}:
