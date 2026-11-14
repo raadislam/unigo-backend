@@ -10,7 +10,7 @@ batch,destination_iso2,field,value,reason
 15,WS,review_notes,"PENDING: Samoa Immigration Border Services states the 90-day Visitor Permit on arrival is free, while the official fee schedule separately lists SAT$200 for a Visitor Entry Permit without clarifying whether it applies to the free on-arrival permit. Do not publish a fee or treat the routes as equivalent until Immigration confirms the scope.",Official source conflict.
 16,TK,application_fee,No fee stated in the published Tokelau entry-permit guidance; confirm with Support Services before travel.,No published amount; do not infer.
 16,TK,maximum_permitted_stay,No fixed stay limit stated in published guidance; duration is set by the approved entry permit and village consent.,No published fixed stay limit.
-16,TK,entry_count,Not specified; village approval required.,Official guidance requires entry permit and village approval; no entry-count rule is published.
+16,TK,entry_count,Not stated; village approval needed.,Official guidance requires entry permit and village approval; no entry-count rule is published.
 16,TK,processing_time,Apply at least one month before travel; no official decision SLA is published.,Official guidance asks visitors to apply one month ahead.
 16,TK,required_documents,Passport|entry-permit request|approval from the relevant village|travel itinerary|onward or return travel details|accommodation and support arrangements requested by Support Services,Official entry-permit process.
 16,CK,entry_count,Not specified; permit issued on arrival.,Full official visitor-permit guidance says Bangladeshi ordinary passport holders receive 31 days on arrival; no single/multiple-entry count is published.
