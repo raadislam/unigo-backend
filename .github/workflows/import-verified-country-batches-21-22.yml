@@ -1,18 +1,18 @@
-name: Import verified country backlog batches 21 and 22
+name: Import verified country backlog batches 21, 22 and 23
 
 on:
   push:
     branches:
       - main
     paths:
-      - 'scripts/run-verified-country-import-batches-21-22.trigger'
+      - 'scripts/run-verified-country-import-batches-21-23.trigger'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: unigo-verified-country-batches-21-22
+  group: unigo-verified-country-batches-21-23
   cancel-in-progress: false
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Build and validate the exact 48-country allowlist
+      - name: Build and validate the exact 51-country allowlist
         run: |
           set -euo pipefail
           python3 scripts/prepare_verified_country_backlog_batch_21.py
@@ -31,17 +31,22 @@ jobs:
 
           expected_44 = {"ID","MU","NP","PH","TR","BN","RW","TZ","HK","MO","UZ","KR","AM","AZ","PK","TL","BB","JM","FJ","KI","NZ","TO","VU","AS","CK","GU","MP","NF","NC","PF","WF","PN","TK","AO","BJ","BW","GM","MZ","NG","AL","IE","MD","ME","RS"}
           expected_4 = {"KY","BM","PA","MX"}
+          expected_3 = {"BO","CU","HT"}
           simple21 = list(csv.DictReader(Path("database/data/verified_country_backlog_batch_21.csv").open(encoding="utf-8-sig", newline="")))
           audit21 = list(csv.DictReader(Path("database/data/verified_country_full_audit_batch_21.csv").open(encoding="utf-8-sig", newline="")))
           simple22 = list(csv.DictReader(Path("database/data/new_country_visa_batch_22.csv").open(encoding="utf-8-sig", newline="")))
           audit22 = list(csv.DictReader(Path("database/data/visa_full_audit_batch_22.csv").open(encoding="utf-8-sig", newline="")))
+          simple23 = list(csv.DictReader(Path("database/data/new_country_visa_batch_23.csv").open(encoding="utf-8-sig", newline="")))
+          audit23 = list(csv.DictReader(Path("database/data/visa_full_audit_batch_23.csv").open(encoding="utf-8-sig", newline="")))
           if len(simple21) != 44 or len(audit21) != 44 or {r["destination_iso2"] for r in audit21} != expected_44:
             raise SystemExit("Batch 21 must contain exactly 44 approved destinations.")
           if len(simple22) != 4 or len(audit22) != 4 or {r["destination_iso2"] for r in audit22} != expected_4:
             raise SystemExit("Batch 22 must contain exactly KY, BM, PA and MX.")
-          if set(expected_44) & set(expected_4):
+          if (set(expected_44) & set(expected_4)) or (set(expected_44) & set(expected_3)) or (set(expected_4) & set(expected_3)):
             raise SystemExit("Batch allowlists overlap.")
-          for batch, simple, audit in (("21", simple21, audit21), ("22", simple22, audit22)):
+          if len(simple23) != 3 or len(audit23) != 3 or {r["destination_iso2"] for r in audit23} != expected_3:
+            raise SystemExit("Batch 23 must contain exactly BO, CU and HT.")
+          for batch, simple, audit in (("21", simple21, audit21), ("22", simple22, audit22), ("23", simple23, audit23)):
             if len(simple) != len(audit):
               raise SystemExit(f"Batch {batch}: simple/full-audit row count mismatch.")
             simple_by_code = {r["destination_iso2"]: r for r in simple}
@@ -75,31 +80,35 @@ jobs:
               for field in ["passport_iso3","travel_purpose","visa_requirement_type","visa_required","visa_free_eligibility","visa_on_arrival_available","evisa_available","application_fee","processing_time","official_source_url","cross_check_source_url","verification_status"]:
                 if source_row.get(field) != row.get(field):
                   raise SystemExit(f"{code}: simple/full-audit mismatch in {field}.")
-          simple_all = simple21 + simple22
-          audit_all = audit21 + audit22
+          simple_all = simple21 + simple22 + simple23
+          audit_all = audit21 + audit22 + audit23
           codes = [r["destination_iso2"] for r in audit_all]
-          if len(codes) != 48 or len(set(codes)) != 48:
-            raise SystemExit("Combined import must contain 48 unique country/nationality/purpose keys.")
-          with Path("verified_new_country_backlog_batches_21_22.csv").open("w", encoding="utf-8", newline="") as f:
+          if len(codes) != 51 or len(set(codes)) != 51:
+            raise SystemExit("Combined import must contain 51 unique country/nationality/purpose keys.")
+          with Path("verified_new_country_backlog_batches_21_23.csv").open("w", encoding="utf-8", newline="") as f:
             simple_fields = list(dict.fromkeys(key for row in simple_all for key in row))
             writer = csv.DictWriter(f, fieldnames=simple_fields, extrasaction="raise")
             writer.writeheader()
             writer.writerows(simple_all)
-          with Path("verified_full_audit_batches_21_22.csv").open("w", encoding="utf-8", newline="") as f:
+          with Path("verified_full_audit_batches_21_23.csv").open("w", encoding="utf-8", newline="") as f:
             audit_fields = list(dict.fromkeys(key for row in audit_all for key in row))
             writer = csv.DictWriter(f, fieldnames=audit_fields, extrasaction="raise")
             writer.writeheader()
             writer.writerows(audit_all)
-          print("VALIDATION_PASSED: 44 verified backlog destinations plus 4 newly researched destinations; 48 unique BGD tourism records. Pending rows excluded.")
+          print("VALIDATION_PASSED: 44 verified backlog destinations plus 4 batch 22 destinations and 3 new batch 23 destinations; 51 unique BGD tourism records. Pending rows excluded.")
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: verified-country-batches-21-22
+          name: verified-country-batches-21-23
           path: |
-            verified_new_country_backlog_batches_21_22.csv
-            verified_full_audit_batches_21_22.csv
+            verified_new_country_backlog_batches_21_23.csv
+            verified_full_audit_batches_21_23.csv
             database/data/verified_country_backlog_batch_21.csv
             database/data/verified_country_full_audit_batch_21.csv
+            database/data/new_country_visa_batch_22.csv
+            database/data/visa_full_audit_batch_22.csv
+            database/data/new_country_visa_batch_23.csv
+            database/data/visa_full_audit_batch_23.csv
 
   import-production:
     needs: validate
@@ -109,7 +118,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: verified-country-batches-21-22
+          name: verified-country-batches-21-23
       - name: Prepare SSH
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -134,7 +143,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'mkdir -p /var/www/unigo/backend/shared/imports'
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" verified_new_country_backlog_batches_21_22.csv verified_full_audit_batches_21_22.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" verified_new_country_backlog_batches_21_23.csv verified_full_audit_batches_21_23.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
       - name: Export fresh pre-import production audit
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -146,18 +155,18 @@ jobs:
           APP_DIR="/var/www/unigo/backend/current"
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
           cd "$APP_DIR"
-          php artisan visa:requirements-audit > "$IMPORT_DIR/batches_21_22_pre_import_audit.json"
-          test -s "$IMPORT_DIR/batches_21_22_pre_import_audit.json"
+          php artisan visa:requirements-audit > "$IMPORT_DIR/batches_21_23_pre_import_audit.json"
+          test -s "$IMPORT_DIR/batches_21_23_pre_import_audit.json"
           REMOTE
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batches_21_22_pre_import_audit.json" ./batches_21_22_pre_import_audit.json
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batches_21_23_pre_import_audit.json" ./batches_21_23_pre_import_audit.json
       - name: Confirm production country rows and duplicate-free keys
         run: |
           python3 - <<'PY'
           import csv
           import json
           from pathlib import Path
-          expected = {r["destination_iso2"] for r in csv.DictReader(Path("verified_full_audit_batches_21_22.csv").open(encoding="utf-8-sig", newline=""))}
-          audit = json.loads(Path("batches_21_22_pre_import_audit.json").read_text())
+          expected = {r["destination_iso2"] for r in csv.DictReader(Path("verified_full_audit_batches_21_23.csv").open(encoding="utf-8-sig", newline=""))}
+          audit = json.loads(Path("batches_21_23_pre_import_audit.json").read_text())
           countries = audit.get("country_table", [])
           by_iso = {c.get("iso2"): c for c in countries}
           if len(by_iso) != len(countries):
@@ -185,7 +194,7 @@ jobs:
             "public_directory_codes_before": sorted(x for x in public_before if x),
             "expected_codes": sorted(expected)
           }
-          Path("batches_21_22_pre_import_summary.json").write_text(json.dumps(summary, indent=2))
+          Path("batches_21_23_pre_import_summary.json").write_text(json.dumps(summary, indent=2))
           print(json.dumps(summary, indent=2))
           print("PRE_IMPORT_DATABASE_CHECK_PASSED")
           PY
@@ -204,13 +213,13 @@ jobs:
           mkdir -p "$BACKUP_DIR"
           test -f "$SHARED_DIR/.env"
           test -f "$APP_DIR/vendor/autoload.php"
-          test -s "$IMPORT_DIR/verified_new_country_backlog_batches_21_22.csv"
-          test -s "$IMPORT_DIR/verified_full_audit_batches_21_22.csv"
-          test -s "$IMPORT_DIR/batches_21_22_pre_import_audit.json"
+          test -s "$IMPORT_DIR/verified_new_country_backlog_batches_21_23.csv"
+          test -s "$IMPORT_DIR/verified_full_audit_batches_21_23.csv"
+          test -s "$IMPORT_DIR/batches_21_23_pre_import_audit.json"
           CNF="$(mktemp)"
           DB_FILE="$(mktemp)"
           STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
-          BACKUP_FILE="$BACKUP_DIR/unigo-pre-verified-batches-21-22-$STAMP.sql.gz"
+          BACKUP_FILE="$BACKUP_DIR/unigo-pre-verified-batches-21-23-$STAMP.sql.gz"
           trap 'rm -f "$CNF" "$DB_FILE"' EXIT
           cd "$APP_DIR"
           BACKUP_CNF="$CNF" DB_NAME_FILE="$DB_FILE" UNIGO_APP_DIR="$APP_DIR" php <<'PHP'
@@ -238,8 +247,8 @@ jobs:
           test -s "$BACKUP_FILE"
           gzip -t "$BACKUP_FILE"
           sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
-          printf '%s\n' "$BACKUP_FILE" > "$IMPORT_DIR/batches_21_22_backup_path.txt"
-          printf '%s\n' "$BACKUP_FILE.sha256" > "$IMPORT_DIR/batches_21_22_backup_checksum_path.txt"
+          printf '%s\n' "$BACKUP_FILE" > "$IMPORT_DIR/batches_21_23_backup_path.txt"
+          printf '%s\n' "$BACKUP_FILE.sha256" > "$IMPORT_DIR/batches_21_23_backup_checksum_path.txt"
           echo "PRODUCTION_BACKUP_CREATED_AND_GZIP_VERIFIED $BACKUP_FILE"
           REMOTE
       - name: Restore-test production backup in isolated MySQL 8
@@ -249,8 +258,8 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          BACKUP_PATH="$(ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cat /var/www/unigo/backend/shared/imports/batches_21_22_backup_path.txt')"
-          CHECKSUM_PATH="$(ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cat /var/www/unigo/backend/shared/imports/batches_21_22_backup_checksum_path.txt')"
+          BACKUP_PATH="$(ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cat /var/www/unigo/backend/shared/imports/batches_21_23_backup_path.txt')"
+          CHECKSUM_PATH="$(ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cat /var/www/unigo/backend/shared/imports/batches_21_23_backup_checksum_path.txt')"
           test -n "$BACKUP_PATH"
           test -n "$CHECKSUM_PATH"
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" ./unigo-production-backup.sql.gz
@@ -283,22 +292,22 @@ jobs:
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
           cd "$APP_DIR"
           mkdir -p storage/app/imports
-          cp "$IMPORT_DIR/verified_new_country_backlog_batches_21_22.csv" storage/app/imports/unigo_visa_requirements_research_template.csv
+          cp "$IMPORT_DIR/verified_new_country_backlog_batches_21_23.csv" storage/app/imports/unigo_visa_requirements_research_template.csv
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force
-          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batches_21_22.csv" --base-url=https://api.unigo-bd.com --dry-run > "$IMPORT_DIR/batches_21_22_dry_run.json"
-          test -s "$IMPORT_DIR/batches_21_22_dry_run.json"
+          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batches_21_23.csv" --base-url=https://api.unigo-bd.com --dry-run > "$IMPORT_DIR/batches_21_23_dry_run.json"
+          test -s "$IMPORT_DIR/batches_21_23_dry_run.json"
           REMOTE
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batches_21_22_dry_run.json" ./batches_21_22_dry_run.json
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batches_21_23_dry_run.json" ./batches_21_23_dry_run.json
       - name: Inspect dry-run result before actual import
         run: |
           python3 - <<'PY'
           import json
           from pathlib import Path
-          result=json.loads(Path("batches_21_22_dry_run.json").read_text())
-          if result.get("mode") != "dry_run" or result.get("rows") != 48 or result.get("failures"):
-            raise SystemExit(f"Dry-run did not pass the 48-row allowlist: {result}")
+          result=json.loads(Path("batches_21_23_dry_run.json").read_text())
+          if result.get("mode") != "dry_run" or result.get("rows") != 51 or result.get("failures"):
+            raise SystemExit(f"Dry-run did not pass the 51-row allowlist: {result}")
           print(json.dumps(result, indent=2))
-          print("DRY_RUN_PASSED_48_ROWS_NO_FAILURES")
+          print("DRY_RUN_PASSED_51_ROWS_NO_FAILURES")
           PY
       - name: Import, verify and export post-import database audit
         env:
@@ -311,14 +320,14 @@ jobs:
           APP_DIR="/var/www/unigo/backend/current"
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
           cd "$APP_DIR"
-          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batches_21_22.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batches_21_22_import_result.json"
-          php artisan visa:requirements-audit > "$IMPORT_DIR/batches_21_22_post_import_audit.json"
-          test -s "$IMPORT_DIR/batches_21_22_import_result.json"
-          test -s "$IMPORT_DIR/batches_21_22_post_import_audit.json"
+          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batches_21_23.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batches_21_23_import_result.json"
+          php artisan visa:requirements-audit > "$IMPORT_DIR/batches_21_23_post_import_audit.json"
+          test -s "$IMPORT_DIR/batches_21_23_import_result.json"
+          test -s "$IMPORT_DIR/batches_21_23_post_import_audit.json"
           REMOTE
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batches_21_22_import_result.json" ./batches_21_22_import_result.json
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batches_21_22_post_import_audit.json" ./batches_21_22_post_import_audit.json
-      - name: Verify database readback and public API for all 48 countries
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batches_21_23_import_result.json" ./batches_21_23_import_result.json
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batches_21_23_post_import_audit.json" ./batches_21_23_post_import_audit.json
+      - name: Verify database readback and public API for all 51 countries
         run: |
           python3 - <<'PY'
           import csv
@@ -326,13 +335,13 @@ jobs:
           from pathlib import Path
           from urllib.request import Request, urlopen
 
-          expected_rows = {r["destination_iso2"]: r for r in csv.DictReader(Path("verified_full_audit_batches_21_22.csv").open(encoding="utf-8-sig", newline=""))}
-          pre = json.loads(Path("batches_21_22_pre_import_audit.json").read_text())
-          post = json.loads(Path("batches_21_22_post_import_audit.json").read_text())
-          imported = json.loads(Path("batches_21_22_import_result.json").read_text())
-          pre_summary = json.loads(Path("batches_21_22_pre_import_summary.json").read_text())
-          if imported.get("mode") != "import" or imported.get("rows") != 48 or imported.get("failures") or imported.get("read_back") != 48 or imported.get("reverified") != 48 or imported.get("republished") != 48:
-            raise SystemExit(f"Importer readback did not confirm all 48 records: {imported}")
+          expected_rows = {r["destination_iso2"]: r for r in csv.DictReader(Path("verified_full_audit_batches_21_23.csv").open(encoding="utf-8-sig", newline=""))}
+          pre = json.loads(Path("batches_21_23_pre_import_audit.json").read_text())
+          post = json.loads(Path("batches_21_23_post_import_audit.json").read_text())
+          imported = json.loads(Path("batches_21_23_import_result.json").read_text())
+          pre_summary = json.loads(Path("batches_21_23_pre_import_summary.json").read_text())
+          if imported.get("mode") != "import" or imported.get("rows") != 51 or imported.get("failures") or imported.get("read_back") != 51 or imported.get("reverified") != 51 or imported.get("republished") != 51:
+            raise SystemExit(f"Importer readback did not confirm all 51 records: {imported}")
           if post.get("country_table_count") != pre.get("country_table_count"):
             raise SystemExit("Country master row count changed during a visa-requirement-only import.")
           expected_total = int(pre.get("total",0)) + len(set(expected_rows) - set(pre_summary["existing_requirement_codes"]))
@@ -373,7 +382,7 @@ jobs:
 
           base="https://api.unigo-bd.com/api"
           def get(path):
-            req=Request(base+path,headers={"Accept":"application/json","User-Agent":"UniGo-Verified-Batches-21-22/1.0"})
+            req=Request(base+path,headers={"Accept":"application/json","User-Agent":"UniGo-Verified-Batches-21-23/1.0"})
             with urlopen(req,timeout=45) as response:
               if response.status != 200:
                 raise SystemExit(f"Public API HTTP {response.status}: {path}")
@@ -422,15 +431,15 @@ jobs:
             print(f"PUBLIC_API_VERIFIED {country['name']} ({code}) — {slug}")
           print(f"DATABASE_AUDIT_VERIFIED total={post.get('total')} published={post.get('published_count')} country_rows={post.get('country_table_count')} public_directory={post.get('public_country_directory_count')}")
           print(f"PUBLIC_API_VERIFIED countries={len(directory_rows)} requirements={len(requirements)}")
-          print("ALL_48_COUNTRIES_IMPORTED_VERIFIED_PUBLISHED")
+          print("ALL_51_COUNTRIES_IMPORTED_VERIFIED_PUBLISHED")
           PY
       - uses: actions/upload-artifact@v4
         with:
-          name: verified-country-batches-21-22-production-audit
+          name: verified-country-batches-21-23-production-audit
           path: |
-            batches_21_22_pre_import_summary.json
-            batches_21_22_pre_import_audit.json
-            batches_21_22_dry_run.json
-            batches_21_22_import_result.json
-            batches_21_22_post_import_audit.json
-            verified_full_audit_batches_21_22.csv
+            batches_21_23_pre_import_summary.json
+            batches_21_23_pre_import_audit.json
+            batches_21_23_dry_run.json
+            batches_21_23_import_result.json
+            batches_21_23_post_import_audit.json
+            verified_full_audit_batches_21_23.csv
