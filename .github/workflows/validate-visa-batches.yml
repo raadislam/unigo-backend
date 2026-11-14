@@ -9,6 +9,10 @@ on:
       - 'database/data/new_country_visa_batch_*.csv'
       - 'database/data/country_discovery_ledger.csv'
       - 'scripts/validate_visa_batches.py'
+      - 'scripts/validate_production_visa_audit.py'
+      - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
+      - 'scripts/validate_production_visa_audit.py'
+      - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
@@ -18,6 +22,8 @@ on:
       - 'database/data/new_country_visa_batch_*.csv'
       - 'database/data/country_discovery_ledger.csv'
       - 'scripts/validate_visa_batches.py'
+      - 'scripts/validate_production_visa_audit.py'
+      - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
@@ -28,6 +34,12 @@ jobs:
     steps:
       - name: Checkout backend
         uses: actions/checkout@v4
+      - name: Set up PHP for importer syntax validation
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+      - name: Validate importer PHP syntax
+        run: php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
       - name: Set up Python
         uses: actions/setup-python@v5
         with:

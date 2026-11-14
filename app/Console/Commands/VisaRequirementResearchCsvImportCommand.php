@@ -149,6 +149,10 @@ class VisaRequirementResearchCsvImportCommand extends Command
                                     if ($actualList !== $expectedList) throw new RuntimeException('Readback mismatch for required_documents.');
                                 } elseif (in_array($field, ['visa_required', 'visa_free_available', 'visa_on_arrival_available', 'evisa_available'], true)) {
                                     if ((bool) $actual !== (bool) $expected) throw new RuntimeException('Readback mismatch for ' . $field . '.');
+                                } elseif (is_array($expected)) {
+                                    if (! is_array($actual) || $this->normalizeArrayValue($actual) !== $this->normalizeArrayValue($expected)) {
+                                        throw new RuntimeException('Readback mismatch for ' . $field . '.');
+                                    }
                                 } elseif ((string) $actual !== (string) $expected) {
                                     throw new RuntimeException('Readback mismatch for ' . $field . '.');
                                 }
@@ -407,6 +411,20 @@ class VisaRequirementResearchCsvImportCommand extends Command
         }
 
         return $payload;
+    }
+
+
+    private function normalizeArrayValue(mixed $value): mixed
+    {
+        if (! is_array($value)) return $value;
+        if (array_is_list($value)) {
+            return array_map(fn ($item) => $this->normalizeArrayValue($item), $value);
+        }
+        ksort($value);
+        foreach ($value as $key => $item) {
+            $value[$key] = $this->normalizeArrayValue($item);
+        }
+        return $value;
     }
 
     private function addSource(string $base, int $id, array $sources, array $source, string $secret, bool $dry): bool
