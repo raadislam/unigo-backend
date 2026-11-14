@@ -78,7 +78,7 @@ jobs:
             if seed.get("cross_check_source_url") or seed.get("cross_check_source_name"):
               raise SystemExit(f"{code}: seed cross-check fields must be blank to avoid duplicate secondary source rows.")
           with Path("verified_full_audit_batch_25.csv").open("w",encoding="utf-8",newline="") as handle:
-            writer=csv.DictWriter(handle,fieldnames=list(audit[0].keys()),lineterminator="\\n")
+            writer=csv.DictWriter(handle,fieldnames=list(audit[0].keys()),lineterminator="\n")
             writer.writeheader()
             writer.writerows([audit_by[c] for c in sorted(expected)])
           print("BATCH25_VALIDATION_PASSED allowlist=KR,SG rows=2")
@@ -113,7 +113,7 @@ jobs:
           test -n "$VPS_PORT"
           test -n "$VPS_USER"
           install -m 700 -d ~/.ssh
-          printf '%s\\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_import
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_import
           chmod 600 ~/.ssh/unigo_import
           for attempt in $(seq 1 5); do
             if ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>/dev/null; then break; fi
@@ -239,7 +239,6 @@ jobs:
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch25_backup_path.txt" ./batch25_backup_path.txt
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch25_backup_checksum_path.txt" ./batch25_backup_checksum_path.txt
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch25_backup_sha256.txt" ./batch25_backup_sha256.txt
-      - name: Restore-test backup in isolated MySQL 8
       - name: Restore-test backup in isolated MySQL 8
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
