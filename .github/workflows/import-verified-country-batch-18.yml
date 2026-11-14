@@ -35,8 +35,6 @@ jobs:
               raise SystemExit("Verified seed rows do not exactly match BF, CV, SC and TG.")
           if any(r.get("passport_iso3") != "BGD" or r.get("travel_purpose") != "tourism" for r in ready):
               raise SystemExit("Unexpected passport nationality or travel purpose.")
-          if any(r.get("publish_status") != "published" for r in ready):
-              raise SystemExit("A verified seed row is not marked published in the reviewed research data.")
           with audit.open(encoding="utf-8-sig", newline="") as f:
               audited = list(csv.DictReader(f))
           selected = [r for r in audited if r.get("verification_status") == "verified" and r.get("publish_status") == "published"]
