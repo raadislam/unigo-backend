@@ -1,0 +1,31 @@
+name: Validate VFS Bangladesh Coverage
+on:
+  pull_request:
+    paths:
+      - 'database/data/vfs_bangladesh_destination_coverage.csv'
+      - 'database/data/vfs_fee_processing_snapshot_20261114.csv'
+      - 'database/data/country_discovery_ledger.csv'
+      - 'scripts/validate_vfs_coverage.py'
+      - '.github/workflows/validate-vfs-coverage.yml'
+  push:
+    branches:
+      - research/vfs-bangladesh-coverage-20261114
+    paths:
+      - 'database/data/vfs_bangladesh_destination_coverage.csv'
+      - 'database/data/vfs_fee_processing_snapshot_20261114.csv'
+      - 'scripts/validate_vfs_coverage.py'
+      - '.github/workflows/validate-vfs-coverage.yml'
+permissions:
+  contents: read
+jobs:
+  validate-vfs-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate VFS destination coverage and fee snapshots
+        run: python scripts/validate_vfs_coverage.py
