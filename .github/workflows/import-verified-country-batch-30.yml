@@ -418,7 +418,7 @@ jobs:
           if result.get("mode") != "dry_run" or result.get("rows") != 6 or result.get("failures"):
             raise SystemExit(f"Batch 30 dry-run failed or did not match the 6-country allowlist: {result}")
           print(json.dumps(result, indent=2))
-          print("BATCH30_DRY_RUN_PASSED_5_VERIFIED_ROWS_NO_FAILURES")
+          print("BATCH30_DRY_RUN_PASSED_6_VERIFIED_ROWS_NO_FAILURES")
           PY
       - name: Import, verify and export post-import production audit
         env:
@@ -444,7 +444,7 @@ jobs:
             if [ -f "$IMPORT_DIR/batch30_import_result.json" ]; then
               FAILED_RESULT="$IMPORT_DIR/batch30_import_result_failed_$(date -u +%Y%m%dT%H%M%SZ).json"
               mv "$IMPORT_DIR/batch30_import_result.json" "$FAILED_RESULT"
-              echo "Previous incomplete or failed batch 29 result archived at $FAILED_RESULT."
+              echo "Previous incomplete or failed batch 30 result archived at $FAILED_RESULT."
             fi
             php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_29.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch30_import_result.json"
           fi
@@ -675,7 +675,7 @@ jobs:
               raise SystemExit(f"{code}: pending research-only country leaked into the public directory.")
           print(f"DATABASE_AUDIT_VERIFIED total={post.get('total')} published={post.get('published_count')} country_rows={post.get('country_table_count')} public_directory={post.get('public_country_directory_count')}")
           print(f"PUBLIC_API_VERIFIED countries={len(directory_rows)} requirements={len(requirements)}")
-          print("BATCH30_COMPLETE: 5 VERIFIED_AND_PUBLISHED; 3 PENDING_RESEARCH_ONLY")
+          print("BATCH30_COMPLETE: 6 VERIFIED_AND_PUBLISHED; 1 PENDING_RESEARCH_ONLY")
           PY
       - uses: actions/upload-artifact@v4
         with:
