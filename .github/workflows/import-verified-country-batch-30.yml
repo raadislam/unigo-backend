@@ -40,10 +40,21 @@ jobs:
           audit_by = {r["destination_iso2"]: r for r in audit}
           pending_rows = list(csv.DictReader(Path("database/data/pending_country_research_batch_30.csv").open(encoding="utf-8-sig", newline="")))
           pending_by = {r["destination_iso2"]: r for r in pending_rows}
+          ledger = {r["destination_iso2"]: r for r in csv.DictReader(Path("database/data/country_discovery_ledger.csv").open(encoding="utf-8-sig", newline=""))}
+          if not (expected | set(pending_by)).issubset(ledger):
+            raise SystemExit("Batch 30 codes are not all represented in the cumulative discovery ledger.")
+          for code in {"MS", "PR", "VI"}:
+            if ledger[code].get("discovery_status") != "research_complete_batch_30" or ledger[code].get("visa_record_status") != "verified_ready_for_import":
+              raise SystemExit(f"{code}: ledger does not show verified Batch 30 research ready for import.")
+          if ledger["US"].get("visa_record_status") != "verified_update_ready_for_import":
+            raise SystemExit("US: ledger does not identify the existing-record update.")
+          for code in {"SH", "TC"}:
+            if ledger[code].get("discovery_status") != "research_in_progress_batch_30" or not ledger[code].get("visa_record_status", "").startswith("research_pending"):
+              raise SystemExit(f"{code}: pending ledger status does not match the research-only file.")
           if set(pending_by) != {"SH", "TC"} or len(pending_by) != 2 or len(pending_by) != len(pending_rows):
             raise SystemExit("Batch 30 pending research file must contain SH and TC with no duplicates.")
           for code, row in pending_by.items():
-            if code in expected or row.get("discovery_status") != "research_in_progress_batch_30" or not row.get("exact_blocker", "").strip() or not row.get("next_research_action", "").strip():
+            if code in expected or row.get("discovery_status") != "research_in_progress_batch_30" or not row.get("exact_blocker", "").strip() or not row.get("next_research_action", "").strip() or not row.get("official_sources_checked", "").strip():
               raise SystemExit(f"{code}: pending country blocker or status is missing, or it leaked into the verified allowlist.")
           if set(simple_by) != expected or set(audit_by) != expected:
             raise SystemExit("Batch 30 country set does not match the MS, PR, VI and US verified allowlist.")
@@ -126,7 +137,7 @@ jobs:
             writer = csv.DictWriter(handle, fieldnames=list(audit[0].keys()), lineterminator="\n")
             writer.writeheader()
             writer.writerows(us_rows)
-          print("BATCH30_VALIDATION_PASSED seed=4 verified_allowlist=4 pending_research_only=2")
+          print("BATCH30_VALIDATION_PASSED seed_rows=4 new_destinations=3 existing_updates=1 verified_allowlist=4 pending_research_only=2")
           print("VERIFIED_ALLOWLIST " + ",".join(sorted(verified)))
           PY
       - uses: actions/upload-artifact@v4
@@ -230,6 +241,11 @@ jobs:
                 raise SystemExit(f"{code}: existing pending record has a non-pending status; manual reconciliation required.")
           pre_public = {c.get("iso2") for c in audit.get("public_country_directory", []) if c.get("iso2")}
           existing_published = sorted(code for code, items in records_by_code.items() if items[0].get("is_published") is True and items[0].get("verification_status") == "verified")
+          pending_research_codes = {"SH", "TC"}
+          missing_pending_master = pending_research_codes - set(by_iso)
+          pending_already_public = pending_research_codes & pre_public
+          if missing_pending_master or pending_already_public:
+            raise SystemExit(f"Pending research master/public parity failed: missing_master={sorted(missing_pending_master)} already_public={sorted(pending_already_public)}")
           us_record = records_by_code.get("US", [None])[0]
           if not isinstance(us_record, dict):
             raise SystemExit("The existing United States BGD tourism record is missing; this batch is an update, not a new country insert.")
@@ -246,6 +262,7 @@ jobs:
             "existing_published_codes": existing_published,
             "existing_statuses": {"US": {"verification_status": us_record.get("verification_status"), "is_published": us_record.get("is_published")}},
             "public_directory_codes_before": sorted(pre_public),
+            "pending_research_codes": sorted(pending_research_codes),
             "expected_codes": sorted(expected)
           }
           Path("batch30_pre_import_summary.json").write_text(json.dumps(summary, indent=2))
@@ -498,7 +515,7 @@ jobs:
                           border_capture.append(code)
                   elif spec.get("status") in {"not_published", "no_fixed_size_published", "no_fixed_size"} and spec.get("source_url"):
                       photo["official_no_fixed_size_published"] += 1
-                  elif spec.get("status") == "verified" and spec.get("source_url") and spec.get("source_name") and spec.get("dimensions_mm"):
+                  elif spec.get("status") == "verified" and spec.get("source_url") and spec.get("source_name") and any(spec.get(key) for key in ["dimensions_mm", "dimensions_px", "digital_dimensions_px", "file_size", "file_format", "format", "copies"]):
                       photo["structured_verified"] += 1
                       capture = str(spec.get("biometric_capture") or "").lower()
                       if any(term in capture for term in ["vfs", "photo booth", "photo captured at the centre", "photo capture at the centre", "captured at the visa application centre"]):
@@ -537,8 +554,14 @@ jobs:
           final = audit("batch30_post_import_audit.json", "post")
           if final["published_bgd_tourism_records"] != baseline["published_bgd_tourism_records"] + 3:
               raise SystemExit("Published record delta does not equal the three new destination records.")
-          if final["applicant_checklists"].get("complete_four_type", 0) < baseline["applicant_checklists"].get("complete_four_type", 0) + 4:
-              raise SystemExit("Applicant checklist coverage did not improve by at least four records.")
+          if final["photo_specifications"].get("structured_verified", 0) != baseline["photo_specifications"].get("structured_verified", 0) + 3:
+              raise SystemExit("Structured photo-specification coverage did not improve by three records.")
+          if final["photo_specifications"].get("missing_unresearched", 0) != baseline["photo_specifications"].get("missing_unresearched", 0) - 1:
+              raise SystemExit("Photo-specification missing count did not decrease by one after the U.S. update.")
+          if final["applicant_checklists"].get("complete_four_type", 0) != baseline["applicant_checklists"].get("complete_four_type", 0) + 4:
+              raise SystemExit("Applicant checklist coverage did not improve by exactly four records.")
+          if final["applicant_checklists"].get("missing", 0) != baseline["applicant_checklists"].get("missing", 0) - 1:
+              raise SystemExit("Applicant checklist missing count did not decrease by one after the U.S. update.")
           PY
 
       - name: Read back photo and applicant checklist JSON from the production database
