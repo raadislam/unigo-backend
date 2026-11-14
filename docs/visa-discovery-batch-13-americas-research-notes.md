@@ -17,12 +17,12 @@ The latest successful production audit available before this research batch was 
 | Colombia | Bangladesh is absent from short-stay visa-exempt Lists A, B and C and therefore requires Visitor V tourism visa. Bangladesh is explicitly listed for direct airport-transit visa; maximum 24 hours in a sterile zone at one airport. Tourism visa validity may be up to one year, with 90-day stays extendable to 180 days per 365 days. | Staged pending admin review. Official 2026 fee sources conflict: one page shows USD82 issuance; Resolution 3969/2026 shows USD138 issuance. No fee is asserted as final. |
 | Guyana | Official exemption schedule covers Bangladesh only for diplomatic, official and special passports. Ordinary passports require a visa. Trinidad consular guidance describes a one-month single-entry tourist visa and TT$300 fee; a separate government portal route is partly online and requires a Guyana sponsor. | Staged pending admin review. Confirm the Bangladesh-specific mission, submission route and applicable fee. |
 | Uruguay | The 19 August 2025 official admission regime marks Bangladesh common passports as requiring a prior consular visa. General process requires an in-person application, interview, six-month passport validity, travel reservation, invitation or hotel and solvency evidence. Fee: 3 consular pesos (USD42) only if granted. | Staged pending admin review. Confirm the responsible mission and Bangladesh-specific checklist. |
+| Ecuador | Bangladesh is on the official 2026 list of nationalities requiring an entry visa; visa-required travellers may apply through the official e-Visa platform. A separate transit visa has applied since 1 September 2025, with USD50 application + USD30 visa fees and a 20-day advance application rule. | Staged pending admin review. Tourist fee, permitted stay, full Bangladesh checklist and tourist processing SLA are not stated in the 2026 notice. |
 
 ## Additional discovery candidates logged but not staged
 
 - **Bahamas (BS):** the official visitor visa PDF dated 18 February 2014 lists Bangladesh ordinary passports as visa-free for three months. This is too old for a 2026 publication decision. Current written confirmation is required.
 - **Argentina (AR):** an Argentine Embassy visa-regime page dated 11 June 2015 lists Bangladesh among nationalities requiring a visa in all categories. The current generic tourist visa procedure is available, but the nationality schedule is stale. Confirm current Bangladesh status and Dhaka application details.
-- **Ecuador (EC):** official 2025 and 2026 notices include Bangladesh among nationalities requiring entry/transit visas. The temporary transit visa route began 1 September 2025 and is online, but the exact tourist visa category, fee, stay and document checklist are not sufficiently mapped.
 
 ## Source register
 
@@ -48,6 +48,12 @@ The latest successful production audit available before this research batch was 
 - Guyana Consulate General Trinidad and Tobago, Visa Application Advisory: https://guyanahctrinidad.mission.gov.gy/visa-application-advisory/
 - Government of Guyana Portal, Visitor Visa: https://portal.gov.gy/services/SVC-A59EC2
 - Guyana Immigration Support Services: https://eservices.iss.gov.gy/
+
+### Ecuador
+- Ecuador Ministry of Foreign Affairs, Tourism in Ecuador (19 October 2026): https://www.cancilleria.gob.ec/suecia/2026/10/19/670/
+- Ecuador Ministry of Foreign Affairs, Transit Visa Effective 1 September 2025: https://www.cancilleria.gob.ec/2025/08/30/ecuador-exigira-visa-de-transeunte-a-partir-del-1-de-septiembre-de-2025/
+- Ecuador Embassy in Madrid, Transit Visa Instructions: https://www.cancilleria.gob.ec/madrid/2025/09/02/visa-de-transeunte/
+- Ecuador Embassy in Houston, Tourism Visas (historical checklist; confirm current rules): https://www.cancilleria.gob.ec/houston/2023/05/10/visas-de-turismo/
 
 ### Uruguay
 - Uruguay Ministry of Interior, Admission Visa Regime (19 August 2025): https://www.gub.uy/ministerio-interior/comunicacion/publicaciones/regimen-visas-admision
