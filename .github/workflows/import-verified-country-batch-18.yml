@@ -1,0 +1,222 @@
+name: Import verified country visa batch 18
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/run-verified-country-import-batch-18.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-verified-country-import-batch-18
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate verified records only
+        run: |
+          python3 - <<'PY'
+          import csv, json
+          from pathlib import Path
+          expected = {"BF", "CV", "SC", "TG"}
+          source = Path("database/data/new_country_visa_batch_18.csv")
+          audit = Path("database/data/visa_full_audit_batch_18.csv")
+          with source.open(encoding="utf-8-sig", newline="") as f:
+              rows = list(csv.DictReader(f))
+          ready = [r for r in rows if r.get("verification_status") == "verified"]
+          if {r.get("destination_iso2") for r in ready} != expected or len(ready) != 4:
+              raise SystemExit("Verified seed rows do not exactly match BF, CV, SC and TG.")
+          if any(r.get("passport_iso3") != "BGD" or r.get("travel_purpose") != "tourism" for r in ready):
+              raise SystemExit("Unexpected passport nationality or travel purpose.")
+          if any(r.get("publish_status") != "published" for r in ready):
+              raise SystemExit("A verified seed row is not marked published in the reviewed research data.")
+          with audit.open(encoding="utf-8-sig", newline="") as f:
+              audited = list(csv.DictReader(f))
+          selected = [r for r in audited if r.get("verification_status") == "verified" and r.get("publish_status") == "published"]
+          if {r.get("destination_iso2") for r in selected} != expected or len(selected) != 4:
+              raise SystemExit("Full-audit published rows do not exactly match BF, CV, SC and TG.")
+          if any(r.get("full_audit") != "true" for r in selected):
+              raise SystemExit("A selected row is not a full audit.")
+          for row in selected:
+              if not row.get("official_source_url", "").startswith("https://") or not row.get("cross_check_source_url", "").startswith("https://"):
+                  raise SystemExit("A selected record lacks HTTPS primary or cross-check source.")
+              sources = json.loads(row.get("additional_sources", "[]"))
+              if not isinstance(sources, list) or len(sources) < 2:
+                  raise SystemExit("A selected record lacks two additional source records.")
+          with open("verified_new_country_batch_18.csv", "w", newline="", encoding="utf-8") as f:
+              writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
+              writer.writeheader()
+              writer.writerows(ready)
+          with open("verified_full_audit_batch_18.csv", "w", newline="", encoding="utf-8") as f:
+              writer = csv.DictWriter(f, fieldnames=list(audited[0].keys()))
+              writer.writeheader()
+              writer.writerows(selected)
+          print("VALIDATION_PASSED: BF, CV, SC, TG only; Burundi excluded as pending.")
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: verified-country-batch-18
+          path: |
+            verified_new_country_batch_18.csv
+            verified_full_audit_batch_18.csv
+
+  import-production:
+    needs: validate
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: verified-country-batch-18
+      - name: Prepare SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_import
+          chmod 600 ~/.ssh/unigo_import
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'command -v php && command -v mysql && command -v mysqldump && command -v gzip'
+      - name: Upload verified CSV files
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'mkdir -p /var/www/unigo/backend/shared/imports'
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" verified_new_country_batch_18.csv verified_full_audit_batch_18.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
+      - name: Backup and test database restore before import
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          SHARED_DIR="/var/www/unigo/backend/shared"
+          BACKUP_DIR="$SHARED_DIR/backups"
+          IMPORT_DIR="$SHARED_DIR/imports"
+          mkdir -p "$BACKUP_DIR"
+          test -f "$SHARED_DIR/.env"
+          test -f "$APP_DIR/vendor/autoload.php"
+          test -s "$IMPORT_DIR/verified_new_country_batch_18.csv"
+          test -s "$IMPORT_DIR/verified_full_audit_batch_18.csv"
+          CNF="$(mktemp)"
+          DB_FILE="$(mktemp)"
+          RESTORE_DB=""
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
+          BACKUP_FILE="$BACKUP_DIR/unigo-pre-verified-batch-18-$STAMP.sql.gz"
+          cleanup() {
+            if [[ -n "$RESTORE_DB" ]]; then sudo -n mysql -e "DROP DATABASE IF EXISTS $RESTORE_DB" >/dev/null 2>&1 || true; fi
+            rm -f "$CNF" "$DB_FILE"
+          }
+          trap cleanup EXIT
+          cd "$APP_DIR"
+          BACKUP_CNF="$CNF" DB_NAME_FILE="$DB_FILE" UNIGO_APP_DIR="$APP_DIR" php <<'PHP'
+          <?php
+          $root = getenv('UNIGO_APP_DIR');
+          chdir($root);
+          require $root . '/vendor/autoload.php';
+          $app = require $root . '/bootstrap/app.php';
+          $app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
+          $connection = config('database.connections.' . config('database.default'));
+          if (!is_array($connection) || ($connection['driver'] ?? '') !== 'mysql') { fwrite(STDERR, "Expected MySQL production connection.\\n"); exit(1); }
+          $database = (string) ($connection['database'] ?? '');
+          if ($database === '') { fwrite(STDERR, "Production database name unavailable.\\n"); exit(1); }
+          $escape = static fn ($v) => '"' . str_replace(["\\\\", '"', "\\n", "\\r"], ["\\\\\\\\", '\\"', "\\n", "\\r"], (string) $v) . '"';
+          $options = ['host' => $connection['host'] ?? '127.0.0.1', 'port' => $connection['port'] ?? 3306, 'user' => $connection['username'] ?? '', 'password' => $connection['password'] ?? '', 'default-character-set' => $connection['charset'] ?? 'utf8mb4'];
+          if (!empty($connection['unix_socket'])) $options['socket'] = $connection['unix_socket'];
+          $content = "[client]\\n";
+          foreach ($options as $key => $value) $content .= $key . '=' . $escape($value) . "\\n";
+          if (file_put_contents(getenv('BACKUP_CNF'), $content, LOCK_EX) === false || file_put_contents(getenv('DB_NAME_FILE'), $database, LOCK_EX) === false) { fwrite(STDERR, "Unable to prepare protected backup configuration.\\n"); exit(1); }
+          chmod(getenv('BACKUP_CNF'), 0600);
+          chmod(getenv('DB_NAME_FILE'), 0600);
+          PHP
+          DB_NAME="$(cat "$DB_FILE")"
+          DB_BYTES="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT COALESCE(SUM(data_length+index_length),0) FROM information_schema.tables WHERE table_schema=DATABASE();")"
+          FREE_KB="$(df -Pk "$BACKUP_DIR" | awk 'NR==2 {print $4}')"
+          if [[ "$DB_BYTES" -le 0 || "$((FREE_KB * 1024))" -lt "$((DB_BYTES * 3 + 268435456))" ]]; then echo "Insufficient backup/restore-test disk space; import stopped."; exit 1; fi
+          mysqldump --defaults-extra-file="$CNF" --no-tablespaces --single-transaction --quick --routines --triggers --events --hex-blob --default-character-set=utf8mb4 "$DB_NAME" | gzip -1 > "$BACKUP_FILE"
+          test -s "$BACKUP_FILE"
+          gzip -t "$BACKUP_FILE"
+          sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
+          SCHEMA_INFO="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE();")"
+          read -r DB_CHARSET DB_COLLATION <<< "$SCHEMA_INFO"
+          RESTORE_DB="unigo_restore_verify_${STAMP//[^A-Za-z0-9_]/_}"
+          sudo -n mysql -e "CREATE DATABASE $RESTORE_DB CHARACTER SET $DB_CHARSET COLLATE $DB_COLLATION"
+          gzip -dc "$BACKUP_FILE" | sudo -n mysql --database="$RESTORE_DB"
+          table_counts() {
+            local database="$1"
+            local tables
+            tables="$(sudo -n mysql --database="$database" --batch --skip-column-names -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema=DATABASE() AND TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME;")"
+            while IFS= read -r table; do
+              [[ -z "$table" ]] && continue
+              printf '%s\\t%s\\n' "$table" "$(sudo -n mysql --database="$database" --batch --skip-column-names -e "SELECT COUNT(*) FROM $table;")"
+            done <<< "$tables"
+          }
+          diff -u <(table_counts "$DB_NAME") <(table_counts "$RESTORE_DB")
+          sudo -n mysql -e "DROP DATABASE $RESTORE_DB"
+          RESTORE_DB=""
+          echo "BACKUP_RESTORE_TEST_PASSED $BACKUP_FILE"
+          REMOTE
+      - name: Import, verify and publish four verified countries
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -Eeuo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          SHARED_DIR="/var/www/unigo/backend/shared"
+          IMPORT_DIR="$SHARED_DIR/imports"
+          cd "$APP_DIR"
+          mkdir -p storage/app/imports
+          cp "$IMPORT_DIR/verified_new_country_batch_18.csv" storage/app/imports/unigo_visa_requirements_research_template.csv
+          php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force
+          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_18.csv" --base-url=https://api.unigo-bd.com --dry-run
+          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_18.csv" --base-url=https://api.unigo-bd.com
+          php artisan visa:requirements-audit
+          REMOTE
+      - name: Verify four public country records
+        run: |
+          python3 - <<'PY'
+          import json
+          from urllib.request import Request, urlopen
+          base = "https://api.unigo-bd.com/api"
+          expected = {"burkina-faso", "cabo-verde", "seychelles", "togo"}
+          def get(path):
+              req = Request(base + path, headers={"Accept":"application/json","User-Agent":"UniGo-Verified-Batch-18/1.0"})
+              with urlopen(req, timeout=45) as response:
+                  if response.status != 200: raise SystemExit(f"HTTP {response.status}: {path}")
+                  return json.loads(response.read().decode())
+          payload = get("/visa-requirements?passport=BGD&purpose=tourism")
+          rows = payload.get("data")
+          if payload.get("success") is not True or not isinstance(rows, list): raise SystemExit("Invalid public requirements API response.")
+          found = {r.get("country",{}).get("slug"):r for r in rows if r.get("country",{}).get("slug") in expected}
+          if set(found) != expected: raise SystemExit(f"Published country set mismatch: {sorted(found)}")
+          for slug, row in found.items():
+              if row.get("verification_status") != "verified" or row.get("is_published") is not True:
+                  raise SystemExit(f"{slug} is not verified and published.")
+              if not any(s.get("source_type") == "official" and s.get("is_primary") is True for s in row.get("sources", [])):
+                  raise SystemExit(f"{slug} lacks a primary official source.")
+              iso2 = row.get("country",{}).get("iso2")
+              detail = get(f"/visa-requirements/{iso2}?passport=BGD&purpose=tourism").get("data",{})
+              if detail.get("id") != row.get("id") or detail.get("verification_status") != "verified" or detail.get("is_published") is not True:
+                  raise SystemExit(f"{slug} detail API readback failed.")
+              print(f"PUBLIC_API_VERIFIED {slug} ({iso2})")
+          print("ALL_FOUR_COUNTRIES_IMPORTED_VERIFIED_PUBLISHED")
+          PY
