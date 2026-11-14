@@ -5,7 +5,7 @@ import json
 import os
 import re
 import sys
-from collections import Counter, defaultdict
+from collections import Counter
 from datetime import date, timedelta
 
 
@@ -179,6 +179,9 @@ def main():
     required_fields = {
         "visa_requirement_type": lambda value: bool(str(value or "").strip()),
         "visa_required": lambda value: value is not None,
+        "visa_free_eligibility": lambda value: value is not None,
+        "visa_on_arrival_available": lambda value: value is not None,
+        "evisa_available": lambda value: value is not None,
         "maximum_permitted_stay": lambda value: bool(str(value or "").strip()),
         "entry_count": lambda value: bool(str(value or "").strip()),
         "application_fee": lambda value: bool(str(value or "").strip()),
