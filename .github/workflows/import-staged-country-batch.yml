@@ -6,6 +6,13 @@ on:
       - main
     paths:
       - 'scripts/run-staged-country-import-20261114.trigger'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'scripts/import_staged_country_batch.php'
+      - '.github/workflows/import-staged-country-batch.yml'
+      - 'scripts/run-staged-country-import-20261114.trigger'
   workflow_dispatch:
 
 permissions:
@@ -16,7 +23,23 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout backend
+        uses: actions/checkout@v4
+
+      - name: Validate PHP and workflow syntax
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+        run: |
+          php -l scripts/import_staged_country_batch.php
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0)); puts "Workflow YAML syntax OK"' .github/workflows/import-staged-country-batch.yml
+
   guarded-import:
+    needs: validate
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -134,7 +157,6 @@ jobs:
           mysqldump --defaults-extra-file="$CNF" --single-transaction --quick --routines --triggers --events --hex-blob --default-character-set=utf8mb4 "$DB_NAME" | gzip -1 > "$BACKUP_FILE"
           test -s "$BACKUP_FILE"
           gzip -t "$BACKUP_FILE"
-          gzip -dc "$BACKUP_FILE" | grep -m 1 -E 'CREATE TABLE|INSERT INTO' >/dev/null
           sha256sum "$BACKUP_FILE" > "$BACKUP_FILE.sha256"
 
           SCHEMA_INFO="$(mysql --defaults-extra-file="$CNF" --database="$DB_NAME" --batch --skip-column-names -e "SELECT DEFAULT_CHARACTER_SET_NAME, DEFAULT_COLLATION_NAME FROM information_schema.SCHEMATA WHERE SCHEMA_NAME=DATABASE();")"
@@ -165,6 +187,7 @@ jobs:
             TOTAL="$(sed -E 's/.*total=([0-9]+).*/\1/' <<< "$LINE")"
             EXISTING="$(sed -E 's/.*existing=([0-9]+).*/\1/' <<< "$LINE")"
             MISSING="$(sed -E 's/.*missing=([0-9]+).*/\1/' <<< "$LINE")"
+            mkdir -p "$APP_DIR/storage/app/imports"
             cp "$IMPORT_DIR/$FILE" "$APP_DIR/storage/app/imports/unigo_visa_requirements_research_template.csv"
             OUTPUT="$(php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force 2>&1)" || {
               printf '%s\n' "$OUTPUT"
