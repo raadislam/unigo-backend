@@ -35,7 +35,7 @@ jobs:
           simple = list(csv.DictReader(Path("database/data/new_country_visa_batch_30.csv").open(encoding="utf-8-sig", newline="")))
           audit = list(csv.DictReader(Path("database/data/visa_full_audit_batch_30.csv").open(encoding="utf-8-sig", newline="")))
           if len(simple) != 4 or len(audit) != 4:
-            raise SystemExit("Batch 30 must contain exactly five verified seed and full-audit rows.")
+            raise SystemExit("Batch 30 must contain exactly four verified seed and full-audit rows.")
           simple_by = {r["destination_iso2"]: r for r in simple}
           audit_by = {r["destination_iso2"]: r for r in audit}
           pending_rows = list(csv.DictReader(Path("database/data/pending_country_research_batch_30.csv").open(encoding="utf-8-sig", newline="")))
@@ -119,7 +119,14 @@ jobs:
             writer = csv.DictWriter(handle, fieldnames=list(audit[0].keys()), lineterminator="\n")
             writer.writeheader()
             writer.writerows(verified_rows)
-          print("BATCH30_VALIDATION_PASSED seed=5 verified_allowlist=5 pending_research_only=3")
+          us_rows = [row for row in verified_rows if row["destination_iso2"] == "US"]
+          if len(us_rows) != 1:
+            raise SystemExit("Exactly one existing United States row is required for controlled re-verification.")
+          with Path("batch30_unpublish_US.csv").open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.DictWriter(handle, fieldnames=list(audit[0].keys()), lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(us_rows)
+          print("BATCH30_VALIDATION_PASSED seed=4 verified_allowlist=4 pending_research_only=2")
           print("VERIFIED_ALLOWLIST " + ",".join(sorted(verified)))
           PY
       - uses: actions/upload-artifact@v4
@@ -130,6 +137,7 @@ jobs:
             database/data/visa_full_audit_batch_30.csv
             database/data/pending_country_research_batch_30.csv
             verified_full_audit_batch_30.csv
+            batch30_unpublish_US.csv
 
   import-production:
     needs: validate
@@ -170,7 +178,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'mkdir -p /var/www/unigo/backend/shared/imports'
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" database/data/new_country_visa_batch_30.csv verified_full_audit_batch_30.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" database/data/new_country_visa_batch_30.csv verified_full_audit_batch_30.csv batch30_unpublish_US.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
       - name: Export fresh pre-import production audit
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -222,6 +230,13 @@ jobs:
                 raise SystemExit(f"{code}: existing pending record has a non-pending status; manual reconciliation required.")
           pre_public = {c.get("iso2") for c in audit.get("public_country_directory", []) if c.get("iso2")}
           existing_published = sorted(code for code, items in records_by_code.items() if items[0].get("is_published") is True and items[0].get("verification_status") == "verified")
+          us_record = records_by_code.get("US", [None])[0]
+          if not isinstance(us_record, dict):
+            raise SystemExit("The existing United States BGD tourism record is missing; this batch is an update, not a new country insert.")
+          if us_record.get("verification_status") not in {"verified", "pending_review"}:
+            raise SystemExit("The existing United States record has an unexpected verification state; manual review required.")
+          if us_record.get("is_published") is True and us_record.get("verification_status") != "verified":
+            raise SystemExit("The existing United States record has an inconsistent publication state.")
           summary = {
             "total_before": audit.get("total"),
             "published_before": audit.get("published_count"),
@@ -229,6 +244,7 @@ jobs:
             "public_directory_count_before": audit.get("public_country_directory_count"),
             "existing_requirement_codes": sorted(records_by_code),
             "existing_published_codes": existing_published,
+            "existing_statuses": {"US": {"verification_status": us_record.get("verification_status"), "is_published": us_record.get("is_published")}},
             "public_directory_codes_before": sorted(pre_public),
             "expected_codes": sorted(expected)
           }
@@ -395,7 +411,12 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
-          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          US_STATE="$(python3 -c 'import json; d=json.load(open("batch30_pre_import_summary.json")); s=d.get("existing_statuses",{}).get("US",{}); print("published" if s.get("verification_status")=="verified" and s.get("is_published") is True else "pending" if s.get("verification_status")=="pending_review" and s.get("is_published") is False else "invalid")')"
+          if [ "$US_STATE" = "invalid" ]; then
+            echo "United States record is not in a safe published or pending state."
+            exit 1
+          fi
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<REMOTE
           set -Eeuo pipefail
           APP_DIR="/var/www/unigo/backend/current"
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
@@ -415,6 +436,12 @@ jobs:
               mv "$IMPORT_DIR/batch30_import_result.json" "$FAILED_RESULT"
               echo "Previous incomplete or failed Batch 30 result archived at $FAILED_RESULT."
             fi
+            if [ "$US_STATE" = "published" ]; then
+              php artisan visa:requirements-import-research --file="$IMPORT_DIR/batch30_unpublish_US.csv" --base-url=https://api.unigo-bd.com --unpublish-only > "$IMPORT_DIR/batch30_unpublish_result.json"
+              php -r '$p=json_decode(file_get_contents($argv[1]), true); $f=is_array($p) ? ($p["failures"] ?? null) : null; $ok=is_array($p) && is_array($f) && count($f) === 0 && (int)($p["rows"] ?? 0) === 1 && (int)($p["unpublished"] ?? 0) === 1 && (int)($p["read_back"] ?? 0) === 1; if (!$ok) { fwrite(STDERR, "Only the existing U.S. record could not be safely moved to pending_review for re-verification.\n"); exit(1); }' "$IMPORT_DIR/batch30_unpublish_result.json"
+            else
+              echo "The U.S. record is already pending_review and unpublished from an earlier interrupted attempt; continuing without a second unpublish."
+            fi
             php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_30.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch30_import_result.json"
           fi
           php artisan visa:requirements-audit > "$IMPORT_DIR/batch30_post_import_audit.json"
@@ -423,6 +450,7 @@ jobs:
           REMOTE
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_import_result.json" ./batch30_import_result.json
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_post_import_audit.json" ./batch30_post_import_audit.json
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_unpublish_result.json" ./batch30_unpublish_result.json || true
 
       - name: Audit baseline and final photo specifications and applicant checklists
         run: |
@@ -744,6 +772,7 @@ jobs:
             batch30_seed_result.txt
             batch30_dry_run.json
             batch30_import_result.json
+            batch30_unpublish_result.json
             batch30_post_import_audit.json
             batch30_pre_photo_checklist_audit.json
             batch30_post_photo_checklist_audit.json
