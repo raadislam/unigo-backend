@@ -74,6 +74,44 @@ jobs:
           ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit' > production-visa-audit.json
           test -s production-visa-audit.json
 
+      - name: Read latest batch 21-23 import result without changing production
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import subprocess
+          from pathlib import Path
+
+          host = __import__("os").environ["VPS_HOST"]
+          port = __import__("os").environ["VPS_PORT"]
+          user = __import__("os").environ["VPS_USER"]
+          key = str(Path.home() / ".ssh" / "unigo_audit")
+          root = "/var/www/unigo/backend/shared/imports"
+          for name in ("batches_21_23_import_result.json", "batches_21_23_post_import_audit.json"):
+              remote = f"{root}/{name}"
+              result = subprocess.run(
+                  ["ssh", "-i", key, "-p", port, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", f"{user}@{host}", f"cat {remote}"],
+                  text=True, capture_output=True, check=False
+              )
+              if result.returncode != 0:
+                  print(f"{name}: MISSING_OR_UNREADABLE")
+                  continue
+              try:
+                  payload = json.loads(result.stdout)
+              except json.JSONDecodeError:
+                  print(f"{name}: NON_JSON_OUTPUT {result.stdout[:1500]}")
+                  continue
+              if name.endswith("import_result.json"):
+                  keys = ("mode", "rows", "updated", "sources_added", "reverified", "republished", "read_back", "failures")
+                  print(json.dumps({"file": name, **{k: payload.get(k) for k in keys}}, indent=2))
+              else:
+                  keys = ("total", "published_count", "pending_count", "country_table_count", "public_country_directory_count", "warnings", "errors")
+                  print(json.dumps({"file": name, **{k: payload.get(k) for k in keys}}, indent=2))
+          PY
+
       - name: Validate live database counts and discovery-master parity
         run: |
           python3 scripts/validate_production_visa_audit.py --audit-file production-visa-audit.json --ledger-file database/data/country_discovery_ledger.csv
