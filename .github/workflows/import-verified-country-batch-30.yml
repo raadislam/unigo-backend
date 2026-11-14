@@ -416,7 +416,7 @@ jobs:
             echo "United States record is not in a safe published or pending state."
             exit 1
           fi
-          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<REMOTE
+          ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "US_STATE='$US_STATE' bash -s" <<'REMOTE'
           set -Eeuo pipefail
           APP_DIR="/var/www/unigo/backend/current"
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
@@ -440,6 +440,7 @@ jobs:
               php artisan visa:requirements-import-research --file="$IMPORT_DIR/batch30_unpublish_US.csv" --base-url=https://api.unigo-bd.com --unpublish-only > "$IMPORT_DIR/batch30_unpublish_result.json"
               php -r '$p=json_decode(file_get_contents($argv[1]), true); $f=is_array($p) ? ($p["failures"] ?? null) : null; $ok=is_array($p) && is_array($f) && count($f) === 0 && (int)($p["rows"] ?? 0) === 1 && (int)($p["unpublished"] ?? 0) === 1 && (int)($p["read_back"] ?? 0) === 1; if (!$ok) { fwrite(STDERR, "Only the existing U.S. record could not be safely moved to pending_review for re-verification.\n"); exit(1); }' "$IMPORT_DIR/batch30_unpublish_result.json"
             else
+              printf '{"mode":"skipped","reason":"United States record was already pending_review and unpublished before this attempt."}\n' > "$IMPORT_DIR/batch30_unpublish_result.json"
               echo "The U.S. record is already pending_review and unpublished from an earlier interrupted attempt; continuing without a second unpublish."
             fi
             php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_30.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch30_import_result.json"
@@ -450,7 +451,7 @@ jobs:
           REMOTE
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_import_result.json" ./batch30_import_result.json
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_post_import_audit.json" ./batch30_post_import_audit.json
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_unpublish_result.json" ./batch30_unpublish_result.json || true
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch30_unpublish_result.json" ./batch30_unpublish_result.json
 
       - name: Audit baseline and final photo specifications and applicant checklists
         run: |
