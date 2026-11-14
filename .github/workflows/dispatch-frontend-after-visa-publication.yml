@@ -15,6 +15,7 @@ on:
       - Repair primary official sources for Korea and Singapore
       - Import verified tourism visa batch 26
       - Import verified tourism visa batch 27
+      - Import verified tourism visa batch 28
       - Import verified country batches 19 and 20
       - Import verified country backlog batches 21, 22 and 23
     types:

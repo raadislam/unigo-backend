@@ -86,6 +86,60 @@ jobs:
           ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit' > production-visa-audit.json
           test -s production-visa-audit.json
 
+      - name: Audit applicant checklist coverage without changing production
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          cat > applicant-checklist-audit.php <<'PHP'
+          <?php
+          $base = getcwd();
+          require $base . '/vendor/autoload.php';
+          $app = require $base . '/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $records = \App\Models\VisaRequirement::query()
+              ->with('country:id,name,iso2')
+              ->where('passport_nationality_iso3', 'BGD')
+              ->where('travel_purpose', 'tourism')
+              ->get();
+          $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published);
+          $withChecklist = $published->filter(fn ($row) => is_array($row->applicant_checklists) && count($row->applicant_checklists) > 0);
+          $complete = $withChecklist->filter(function ($row) {
+              $types = [];
+              foreach ($row->applicant_checklists as $checklist) {
+                  if (! is_array($checklist) || empty($checklist['applicant_type']) || ! is_array($checklist['documents'] ?? null) || count($checklist['documents']) === 0) return false;
+                  $types[] = $checklist['applicant_type'];
+                  foreach ($checklist['documents'] as $document) {
+                      if (! is_array($document) || empty($document['name']) || ! in_array($document['status'] ?? '', ['required', 'conditional', 'if_applicable'], true)) return false;
+                  }
+              }
+              return count(array_diff(['employee', 'self_employed_or_business_owner', 'student', 'retired'], $types)) === 0;
+          });
+          $missing = $published->diff($withChecklist)->map(fn ($row) => $row->country?->iso2)->filter()->values()->all();
+          $incomplete = $withChecklist->diff($complete)->map(fn ($row) => $row->country?->iso2)->filter()->values()->all();
+          echo json_encode([
+              'total_bgd_tourism_records' => $records->count(),
+              'published_count' => $published->count(),
+              'published_with_checklists' => $withChecklist->count(),
+              'published_with_complete_four_type_checklists' => $complete->count(),
+              'published_missing_checklists' => count($missing),
+              'published_incomplete_checklists' => count($incomplete),
+              'missing_country_iso2' => $missing,
+              'incomplete_country_iso2' => $incomplete,
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+          PHP
+          scp -i ~/.ssh/unigo_audit -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes applicant-checklist-audit.php "$VPS_USER@$VPS_HOST:/tmp/unigo-applicant-checklist-audit.php"
+          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php -l /tmp/unigo-applicant-checklist-audit.php >/dev/null && php /tmp/unigo-applicant-checklist-audit.php; status=$?; rm -f /tmp/unigo-applicant-checklist-audit.php; exit $status' > applicant-checklist-audit.json
+          python3 -m json.tool applicant-checklist-audit.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("applicant-checklist-audit.json").read_text(encoding="utf-8"))
+          print("APPLICANT_CHECKLIST_AUDIT " + json.dumps(data, ensure_ascii=False))
+          PY
+
       - name: Read latest batch 21-23 import result without changing production
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
