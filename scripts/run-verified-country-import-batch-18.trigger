@@ -3,3 +3,4 @@ Retry after aligning validation with the seed CSV schema.
 Retry with corrected SSH private key newline formatting.
 Retry isolated restore test using the configured database account, not sudo.
 Retry with a disposable MySQL restore test on the GitHub runner.
+Retry authenticated readiness check for isolated MySQL restore.
