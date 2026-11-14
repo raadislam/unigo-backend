@@ -97,9 +97,17 @@ jobs:
             for item in checklist:
               if not isinstance(item, dict) or not isinstance(item.get("documents"), list) or not item["documents"]:
                 raise SystemExit(f"{code}: applicant checklist has no documents.")
+              if set(item) - {"applicant_type", "documents"}:
+                raise SystemExit(f"{code}: applicant checklist contains fields not accepted by the production API.")
               for document in item["documents"]:
                 if not isinstance(document, dict) or not document.get("name") or document.get("status") not in {"required", "conditional", "if_applicable"}:
                   raise SystemExit(f"{code}: applicant checklist document is invalid.")
+                if set(document) - {"name", "status", "notes"}:
+                  raise SystemExit(f"{code}: applicant checklist document contains an unsupported field.")
+                if len(document["name"]) > 200:
+                  raise SystemExit(f"{code}: applicant checklist document name exceeds the 200-character API limit.")
+                if len(document.get("notes") or "") > 1000:
+                  raise SystemExit(f"{code}: applicant checklist document notes exceed the 1000-character API limit.")
             if code in verified:
               if row.get("verification_status") != "verified" or row.get("publish_status") != "published":
                 raise SystemExit(f"{code}: not explicitly verified and approved for publication.")
