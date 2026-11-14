@@ -5,8 +5,8 @@ import json
 import os
 import re
 import sys
-from collections import Counter
-from datetime import date
+from collections import Counter, defaultdict
+from datetime import date, timedelta
 
 
 def fail(message):
@@ -176,6 +176,66 @@ def main():
     if len(all_bgd_codes) != len(set(all_bgd_codes)):
         fail("Production contains duplicate BGD tourism requirement keys, including unpublished records.")
 
+    required_fields = {
+        "visa_requirement_type": lambda value: bool(str(value or "").strip()),
+        "visa_required": lambda value: value is not None,
+        "maximum_permitted_stay": lambda value: bool(str(value or "").strip()),
+        "entry_count": lambda value: bool(str(value or "").strip()),
+        "application_fee": lambda value: bool(str(value or "").strip()),
+        "processing_time": lambda value: bool(str(value or "").strip()),
+        "required_documents": lambda value: bool(value),
+        "application_channel": lambda value: bool(str(value or "").strip()),
+        "passport_validity_rule": lambda value: bool(str(value or "").strip()),
+        "blank_passport_pages_rule": lambda value: bool(str(value or "").strip()),
+        "return_ticket_rule": lambda value: bool(str(value or "").strip()),
+        "proof_of_funds_rule": lambda value: bool(str(value or "").strip()),
+        "accommodation_rule": lambda value: bool(str(value or "").strip()),
+        "travel_insurance_rule": lambda value: bool(str(value or "").strip()),
+        "yellow_fever_or_health_rule": lambda value: bool(str(value or "").strip()),
+        "transit_rule": lambda value: bool(str(value or "").strip()),
+    }
+    missing_field_counts = Counter()
+    missing_field_record_codes = []
+    source_records_total = 0
+    source_records_missing_dates = []
+    stale_source_records = []
+    primary_source_date_missing = []
+    freshness_cutoff = date.today() - timedelta(days=365)
+    for row in published_bgd:
+        country = row.get("country") or {}
+        iso2 = str(country.get("iso2") or "").upper()
+        missing = []
+        for field, validator in required_fields.items():
+            if not validator(row.get(field)):
+                missing_field_counts[field] += 1
+                missing.append(field)
+        if missing:
+            missing_field_record_codes.append({"iso2": iso2, "fields": missing})
+        sources = row.get("sources") or []
+        primary_official = [
+            source for source in sources
+            if source.get("source_type") == "official" and bool(source.get("is_primary"))
+        ]
+        if not any(source.get("source_last_checked_at") for source in primary_official):
+            primary_source_date_missing.append(iso2)
+        for source in sources:
+            source_records_total += 1
+            raw_checked = source.get("source_last_checked_at")
+            if not raw_checked:
+                source_records_missing_dates.append({"iso2": iso2, "source_url": source.get("source_url")})
+                continue
+            try:
+                checked_date = date.fromisoformat(str(raw_checked)[:10])
+            except ValueError:
+                source_records_missing_dates.append({"iso2": iso2, "source_url": source.get("source_url")})
+                continue
+            if checked_date < freshness_cutoff:
+                stale_source_records.append({
+                    "iso2": iso2,
+                    "source_url": source.get("source_url"),
+                    "source_last_checked_at": checked_date.isoformat()
+                })
+
     photo_status_counts = Counter()
     photo_missing_codes = []
     photo_no_fixed_size_codes = []
@@ -238,6 +298,12 @@ def main():
         f"- BGD tourism actively published and verified: **{len(published_bgd)}**",
         f"- BGD tourism pending, unverified, expired or unpublished: **{len(pending_bgd)}**",
         f"- Published BGD tourism records missing primary official sources: **{len(missing_primary_sources)}**",
+        f"- Published BGD tourism records with all required structured fields present: **{len(published_bgd) - len(missing_field_record_codes)} / {len(published_bgd)}**",
+        f"- Missing required fields by field: **{dict(missing_field_counts)}**",
+        f"- Records missing a checked date on every primary official source: **{len(primary_source_date_missing)}**" + (f" ({', '.join(sorted(primary_source_date_missing))})" if primary_source_date_missing else ""),
+        f"- Source records missing or invalid checked dates: **{len(source_records_missing_dates)} / {source_records_total}**",
+        f"- Source records older than 365 days: **{len(stale_source_records)}**",
+        f"- Duplicate BGD tourism requirement keys including unpublished records: **0**",
         f"- Published BGD tourism photo status counts: **{dict(photo_status_counts)}**",
         f"- Structured verified photo specifications: **{len(photo_verified_codes)} / {len(published_bgd)}**",
         f"- Officially confirmed no fixed-size photo rule: **{len(photo_no_fixed_size_codes)}**" + (f" ({', '.join(sorted(photo_no_fixed_size_codes))})" if photo_no_fixed_size_codes else ""),
@@ -251,6 +317,14 @@ def main():
         "",
         "The command used for this snapshot is read-only. No database rows, caches, migrations or application files were modified.",
     ]
+    if missing_field_record_codes:
+        warn("Published BGD tourism records with missing required fields: " + json.dumps(missing_field_record_codes[:50], ensure_ascii=False))
+    if primary_source_date_missing:
+        warn("Published BGD tourism records missing checked dates on primary official sources: " + ", ".join(sorted(primary_source_date_missing)))
+    if source_records_missing_dates:
+        warn("Official/other source records missing or carrying invalid checked dates: " + str(len(source_records_missing_dates)))
+    if stale_source_records:
+        warn("Source records with checked dates older than 365 days: " + json.dumps(stale_source_records[:50], ensure_ascii=False))
     if missing_country_rows:
         warn("Country master rows absent from production: " + ", ".join(missing_country_rows))
     if extra_country_rows:
