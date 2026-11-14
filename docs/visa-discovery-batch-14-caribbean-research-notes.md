@@ -76,9 +76,9 @@ The visa-exemption webpage is dated 21 December 2012. It is an official lead but
 
 ## Import, verification and publication controls
 
-- The seed and full-audit CSVs contain six records: three research-verified/publishable and three pending/draft.
-- All three pending records remain `pending_review` and `draft`.
-- The three research-verified records are classified as publishable in the research audit file only; this is not production publication.
+- The seed and full-audit CSVs contain six records: two research-verified/publishable and four pending/draft.
+- All four pending records remain `pending_review` and `draft`.
+- The two research-verified records are classified as publishable in the research audit file only; this is not production publication.
 - The validator checks unique (passport, destination, purpose) keys, required fields, HTTPS official sources, same-day check dates and matching seed/full-audit keys.
 - The deployment workflow ignores the batch CSVs, discovery ledger, validator and batch research notes. No deployment, migration, import or publication is performed by this research PR.
 - No production data is changed.
