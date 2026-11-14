@@ -1,13 +1,13 @@
 <?php
 
-use App\Models\Country;
-use App\Models\VisaRequirement;
+use App\\Models\\Country;
+use App\\Models\\VisaRequirement;
 
 $root = getenv('UNIGO_APP_DIR') ?: dirname(__DIR__);
 chdir($root);
 require $root . '/vendor/autoload.php';
 $app = require $root . '/bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app->make(Illuminate\\Contracts\\Console\\Kernel::class)->bootstrap();
 
 $mode = $argv[1] ?? '';
 if (! in_array($mode, ['preflight', 'verify'], true)) {
@@ -16,8 +16,14 @@ if (! in_array($mode, ['preflight', 'verify'], true)) {
 }
 
 $specs = [
-    'new_country_visa_batch_06_07.csv' => ['ID', 'MU', 'NP', 'PH', 'TR', 'BN', 'RW', 'TZ'],
-    'new_country_visa_batch_08.csv' => ['HK', 'MO', 'UZ', 'KR'],
+    'new_country_visa_batch_06_07.csv' => [
+        'ready' => ['ID', 'MU', 'NP', 'PH', 'TR', 'BN', 'RW', 'TZ'],
+        'pending' => ['LK', 'BT'],
+    ],
+    'new_country_visa_batch_08.csv' => [
+        'ready' => ['HK', 'MO', 'UZ', 'KR'],
+        'pending' => ['KZ'],
+    ],
 ];
 
 $truthy = static fn ($value): ?bool => $value === '' || $value === null ? null : filter_var($value, FILTER_VALIDATE_BOOLEAN);
@@ -90,7 +96,9 @@ $existingCount = 0;
 $missingCount = 0;
 $seen = [];
 
-foreach ($specs as $file => $expectedCodes) {
+foreach ($specs as $file => $spec) {
+    $expectedCodes = $spec['ready'];
+    $pendingCodes = $spec['pending'];
     $importDir = getenv('UNIGO_IMPORT_DIR') ?: ($root . '/database/data');
     $path = rtrim($importDir, '/') . '/' . $file;
     if (! is_file($path)) {
@@ -102,6 +110,7 @@ foreach ($specs as $file => $expectedCodes) {
         throw new RuntimeException('Unable to open staged CSV: ' . $file);
     }
 
+    $readyHandle = null;
     try {
         $headers = fgetcsv($handle);
         if (! is_array($headers)) {
@@ -120,7 +129,17 @@ foreach ($specs as $file => $expectedCodes) {
             throw new RuntimeException('Missing columns in ' . $file . ': ' . implode(', ', $missingHeaders));
         }
 
+        if ($mode === 'preflight') {
+            $readyPath = rtrim($importDir, '/') . '/ready_' . $file;
+            $readyHandle = fopen($readyPath, 'w');
+            if ($readyHandle === false) {
+                throw new RuntimeException('Unable to create filtered import CSV: ' . $readyPath);
+            }
+            fputcsv($readyHandle, $headers);
+        }
+
         $fileCodes = [];
+        $pendingFound = [];
         $fileExisting = 0;
         $fileMissing = 0;
 
@@ -134,6 +153,14 @@ foreach ($specs as $file => $expectedCodes) {
             }
 
             $iso2 = strtoupper(trim($row['destination_iso2'] ?? ''));
+            if (in_array($iso2, $pendingCodes, true)) {
+                if (trim($row['verification_status'] ?? '') !== 'pending_review') {
+                    throw new RuntimeException('A staged pending record changed status unexpectedly: ' . $iso2);
+                }
+                $pendingFound[] = $iso2;
+                continue;
+            }
+
             if (! in_array($iso2, $expectedCodes, true) || isset($seen[$iso2])) {
                 throw new RuntimeException('Unexpected or duplicate destination code: ' . $iso2);
             }
@@ -176,22 +203,33 @@ foreach ($specs as $file => $expectedCodes) {
             } else {
                 $fileMissing++;
             }
+
+            if ($readyHandle !== null) {
+                fputcsv($readyHandle, $values);
+            }
             $total++;
         }
 
         sort($fileCodes);
         $sortedExpected = $expectedCodes;
         sort($sortedExpected);
-        if ($fileCodes !== $sortedExpected) {
-            throw new RuntimeException('Destination list mismatch in ' . $file);
+        sort($pendingFound);
+        $sortedPending = $pendingCodes;
+        sort($sortedPending);
+
+        if ($fileCodes !== $sortedExpected || $pendingFound !== $sortedPending) {
+            throw new RuntimeException('Destination or pending-review exclusion list mismatch in ' . $file);
         }
 
         $existingCount += $fileExisting;
         $missingCount += $fileMissing;
         if ($mode === 'preflight') {
+            fclose($readyHandle);
+            $readyHandle = null;
             echo 'PRECHECK_FILE ' . $file . ' total=' . count($expectedCodes) . ' existing=' . $fileExisting . ' missing=' . $fileMissing . PHP_EOL;
         }
     } finally {
+        if (is_resource($readyHandle)) fclose($readyHandle);
         fclose($handle);
     }
 }
