@@ -70,4 +70,17 @@ Batch 20 contains 9 structured research rows: 3 research-verified/publishable in
 
 The cumulative validator now includes batch 20. All source URLs and check dates are recorded. Research-file verification is not production verification or publication.
 
-No production import, migration, country seeder, cache operation, frontend build, sitemap update or deployment was performed. The guarded importer still does not support batch 20 and the isolated backup-restore privilege check remains a separate requirement. The last confirmed frontend/API/static/sitemap parity remains 41/41; no new production pages were expected from this research-only branch.
+No batch-20 production import, migration, Kosovo seeder, frontend build, sitemap regeneration or new publication was performed. However, merging PR #41 automatically triggered backend deployment run https://github.com/raadislam/unigo-backend/actions/runs/43603123574 because the Kosovo seeder path was not yet in the deployment workflow's `paths-ignore` list.
+
+The backend workflow synced the repository, ran Composer installation and refreshed Laravel caches. It then executed its existing import checks for batches 01–05:
+- Batch 01 reported that the exact CSV had already been imported and reconciled.
+- Batch 02 imported or updated 0 records and skipped 2; both remained pending review and unpublished.
+- Batches 03, 04 and 05 each reported that the exact CSV had already been imported and reconciled.
+- The generic `ImportMajorVisaRequirementsSeeder` imported or updated 0 records and skipped 2 pending rows.
+- No migration ran, and `KosovoCountryBackfillSeeder` was not called.
+
+The post-import database audit/readback remained unchanged: 250 discovery-master destinations, 249 country rows, XK still missing, 41 verified and published BGD tourism requirements, 0 pending/unverified/expired/unpublished BGD tourism requirements, and 41 public directory entries. The backend workflow's public API verification checked all 41 visa detail endpoints and the directory successfully. Audit run: https://github.com/raadislam/unigo-backend/actions/runs/43603123585.
+
+The automatic deploy workflow did not create or restore-test a database backup. The existing import commands were idempotent/no-op for the reconciled batches, so no new production requirement or country row was inserted or published. This backend deployment was an unintended path-trigger consequence of the research-only seeder file, not the planned batch-20 import. PR #42 now adds `database/seeders/KosovoCountryBackfillSeeder.php` to `paths-ignore` to prevent the same trigger in future.
+
+The guarded importer still does not support batch 20, and the isolated backup-restore privilege check remains a separate requirement before any production import. The last confirmed frontend/static/sitemap parity remains 41/41; no frontend build or sitemap regeneration occurred.
