@@ -1,9 +1,9 @@
 <?php
 
-namespace Database\\Seeders;
+namespace Database\Seeders;
 
-use App\\Models\\Country;
-use Illuminate\\Database\\Seeder;
+use App\Models\Country;
+use Illuminate\Database\Seeder;
 
 class ImportKosovoCountrySeeder extends Seeder
 {
