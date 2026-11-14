@@ -50,10 +50,25 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
+          set -euo pipefail
+          : "${VPS_SSH_KEY:?VPS_SSH_KEY secret is missing}"
+          : "${VPS_HOST:?VPS_HOST secret is missing}"
+          : "${VPS_PORT:?VPS_PORT secret is missing}"
           install -m 700 -d ~/.ssh
           printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_deploy
           chmod 600 ~/.ssh/unigo_deploy
-          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          for attempt in 1 2 3 4 5; do
+            if ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>~/.ssh/keyscan.log; then
+              if [ -s ~/.ssh/known_hosts ]; then
+                exit 0
+              fi
+            fi
+            echo "SSH host-key scan attempt $attempt failed."
+            cat ~/.ssh/keyscan.log
+            sleep 5
+          done
+          echo "Unable to retrieve the VPS SSH host key. Check VPS_HOST, VPS_PORT, firewall and SSH service."
+          exit 1
 
       - name: Check deployment tools
         env:
