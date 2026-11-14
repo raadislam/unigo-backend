@@ -42,6 +42,10 @@ Neither pending candidate is included in the verified import allowlist or public
 - https://travel.state.gov/en/newsroom/visas/2026/countries-subject-to-visa-bonds.html?pubDate=20260802
 - https://travel.state.gov/content/travel/en/us-visas/visa-information-resources/photos.html
 - https://travel.state.gov/content/travel/en/us-visas/visa-information-resources/photos/digital-image-requirements.html
+- https://travel.state.gov/en/newsroom/visas/2026/countries-subject-to-visa-bonds.html?pubDate=20260802
+- https://travel.state.gov/content/travel/en/us-visas/Visa-Reciprocity-and-Civil-Documents-by-Country/Bangladesh.html
+- https://www.govinfo.gov/content/pkg/PLAW-119publ21/pdf/PLAW-119publ21.pdf
+- https://public-inspection.federalregister.gov/2025-13738.pdf
 
 ### U.S. visa integrity fee caveat
 - https://public-inspection.federalregister.gov/2025-13738.pdf
