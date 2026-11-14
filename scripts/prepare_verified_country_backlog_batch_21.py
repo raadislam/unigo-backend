@@ -20,8 +20,13 @@ def read(path):
 def write(path, rows):
     if not rows:
         raise SystemExit(f"No rows to write: {path}")
+    fieldnames = []
+    for row in rows:
+        for key in row:
+            if key not in fieldnames:
+                fieldnames.append(key)
     with Path(path).open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=list(rows[0].keys()), lineterminator="\n")
+        writer = csv.DictWriter(handle, fieldnames=fieldnames, lineterminator="\n", extrasaction="raise")
         writer.writeheader()
         writer.writerows(rows)
 
