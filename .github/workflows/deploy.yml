@@ -19,6 +19,8 @@ on:
       - '.github/workflows/import-staged-country-batch.yml'
       - 'scripts/import_staged_country_batch.php'
       - 'scripts/run-staged-country-import-20261114.trigger'
+      - 'scripts/run-verified-country-import-batch-18.trigger'
+      - '.github/workflows/import-verified-country-batch-18.yml'
       - 'scripts/validate_visa_batches.py'
       - '.github/workflows/validate-visa-batches.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
