@@ -65,7 +65,7 @@ The discovery universe contains 250 destinations. All eight destinations staged 
 - Papua New Guinea ICA, Visa on Arrival Eligible Country List: https://ica.gov.pg/uploads/media/post_file_6166280-voa-eligible-country-list-public-notice-31032014-v3-new.pdf
 
 ### Palau
-- Republic of Palau Office of the President, Executive Order 478 (2026): https://www.palaugov.pw/wp-content/uploads/EO-478-Removing-the-restriction-on-the-number-of-work-visas-issued-by-the-BH-to-citizens-of-the-Peoples-Republic-of-Bangladesh.pdf
+- Republic of Palau Office of the President, Executive Order 478 (signed 10 February 2023): https://www.palaugov.pw/wp-content/uploads/EO-478-Removing-the-restriction-on-the-number-of-work-visas-issued-by-the-BH-to-citizens-of-the-Peoples-Republic-of-Bangladesh.pdf
 - Republic of Palau National Government: https://www.palaugov.pw/
 
 ### Solomon Islands — ledger only
@@ -80,9 +80,9 @@ The discovery universe contains 250 destinations. All eight destinations staged 
 
 ## Import, verification and publication controls
 
-- The seed and full-audit CSVs contain eight records: four research-verified/publishable and four pending/draft.
-- All four pending records remain `pending_review` and `draft`.
-- The four research-verified records are classified as publishable in the research audit file only; this is not production publication.
+- The seed and full-audit CSVs contain eight records: five research-verified/publishable and three pending/draft.
+- All three pending records remain `pending_review` and `draft`.
+- The five research-verified records are classified as publishable in the research audit file only; this is not production publication.
 - Solomon Islands remains ledger-only until the Bangladesh ordinary-passport exemption status is confirmed.
 - The validator checks unique (passport, destination, purpose) keys, required fields, field lengths, HTTPS official sources, same-day check dates, at least two official sources per record, and matching seed/full-audit keys.
 - The production deployment workflow excludes the batch CSVs, discovery ledger, validator and batch research notes. No deployment, migration, import or publication is performed by this research PR.
