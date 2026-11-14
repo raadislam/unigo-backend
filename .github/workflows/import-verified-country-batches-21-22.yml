@@ -81,11 +81,13 @@ jobs:
           if len(codes) != 48 or len(set(codes)) != 48:
             raise SystemExit("Combined import must contain 48 unique country/nationality/purpose keys.")
           with Path("verified_new_country_backlog_batches_21_22.csv").open("w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=list(simple_all[0].keys()))
+            simple_fields = list(dict.fromkeys(key for row in simple_all for key in row))
+            writer = csv.DictWriter(f, fieldnames=simple_fields, extrasaction="raise")
             writer.writeheader()
             writer.writerows(simple_all)
           with Path("verified_full_audit_batches_21_22.csv").open("w", encoding="utf-8", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=list(audit_all[0].keys()))
+            audit_fields = list(dict.fromkeys(key for row in audit_all for key in row))
+            writer = csv.DictWriter(f, fieldnames=audit_fields, extrasaction="raise")
             writer.writeheader()
             writer.writerows(audit_all)
           print("VALIDATION_PASSED: 44 verified backlog destinations plus 4 newly researched destinations; 48 unique BGD tourism records. Pending rows excluded.")
