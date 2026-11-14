@@ -8,7 +8,7 @@ on:
 
 concurrency:
   group: unigo-backend-production
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -35,7 +35,35 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'command -v rsync && command -v composer && command -v php'
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'command -v rsync && command -v composer && command -v php && (command -v mysqldump || command -v mariadb-dump) && (command -v mysql || command -v mariadb) && command -v gzip && command -v sha256sum'
+
+      - name: Export pre-deployment visa database audit
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "cd /var/www/unigo/backend/current && mkdir -p storage/app/audits && php artisan visa:requirements-audit | tee storage/app/audits/pre-deploy-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT.json"
+
+      - name: Inspect production migration status
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "cd /var/www/unigo/backend/current && php artisan migrate:status --no-ansi"
+
+      - name: Create and restore-test production database backup
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "bash -s -- '/var/www/unigo/backend/current' '$GITHUB_RUN_ID' '$GITHUB_RUN_ATTEMPT'" < scripts/backup-and-verify-db.sh
 
       - name: Sync application files
         env:
@@ -145,6 +173,14 @@ jobs:
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_02.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_02.csv --base-url=https://api.unigo-bd.com; else echo "No pending full-audit batch."; fi'
 
+      - name: Seed Kosovo country row
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "cd /var/www/unigo/backend/current && php artisan db:seed --class=ImportKosovoCountrySeeder --force"
+
       - name: Seed newly researched country records
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -200,6 +236,22 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_05.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_05.csv --base-url=https://api.unigo-bd.com; else echo "No remaining-country full-audit batch."; fi'
+
+      - name: Validate new-country full audit batch 06
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "cd /var/www/unigo/backend/current && php artisan visa:requirements-import-research database/data/visa_full_audit_batch_06.csv --dry-run"
+
+      - name: Import and publish new-country full audit batch 06
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "cd /var/www/unigo/backend/current && php artisan visa:requirements-import-research database/data/visa_full_audit_batch_06.csv"
 
       - name: Verify imported visa records by readback
         env:
@@ -290,12 +342,18 @@ jobs:
                   raise SystemExit(f"Public visa detail API is missing official source links for {slug}.")
               print(f"Public visa detail API HTTP 200 verified: {slug} ({iso2}).")
 
-          for slug in ("japan", "australia"):
+          mandatory_slugs = {"japan", "australia", "maldives", "viet-nam"}
+          new_batch_slugs = {"indonesia", "mauritius", "nepal", "philippines", "sri-lanka", "turkiye", "kosovo"}
+          for slug in sorted(mandatory_slugs | new_batch_slugs):
               country = country_by_slug.get(slug)
               requirement = requirement_by_slug.get(slug)
               if not country or not requirement:
                   raise SystemExit(f"Mandatory country or BGD tourism requirement is missing: {slug}.")
-              if country.get("is_published") is not False:
+              if requirement.get("verification_status") != "verified" or requirement.get("is_published") is not True:
+                  raise SystemExit(f"Mandatory BGD tourism requirement is not verified and published: {slug}.")
+              print(f"Verified published BGD tourism destination: {slug}.")
+          for slug in ("japan", "australia"):
+              if country_by_slug[slug].get("is_published") is not False:
                   raise SystemExit(f"Expected {slug} to remain admitted by its visa requirement rather than a blanket country flag.")
               print(f"Verified {slug}: country.is_published=false; requirement.verification_status=verified; requirement.is_published=true.")
 
