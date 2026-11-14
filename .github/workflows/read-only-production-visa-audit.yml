@@ -1,0 +1,61 @@
+name: Read-only Production Visa Audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '3 * * * *'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/read-only-production-visa-audit.yml'
+      - 'scripts/validate_production_visa_audit.py'
+      - 'database/data/country_discovery_ledger.csv'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-read-only-production-visa-audit
+  cancel-in-progress: false
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout backend audit definitions
+        uses: actions/checkout@v4
+
+      - name: Prepare read-only VPS SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_SSH_KEY"
+          test -n "$VPS_HOST"
+          test -n "$VPS_PORT"
+          test -n "$VPS_USER"
+          install -m 700 -d ~/.ssh
+          printf '%s\\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_audit
+          chmod 600 ~/.ssh/unigo_audit
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Export read-only production database snapshot
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit' > production-visa-audit.json
+          test -s production-visa-audit.json
+
+      - name: Validate live database counts and discovery-master parity
+        run: |
+          python3 -m py_compile scripts/validate_production_visa_audit.py
+          python3 scripts/validate_production_visa_audit.py --audit-file production-visa-audit.json --ledger-file database/data/country_discovery_ledger.csv
