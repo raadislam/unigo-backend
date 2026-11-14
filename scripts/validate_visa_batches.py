@@ -43,8 +43,8 @@ for seed in seed_files:
    key=(row.get('passport_iso3'),row.get('destination_iso2'),row.get('travel_purpose'))
    if key in seed_keys: errors.append(f'{seed.name}:{n}: duplicate seed key {key}')
    seed_keys.add(key); seed_rows.append(row)
- audit_keys={(r.get('passport_iso3'),r.get('destination_iso2'),r.get('travel_purpose')) for r in all_rows}
- if seed_keys!=audit_keys: errors.append(f'seed/full-audit key mismatch; seed-only={sorted(seed_keys-audit_keys)} audit-only={sorted(audit_keys-seed_keys)}')
+audit_keys={(r.get('passport_iso3'),r.get('destination_iso2'),r.get('travel_purpose')) for r in all_rows}
+if seed_keys!=audit_keys: errors.append(f'seed/full-audit key mismatch; seed-only={sorted(seed_keys-audit_keys)} audit-only={sorted(audit_keys-seed_keys)}')
 if errors:
  print('VALIDATION FAILED'); print('\\n'.join(errors)); sys.exit(1)
 print(f'VALIDATION PASSED: {len(all_rows)} unique BGD tourism records; {sum(r["publish_status"]=="published" for r in all_rows)} verified/publishable; {sum(r["publish_status"]=="draft" for r in all_rows)} pending; seed/full-audit keys match.')
