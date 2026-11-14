@@ -21,6 +21,7 @@ files = [
     root / "database/data/visa_full_audit_batch_19.csv",
     root / "database/data/visa_full_audit_batch_20.csv",
     root / "database/data/visa_full_audit_batch_28.csv",
+    root / "database/data/visa_full_audit_batch_29.csv",
 ]
 seed_files = [
     root / "database/data/new_country_visa_batch_06_07.csv",
@@ -37,6 +38,7 @@ seed_files = [
     root / "database/data/new_country_visa_batch_19.csv",
     root / "database/data/new_country_visa_batch_20.csv",
     root / "database/data/new_country_visa_batch_28.csv",
+    root / "database/data/new_country_visa_batch_29.csv",
 ]
 required = {
     "passport_iso3", "passport_nationality", "destination_iso2", "destination_name",
