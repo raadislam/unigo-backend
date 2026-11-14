@@ -156,7 +156,29 @@ jobs:
           user = __import__("os").environ["VPS_USER"]
           key = str(Path.home() / ".ssh" / "unigo_audit")
           root = "/var/www/unigo/backend/shared/imports"
-          for name in ("batches_21_23_import_result.json", "batches_21_23_post_import_audit.json"):
+          import re
+
+          def scrub(value):
+              if isinstance(value, dict):
+                  return {
+                      key: "[REDACTED]" if any(word in key.lower() for word in ("password", "token", "secret", "authorization")) else scrub(item)
+                      for key, item in value.items()
+                  }
+              if isinstance(value, list):
+                  return [scrub(item) for item in value]
+              if isinstance(value, str):
+                  return re.sub(r"(?i)\\b(password|token|secret|authorization)\\b(\\s*[:=]\\s*)[^\\s,;]+", r"\\1\\2[REDACTED]", value)
+              return value
+
+          names = (
+              "batches_21_23_import_result.json",
+              "batches_21_23_post_import_audit.json",
+              "batch28_import_result.json",
+              "batch28_post_import_audit.json",
+              "batch29_import_result.json",
+              "batch29_post_import_audit.json",
+          )
+          for name in names:
               remote = f"{root}/{name}"
               result = subprocess.run(
                   ["ssh", "-i", key, "-p", port, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", f"{user}@{host}", f"cat {remote}"],
@@ -168,14 +190,15 @@ jobs:
               try:
                   payload = json.loads(result.stdout)
               except json.JSONDecodeError:
-                  print(f"{name}: NON_JSON_OUTPUT {result.stdout[:1500]}")
+                  print(f"{name}: NON_JSON_OUTPUT {scrub(result.stdout[:1000])}")
                   continue
+              payload = scrub(payload)
               if name.endswith("import_result.json"):
-                  keys = ("mode", "rows", "updated", "sources_added", "reverified", "republished", "read_back", "failures")
-                  print(json.dumps({"file": name, **{k: payload.get(k) for k in keys}}, indent=2))
+                  keys = ("csv_sha256", "mode", "rows", "updated", "sources_added", "reverified", "republished", "read_back", "failures", "errors", "message")
+                  print(json.dumps({"file": name, **{k: payload.get(k) for k in keys}}, indent=2, ensure_ascii=False))
               else:
                   keys = ("total", "published_count", "pending_count", "country_table_count", "public_country_directory_count", "warnings", "errors")
-                  print(json.dumps({"file": name, **{k: payload.get(k) for k in keys}}, indent=2))
+                  print(json.dumps({"file": name, **{k: payload.get(k) for k in keys}}, indent=2, ensure_ascii=False))
           PY
 
       - name: Validate live database counts and discovery-master parity
