@@ -28,8 +28,8 @@ jobs:
           from pathlib import Path
           from urllib.parse import urlparse
 
-          expected = {"AX", "FO", "GL", "MC"}
-          verified = {"AX", "FO", "GL", "MC"}
+          expected = {"AX", "MC"}
+          verified = {"AX", "MC"}
           pending = set()
           checked = "2026-11-15"
           simple = list(csv.DictReader(Path("database/data/new_country_visa_batch_28.csv").open(encoding="utf-8-sig", newline="")))
@@ -46,7 +46,7 @@ jobs:
             if code in expected or row.get("discovery_status") != "research_in_progress_batch_28" or not row.get("exact_blocker", "").strip() or not row.get("next_research_action", "").strip():
               raise SystemExit(f"{code}: pending country blocker or status is missing, or it leaked into the verified allowlist.")
           if set(simple_by) != expected or set(audit_by) != expected:
-            raise SystemExit("Batch 28 country set does not match AX, FO, GL and MC.")
+            raise SystemExit("Batch 28 country set does not match the AX and MC verified allowlist.")
           if len(simple_by) != len(simple) or len(audit_by) != len(audit):
             raise SystemExit("Duplicate country ISO2 in batch 28.")
           for code, row in audit_by.items():
@@ -119,7 +119,7 @@ jobs:
             writer = csv.DictWriter(handle, fieldnames=list(audit[0].keys()), lineterminator="\n")
             writer.writeheader()
             writer.writerows(verified_rows)
-          print("BATCH28_VALIDATION_PASSED seed=4 verified_allowlist=4 pending_database_rows=0")
+          print("BATCH28_VALIDATION_PASSED seed=2 verified_allowlist=2 pending_research_only=5")
           print("VERIFIED_ALLOWLIST " + ",".join(sorted(verified)))
           PY
       - uses: actions/upload-artifact@v4
@@ -192,7 +192,7 @@ jobs:
           import csv
           import json
           from pathlib import Path
-          expected = {"AX","FO","GL","MC"}
+          expected = {"AX","MC"}
           pending = set()
           ledger = list(csv.DictReader(Path("database/data/country_discovery_ledger.csv").open(encoding="utf-8-sig", newline="")))
           audit = json.loads(Path("batch28_pre_import_audit.json").read_text())
@@ -383,10 +383,10 @@ jobs:
           import json
           from pathlib import Path
           result = json.loads(Path("batch28_dry_run.json").read_text())
-          if result.get("mode") != "dry_run" or result.get("rows") != 4 or result.get("failures"):
-            raise SystemExit(f"Batch 28 dry-run failed or did not match the 4-country allowlist: {result}")
+          if result.get("mode") != "dry_run" or result.get("rows") != 2 or result.get("failures"):
+            raise SystemExit(f"Batch 28 dry-run failed or did not match the 2-country allowlist: {result}")
           print(json.dumps(result, indent=2))
-          print("BATCH28_DRY_RUN_PASSED_4_VERIFIED_ROWS_NO_FAILURES")
+          print("BATCH28_DRY_RUN_PASSED_2_VERIFIED_ROWS_NO_FAILURES")
           PY
       - name: Import, verify and export post-import production audit
         env:
@@ -516,7 +516,7 @@ jobs:
           summary = json.loads(Path("batch28_pre_import_summary.json").read_text())
           verified_codes = set(rows)
           pending_codes = set()
-          pending_research_codes = {"SM", "GI", "VA"}
+          pending_research_codes = {"FO", "GL", "SM", "GI", "VA"}
           expected_codes = set(all_rows)
           if pending_research_codes & set(summary.get("public_directory_codes_before", [])):
             raise SystemExit("A pending research-only country is already present in the public directory.")
@@ -636,7 +636,7 @@ jobs:
               raise SystemExit(f"{code}: pending research-only country leaked into the public directory.")
           print(f"DATABASE_AUDIT_VERIFIED total={post.get('total')} published={post.get('published_count')} country_rows={post.get('country_table_count')} public_directory={post.get('public_country_directory_count')}")
           print(f"PUBLIC_API_VERIFIED countries={len(directory_rows)} requirements={len(requirements)}")
-          print("BATCH28_COMPLETE: 4 VERIFIED_AND_PUBLISHED; 3 PENDING_RESEARCH_ONLY")
+          print("BATCH28_COMPLETE: 2 VERIFIED_AND_PUBLISHED; 5 PENDING_RESEARCH_ONLY")
           PY
       - uses: actions/upload-artifact@v4
         with:
