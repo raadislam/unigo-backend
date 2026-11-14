@@ -177,9 +177,9 @@ def main():
         fail("Production contains duplicate BGD tourism requirement keys, including unpublished records.")
 
     required_fields = {
-        "visa_requirement_type": lambda value: bool(str(value or "").strip()),
+        "requirement_type": lambda value: bool(str(value or "").strip()),
         "visa_required": lambda value: value is not None,
-        "visa_free_eligibility": lambda value: value is not None,
+        "visa_free_available": lambda value: value is not None,
         "visa_on_arrival_available": lambda value: value is not None,
         "evisa_available": lambda value: value is not None,
         "maximum_permitted_stay": lambda value: bool(str(value or "").strip()),
@@ -194,8 +194,10 @@ def main():
         "proof_of_funds_rule": lambda value: bool(str(value or "").strip()),
         "accommodation_rule": lambda value: bool(str(value or "").strip()),
         "travel_insurance_rule": lambda value: bool(str(value or "").strip()),
-        "yellow_fever_or_health_rule": lambda value: bool(str(value or "").strip()),
-        "transit_rule": lambda value: bool(str(value or "").strip()),
+        "health_requirements": lambda value: bool(str(value or "").strip()),
+        "transit_requirements": lambda value: bool(str(value or "").strip()),
+        "official_source_checked_at": lambda value: bool(value),
+        "last_synced_at": lambda value: bool(value),
     }
     missing_field_counts = Counter()
     missing_field_record_codes = []
