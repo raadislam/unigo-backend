@@ -41,9 +41,10 @@ class ImportMajorVisaRequirementsSeeder extends Seeder
 
         $count = 0;
         $skipped = 0;
+        $dryRun = filter_var(env('UNIGO_VISA_SEED_DRY_RUN', false), FILTER_VALIDATE_BOOLEAN);
 
         try {
-            DB::transaction(function () use ($handle, $headers, &$count, &$skipped): void {
+            DB::transaction(function () use ($handle, $headers, &$count, &$skipped, $dryRun): void {
                 while (($values = fgetcsv($handle)) !== false) {
                     if (count($values) !== count($headers)) {
                         $skipped++;
@@ -69,6 +70,11 @@ class ImportMajorVisaRequirementsSeeder extends Seeder
 
                     if ($existing) {
                         $skipped++;
+                        continue;
+                    }
+
+                    if ($dryRun) {
+                        $count++;
                         continue;
                     }
 
@@ -149,6 +155,11 @@ class ImportMajorVisaRequirementsSeeder extends Seeder
             });
         } finally {
             fclose($handle);
+        }
+
+        if ($dryRun) {
+            $this->command?->info($count . ' visa requirement records would be imported; ' . $skipped . ' rows skipped. Dry-run wrote no records.');
+            return;
         }
 
         $this->command?->info($count . ' visa requirement records imported or updated; ' . $skipped . ' rows skipped. All records remain pending review and unpublished.');
