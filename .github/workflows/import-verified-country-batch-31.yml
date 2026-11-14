@@ -74,7 +74,7 @@ jobs:
                       raise SystemExit(f"{code}: missing {field}.")
               if len(row["visa_requirement_type"]) > 255 or len(row["entry_count"]) > 40 or len(row["processing_time"]) > 120:
                   raise SystemExit(f"{code}: a bounded schema field exceeds its validated length.")
-              if len(row["application_fee"]) > 1000 or len(row["required_documents"]) > 20000:
+              if len(row["application_fee"]) > 120 or len(row["required_documents"]) > 20000:
                   raise SystemExit(f"{code}: application fee or document list exceeds safe import bounds.")
               docs = [x.strip() for x in row["required_documents"].split("|") if x.strip()]
               if not docs:
