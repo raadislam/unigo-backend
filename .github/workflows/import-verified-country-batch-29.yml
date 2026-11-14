@@ -100,6 +100,8 @@ jobs:
               for document in item["documents"]:
                 if not isinstance(document, dict) or not document.get("name") or document.get("status") not in {"required", "conditional", "if_applicable"}:
                   raise SystemExit(f"{code}: applicant checklist document is invalid.")
+                if len(document["name"]) > 200:
+                  raise SystemExit(f"{code}: applicant checklist document name exceeds the 200-character API limit.")
             if code in verified:
               if row.get("verification_status") != "verified" or row.get("publish_status") != "published":
                 raise SystemExit(f"{code}: not explicitly verified and approved for publication.")
