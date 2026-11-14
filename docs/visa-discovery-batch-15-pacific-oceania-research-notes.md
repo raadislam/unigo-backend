@@ -81,8 +81,8 @@ The discovery universe contains 250 destinations. All eight destinations staged 
 ## Import, verification and publication controls
 
 - The seed and full-audit CSVs contain eight records: five research-verified/publishable and three pending/draft.
-- All four pending records remain `pending_review` and `draft`.
-- The four research-verified records are classified as publishable in the research audit file only; this is not production publication.
+- All three pending records remain `pending_review` and `draft`.
+- The five research-verified records are classified as publishable in the research audit file only; this is not production publication.
 - Solomon Islands remains ledger-only until the Bangladesh ordinary-passport exemption status is confirmed.
 - The validator checks unique (passport, destination, purpose) keys, required fields, field lengths, HTTPS official sources, same-day check dates, at least two official sources per record, and matching seed/full-audit keys.
 - The production deployment workflow excludes the batch CSVs, discovery ledger, validator and batch research notes. No deployment, migration, import or publication is performed by this research PR.
