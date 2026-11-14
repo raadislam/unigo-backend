@@ -8,6 +8,15 @@ on:
       - 'database/data/vfs_bangladesh_destination_coverage.csv'
       - 'database/data/vfs_fee_processing_snapshot_20261114.csv'
       - 'database/data/country_discovery_ledger.csv'
+      - 'database/data/new_country_visa_batch_09.csv'
+      - 'database/data/visa_full_audit_batch_09.csv'
+      - 'database/seeders/ImportMajorVisaRequirementsSeeder.php'
+      - 'scripts/validate_visa_batches.py'
+      - 'scripts/preflight_visa_import.php'
+      - 'scripts/verify_visa_import_audit.php'
+      - 'scripts/dispatch_frontend_rebuild.py'
+      - 'docs/visa-discovery-batch-09-release-checklist.md'
+      - '.github/workflows/validate-visa-batches.yml'
       - 'scripts/validate_vfs_coverage.py'
       - '.github/workflows/validate-vfs-coverage.yml'
       - '.github/workflows/deploy.yml'
@@ -24,6 +33,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Validate visa research batches
+        run: python3 scripts/validate_visa_batches.py
 
       - name: Prepare SSH
         env:
@@ -208,6 +220,155 @@ jobs:
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_05.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_05.csv --base-url=https://api.unigo-bd.com; else echo "No remaining-country full-audit batch."; fi'
 
+      - name: Check backup, import markers and frontend dispatch before new-country batch
+        id: new_country_import_gate
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          BACKUP_VERIFIED: ${{ vars.UNIGO_VISA_IMPORT_BACKUP_VERIFIED }}
+          BACKUP_PATH: ${{ vars.UNIGO_VISA_IMPORT_BACKUP_PATH }}
+          BACKUP_SHA256: ${{ vars.UNIGO_VISA_IMPORT_BACKUP_SHA256 }}
+          FRONTEND_TOKEN: ${{ secrets.UNIGO_FRONTEND_DISPATCH_TOKEN }}
+        run: |
+          set -e
+          mapfile -t hashes < <(sha256sum database/data/visa_full_audit_batch_06.csv database/data/visa_full_audit_batch_07.csv database/data/visa_full_audit_batch_08.csv database/data/visa_full_audit_batch_09.csv | awk '{print $1}')
+          combined_hash=$(printf '%s\n' "${hashes[@]}" | sha256sum | awk '{print $1}')
+          marker_count=0
+          for hash in "${hashes[@]}"; do
+            if ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "test -f /var/www/unigo/backend/current/storage/logs/visa-imports-$hash.json"; then
+              marker_count=$((marker_count + 1))
+            fi
+          done
+          if [ "$marker_count" -eq 4 ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "imported=false" >> "$GITHUB_OUTPUT"
+            echo "expected_public_count=53" >> "$GITHUB_OUTPUT"
+            if ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "test -f /var/www/unigo/backend/current/storage/logs/visa-frontend-verified-$combined_hash.json"; then
+              echo "frontend_pending=false" >> "$GITHUB_OUTPUT"
+            else
+              if [ -z "$FRONTEND_TOKEN" ]; then
+                echo "::error::The new-country records are imported but the frontend verification marker is missing and UNIGO_FRONTEND_DISPATCH_TOKEN is not configured."
+                exit 1
+              fi
+              echo "frontend_pending=true" >> "$GITHUB_OUTPUT"
+            fi
+            echo "All four import markers exist; data import is skipped."
+            exit 0
+          fi
+          if [ "$marker_count" -ne 0 ]; then
+            echo "::error::Only some new-country batch markers exist. Manual reconciliation is required; no batch will be overwritten."
+            exit 1
+          fi
+          if [ "$BACKUP_VERIFIED" != "true" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "imported=false" >> "$GITHUB_OUTPUT"
+            echo "frontend_pending=false" >> "$GITHUB_OUTPUT"
+            echo "expected_public_count=41" >> "$GITHUB_OUTPUT"
+            echo "::warning::New-country import skipped: set UNIGO_VISA_IMPORT_BACKUP_VERIFIED=true only after a restorable backup has been restore-tested."
+            exit 0
+          fi
+          case "$BACKUP_PATH" in
+            /var/backups/unigo/*.sql|/var/backups/unigo/*.sql.gz) ;;
+            *) echo "::error::UNIGO_VISA_IMPORT_BACKUP_PATH must be a .sql or .sql.gz file under /var/backups/unigo/."; exit 1 ;;
+          esac
+          if ! [[ "$BACKUP_SHA256" =~ ^[0-9a-fA-F]{64}$ ]]; then
+            echo "::error::UNIGO_VISA_IMPORT_BACKUP_SHA256 must contain 64 hexadecimal characters."
+            exit 1
+          fi
+          if [ -z "$FRONTEND_TOKEN" ]; then
+            echo "::error::UNIGO_FRONTEND_DISPATCH_TOKEN is required before importing new country records."
+            exit 1
+          fi
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "test -s '$BACKUP_PATH' && actual=\$(sha256sum '$BACKUP_PATH' | cut -d' ' -f1) && test \"\$actual\" = '$BACKUP_SHA256' && case '$BACKUP_PATH' in *.gz) gzip -t '$BACKUP_PATH';; esac"
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          echo "imported=true" >> "$GITHUB_OUTPUT"
+          echo "frontend_pending=true" >> "$GITHUB_OUTPUT"
+          echo "expected_public_count=53" >> "$GITHUB_OUTPUT"
+
+      - name: Inspect migration status and export fresh pre-import audit
+        if: steps.new_country_import_gate.outputs.enabled == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -e
+          cd /var/www/unigo/backend/current
+          php artisan migrate:status --no-ansi > /tmp/unigo-migration-status.txt
+          if grep -Eq '(^|[[:space:]])Pending([[:space:]]|$)' /tmp/unigo-migration-status.txt; then
+            cat /tmp/unigo-migration-status.txt
+            echo "Pending migrations detected; no visa data import will run."
+            exit 1
+          fi
+          php artisan visa:requirements-audit > /tmp/unigo-visa-preflight.json
+          php scripts/preflight_visa_import.php /tmp/unigo-visa-preflight.json 41 41 249 "ID,MU,NP,PH,LK,TR,BN,RW,TZ,BT,HK,MO,KZ,UZ,KR,QA,SA,JO"
+          REMOTE
+
+      - name: Dry-run new-country seed batches 06-07, 08 and 09
+        if: steps.new_country_import_gate.outputs.enabled == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -e
+          cd /var/www/unigo/backend/current
+          for file in database/data/new_country_visa_batch_06_07.csv database/data/new_country_visa_batch_08.csv database/data/new_country_visa_batch_09.csv; do
+            cp "$file" storage/app/imports/unigo_visa_requirements_research_template.csv
+            UNIGO_VISA_SEED_DRY_RUN=true php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force
+          done
+          REMOTE
+
+      - name: Import new-country seed batches 06-07, 08 and 09 as unpublished records
+        if: steps.new_country_import_gate.outputs.enabled == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -e
+          cd /var/www/unigo/backend/current
+          for file in database/data/new_country_visa_batch_06_07.csv database/data/new_country_visa_batch_08.csv database/data/new_country_visa_batch_09.csv; do
+            cp "$file" storage/app/imports/unigo_visa_requirements_research_template.csv
+            php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force
+          done
+          REMOTE
+
+      - name: Dry-run full audit batches 06-09
+        if: steps.new_country_import_gate.outputs.enabled == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -e
+          cd /var/www/unigo/backend/current
+          for file in database/data/visa_full_audit_batch_06.csv database/data/visa_full_audit_batch_07.csv database/data/visa_full_audit_batch_08.csv database/data/visa_full_audit_batch_09.csv; do
+            php artisan visa:requirements-import-research --file="$file" --base-url=https://api.unigo-bd.com --dry-run
+          done
+          REMOTE
+
+      - name: Import and verify full audit batches 06-09
+        if: steps.new_country_import_gate.outputs.enabled == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -e
+          cd /var/www/unigo/backend/current
+          for file in database/data/visa_full_audit_batch_06.csv database/data/visa_full_audit_batch_07.csv database/data/visa_full_audit_batch_08.csv database/data/visa_full_audit_batch_09.csv; do
+            php artisan visa:requirements-import-research --file="$file" --base-url=https://api.unigo-bd.com
+          done
+          REMOTE
+
+
       - name: Verify imported visa records by readback
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -215,10 +376,27 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit'
+
+      - name: Verify new-country database readback and official sources
+        if: steps.new_country_import_gate.outputs.expected_public_count == '53'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -e
+          cd /var/www/unigo/backend/current
+          php artisan visa:requirements-audit > /tmp/unigo-visa-postflight.json
+          php scripts/verify_visa_import_audit.php /tmp/unigo-visa-postflight.json
+          REMOTE
       - name: Verify public country directory and visa requirement API
+        env:
+          EXPECTED_PUBLIC_COUNT: ${{ steps.new_country_import_gate.outputs.expected_public_count || '41' }}
         run: |
           python3 - <<'PY'
           import json
+          import os
           from urllib.request import Request, urlopen
 
           base = "https://api.unigo-bd.com/api"
@@ -232,8 +410,8 @@ jobs:
               return payload
 
           directory = get_json("/countries")
-          if directory.get("success") is not True or not isinstance(directory.get("data"), list) or not directory["data"]:
-              raise SystemExit("Public country directory API returned an unsuccessful or empty response.")
+          if directory.get("success") is not True or not isinstance(directory.get("data"), list):
+              raise SystemExit("Public country directory API returned an unsuccessful or invalid response.")
 
           requirements_payload = get_json("/visa-requirements?passport=BGD&purpose=tourism")
           if requirements_payload.get("success") is not True or not isinstance(requirements_payload.get("data"), list):
@@ -241,6 +419,9 @@ jobs:
 
           countries = directory["data"]
           requirements = requirements_payload["data"]
+          expected_count = int(os.environ.get("EXPECTED_PUBLIC_COUNT", "41"))
+          if len(countries) != expected_count or len(requirements) != expected_count:
+              raise SystemExit(f"Public API count mismatch: expected {expected_count}, countries={len(countries)}, requirements={len(requirements)}.")
           country_by_slug = {item.get("slug"): item for item in countries}
           requirement_by_slug = {
               item.get("country", {}).get("slug"): item
@@ -297,17 +478,39 @@ jobs:
                   raise SystemExit(f"Public visa detail API is missing official source links for {slug}.")
               print(f"Public visa detail API HTTP 200 verified: {slug} ({iso2}).")
 
-          for slug in ("japan", "australia"):
+          for slug in ("japan", "australia", "maldives", "viet-nam"):
               country = country_by_slug.get(slug)
               requirement = requirement_by_slug.get(slug)
               if not country or not requirement:
                   raise SystemExit(f"Mandatory country or BGD tourism requirement is missing: {slug}.")
-              if country.get("is_published") is not False:
+              if slug in ("japan", "australia") and country.get("is_published") is not False:
                   raise SystemExit(f"Expected {slug} to remain admitted by its visa requirement rather than a blanket country flag.")
-              print(f"Verified {slug}: country.is_published=false; requirement.verification_status=verified; requirement.is_published=true.")
+              print(f"Verified regression destination: {slug}; requirement.verification_status=verified; requirement.is_published=true.")
+
+          if expected_count == 53:
+              expected_new_slugs = {"indonesia", "mauritius", "nepal", "philippines", "turkiye", "brunei", "rwanda", "tanzania", "hong-kong", "macao", "uzbekistan", "korea-republic-of"}
+              missing_new = sorted(expected_new_slugs - set(requirement_by_slug))
+              if missing_new:
+                  raise SystemExit(f"New verified country requirements are missing from the public API: {missing_new}")
+              pending_slugs = {"sri-lanka", "bhutan", "kazakhstan", "qatar", "saudi-arabia", "jordan"}
+              leaked_pending = sorted(pending_slugs & set(requirement_by_slug))
+              if leaked_pending:
+                  raise SystemExit(f"Pending country requirements leaked into the public API: {leaked_pending}")
 
           print(f"Public country directory HTTP 200: {len(countries)} countries.")
           print("Directory slugs: " + ", ".join(sorted(country_by_slug)))
           print(f"Public BGD tourism requirements HTTP 200: {len(requirements)} records.")
           print("All country visibility gates and official-source checks passed.")
           PY
+
+      - name: Rebuild and verify static frontend after new-country publication
+        if: steps.new_country_import_gate.outputs.frontend_pending == 'true'
+        env:
+          UNIGO_FRONTEND_DISPATCH_TOKEN: ${{ secrets.UNIGO_FRONTEND_DISPATCH_TOKEN }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          python3 scripts/dispatch_frontend_rebuild.py
+          combined_hash=$(printf '%s\n' $(sha256sum database/data/visa_full_audit_batch_06.csv database/data/visa_full_audit_batch_07.csv database/data/visa_full_audit_batch_08.csv database/data/visa_full_audit_batch_09.csv | awk '{print $1}') | sha256sum | awk '{print $1}')
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "printf '%s\n' 'verified' > /var/www/unigo/backend/current/storage/logs/visa-frontend-verified-$combined_hash.json"
