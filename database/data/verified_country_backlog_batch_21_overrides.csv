@@ -1,6 +1,6 @@
 batch,destination_iso2,field,value,reason
 10,PK,visa_on_arrival_available,false,Bangladesh is absent from the official 50-country tourist VOA list; Visa in Your Inbox is pre-arrival electronic authorization and business VOA is not a tourist route.
-10,PK,application_fee,"DGI&P Bangladesh schedule: 25 single entry, 37.50 multiple up to 1 year, 50 multiple over 1 year; currency not labelled in table, confirm at portal/mission checkout.",Official fee schedule lists these Bangladesh values but does not label currency.
+10,PK,application_fee,"25 single; 37.50 multiple up to 1 year; 50 multiple over 1 year; currency unspecified.",Official fee schedule lists these Bangladesh values but does not label currency.
 10,PK,processing_time,Usually 7-10 working days at missions abroad; portal timing can vary.,Official DGI&P guidance states this mission processing range.
 10,PK,review_notes,Bangladesh is listed for Pakistan eVisa / Visa in Your Inbox. The official 50-country tourist VOA list does not include Bangladesh; the separate business VOA is not a tourist route. Fee schedule lists 25/37.50/50 for Bangladesh but does not label currency; verify at checkout.,Official tourist and fee pages checked 2026-11-14.
 15,WS,verification_status,pending_review,Free on-arrival Visitor Permit conflicts with SAT$200 Visitor Entry Permit fee schedule; scope unresolved.
