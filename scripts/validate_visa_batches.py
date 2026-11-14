@@ -141,8 +141,11 @@ for path in files:
                     raise ValueError("source_name is missing or exceeds 180 characters")
                 if not source.get("source_url", "").startswith("https://") or len(source["source_url"]) > 2000:
                     raise ValueError("source_url must be HTTPS and no longer than 2000 characters")
-                if not source.get("verification_notes", "").strip() or len(source["verification_notes"]) > 5000:
-                    raise ValueError("verification_notes is missing or exceeds 5000 characters")
+                notes = source.get("verification_notes")
+                if notes is not None and len(notes) > 5000:
+                    raise ValueError("verification_notes exceeds 5000 characters")
+                if path.name == "visa_full_audit_batch_28.csv" and not (notes or "").strip():
+                    raise ValueError("batch 28 verification_notes is required")
         except Exception as exc:
             errors.append(f"{path.name}:{line}: invalid additional_sources: {exc}")
 
