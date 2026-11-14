@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - 'database/data/vfs_bangladesh_destination_coverage.csv'
+      - 'database/data/vfs_fee_processing_snapshot_20261114.csv'
+      - 'database/data/country_discovery_ledger.csv'
+      - 'scripts/validate_vfs_coverage.py'
+      - '.github/workflows/validate-vfs-coverage.yml'
+      - '.github/workflows/deploy.yml'
   workflow_dispatch:
 
 concurrency:
