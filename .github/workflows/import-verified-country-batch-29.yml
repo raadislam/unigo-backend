@@ -467,6 +467,8 @@ jobs:
               mv "$IMPORT_DIR/batch29_import_result.json" "$FAILED_RESULT"
               echo "Previous incomplete or failed batch 29 result archived at $FAILED_RESULT."
             fi
+            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_29.csv" --base-url=https://api.unigo-bd.com --unpublish-only > "$IMPORT_DIR/batch29_unpublish_result.json"
+            php -r '$p=json_decode(file_get_contents($argv[1]), true); $f=is_array($p) ? ($p["failures"] ?? null) : null; $ok=is_array($p) && is_array($f) && count($f) === 0 && (int)($p["rows"] ?? 0) === 5 && (int)($p["unpublished"] ?? 0) === 5 && (int)($p["read_back"] ?? 0) === 5; if (!$ok) { fwrite(STDERR, "Batch 29 records were not all confirmed pending_review and unpublished before retry.\n"); exit(1); }' "$IMPORT_DIR/batch29_unpublish_result.json"
             php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_29.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch29_import_result.json"
           fi
           php artisan visa:requirements-audit > "$IMPORT_DIR/batch29_post_import_audit.json"
@@ -474,6 +476,7 @@ jobs:
           test -s "$IMPORT_DIR/batch29_post_import_audit.json"
           REMOTE
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch29_import_result.json" ./batch29_import_result.json
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch29_unpublish_result.json" ./batch29_unpublish_result.json
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch29_post_import_audit.json" ./batch29_post_import_audit.json
       - name: Read back photo and applicant checklist JSON from the production database
         env:
