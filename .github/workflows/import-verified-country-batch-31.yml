@@ -326,18 +326,38 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
-          set -Eeuo pipefail
+          set -uo pipefail
           APP_DIR="/var/www/unigo/backend/current"
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
           cd "$APP_DIR"
           mkdir -p storage/app/imports
           cp "$IMPORT_DIR/new_country_visa_batch_31.csv" storage/app/imports/unigo_visa_requirements_research_template.csv
-          php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > "$IMPORT_DIR/batch31_seed_result.txt"
-          php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_31.csv" --base-url=https://api.unigo-bd.com --dry-run > "$IMPORT_DIR/batch31_dry_run.json"
-          test -s "$IMPORT_DIR/batch31_seed_result.txt" && test -s "$IMPORT_DIR/batch31_dry_run.json"
+          : > "$IMPORT_DIR/batch31_dry_run.json"
+          : > "$IMPORT_DIR/batch31_dry_run.stderr"
+          php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > "$IMPORT_DIR/batch31_seed_result.txt" 2>&1
+          SEED_STATUS=$?
+          DRY_STATUS=99
+          if [ "$SEED_STATUS" -eq 0 ]; then
+            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_31.csv" --base-url=https://api.unigo-bd.com --dry-run > "$IMPORT_DIR/batch31_dry_run.json" 2> "$IMPORT_DIR/batch31_dry_run.stderr"
+            DRY_STATUS=$?
+          fi
+          printf '%s\n' "$SEED_STATUS" > "$IMPORT_DIR/batch31_seed_exit_code.txt"
+          printf '%s\n' "$DRY_STATUS" > "$IMPORT_DIR/batch31_dry_run_exit_code.txt"
           REMOTE
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch31_seed_result.txt" ./batch31_seed_result.txt
           scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch31_dry_run.json" ./batch31_dry_run.json
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch31_dry_run.stderr" ./batch31_dry_run.stderr
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch31_seed_exit_code.txt" ./batch31_seed_exit_code.txt
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch31_dry_run_exit_code.txt" ./batch31_dry_run_exit_code.txt
+          SEED_STATUS="$(cat batch31_seed_exit_code.txt)"
+          DRY_STATUS="$(cat batch31_dry_run_exit_code.txt)"
+          if [ "$SEED_STATUS" -ne 0 ] || [ "$DRY_STATUS" -ne 0 ]; then
+            echo "Batch 31 seed/dry-run failed; captured diagnostics:"
+            tail -n 80 batch31_seed_result.txt || true
+            tail -n 120 batch31_dry_run.stderr || true
+            exit 1
+          fi
+          test -s batch31_dry_run.json
       - name: Inspect dry-run result before any production import
         run: |
           python3 - <<'PY'
