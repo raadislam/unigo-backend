@@ -11,6 +11,13 @@ on:
       - '.github/workflows/read-only-production-visa-audit.yml'
       - 'scripts/validate_production_visa_audit.py'
       - 'database/data/country_discovery_ledger.csv'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/read-only-production-visa-audit.yml'
+      - 'scripts/validate_production_visa_audit.py'
+      - '.github/workflows/deploy.yml'
 
 permissions:
   contents: read
@@ -20,7 +27,19 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout backend audit definitions
+        uses: actions/checkout@v4
+      - name: Validate audit script and workflow syntax
+        run: |
+          python3 -m py_compile scripts/validate_production_visa_audit.py
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0)); puts "Workflow YAML syntax OK"' .github/workflows/read-only-production-visa-audit.yml
+
   audit:
+    if: github.event_name != 'pull_request'
+    needs: validate
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -57,5 +76,4 @@ jobs:
 
       - name: Validate live database counts and discovery-master parity
         run: |
-          python3 -m py_compile scripts/validate_production_visa_audit.py
           python3 scripts/validate_production_visa_audit.py --audit-file production-visa-audit.json --ledger-file database/data/country_discovery_ledger.csv
