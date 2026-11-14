@@ -181,10 +181,14 @@ jobs:
           )
           for name in names:
               remote = f"{root}/{name}"
-              result = subprocess.run(
-                  ["ssh", "-i", key, "-p", port, "-o", "BatchMode=yes", "-o", "StrictHostKeyChecking=yes", f"{user}@{host}", f"cat {remote}"],
-                  text=True, capture_output=True, check=False
-              )
+              try:
+                  result = subprocess.run(
+                      ["ssh", "-i", key, "-p", port, "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", "-o", "StrictHostKeyChecking=yes", f"{user}@{host}", f"cat {remote}"],
+                      text=True, capture_output=True, check=False, timeout=25
+                  )
+              except subprocess.TimeoutExpired:
+                  print(f"{name}: TIMEOUT")
+                  continue
               if result.returncode != 0:
                   print(f"{name}: MISSING_OR_UNREADABLE")
                   continue
