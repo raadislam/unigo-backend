@@ -37,6 +37,10 @@ class VisaRequirementAuditCommand extends Command
             ->orderBy('name')
             ->get(['id', 'name', 'iso2', 'iso3', 'slug', 'is_published', 'sort_order']);
 
+        $allCountries = Country::query()
+            ->orderBy('name')
+            ->get(['id', 'name', 'iso2', 'iso3', 'slug', 'is_published', 'sort_order']);
+
         $fields = [
             'id',
             'passport_nationality_iso3',
@@ -79,6 +83,10 @@ class VisaRequirementAuditCommand extends Command
             'published_count' => $records->where('is_published', true)->count(),
             'public_country_directory_count' => $publicCountries->count(),
             'public_country_directory' => $publicCountries->map(fn (Country $country) => $country->only(['id', 'name', 'iso2', 'iso3', 'slug', 'is_published', 'sort_order']))->values()->all(),
+            'country_table_count' => $allCountries->count(),
+            'country_table_published_count' => $allCountries->where('is_published', true)->count(),
+            'country_table_unpublished_count' => $allCountries->where('is_published', false)->count(),
+            'country_table' => $allCountries->map(fn (Country $country) => $country->only(['id', 'name', 'iso2', 'iso3', 'slug', 'is_published', 'sort_order']))->values()->all(),
             'records' => $records->map(function (VisaRequirement $record) use ($fields): array {
                 return [
                     ...$record->only($fields),
