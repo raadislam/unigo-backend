@@ -46,7 +46,7 @@ jobs:
           for code in {"MS", "PR", "VI"}:
             if ledger[code].get("discovery_status") != "research_complete_batch_30" or ledger[code].get("visa_record_status") != "verified_ready_for_import":
               raise SystemExit(f"{code}: ledger does not show verified Batch 30 research ready for import.")
-          if ledger["US"].get("visa_record_status") != "verified_update_ready_for_import":
+          if ledger["US"].get("visa_record_status") != "verified_published":
             raise SystemExit("US: ledger does not identify the existing-record update.")
           for code in {"SH", "TC"}:
             if ledger[code].get("discovery_status") != "research_in_progress_batch_30" or not ledger[code].get("visa_record_status", "").startswith("research_pending"):
