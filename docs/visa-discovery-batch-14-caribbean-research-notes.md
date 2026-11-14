@@ -15,7 +15,7 @@ The discovery ledger contains 250 destinations. The nine destinations in this ba
 | Destination | Bangladesh ordinary-passport tourism route | Research classification / blocker |
 |---|---|---|
 | Barbados | Visa-free for up to six months, per the Barbados MFA visa list revised 9 May 2025. Visitor checklist: passport valid at least six months, return ticket, intended address, evidence of personal support and online Immigration/Customs Form within 72 hours before arrival. | Verified/publishable in research files. Not imported or published in production. |
-| Dominica | Bangladesh qualifies under the Commonwealth-member visa exemption for visits up to six months. Entry checklist: valid passport, return ticket, sufficient funds and local address. | Verified/publishable in research files. Not imported or published in production. |
+| Dominica | The Government visa-exemption page says Commonwealth members may enter for up to six months, and Bangladesh is a Commonwealth member. The page is dated 21 December 2012; entry checklist lists passport, return ticket, sufficient funds and local address. | Pending. Obtain current Bangladesh-specific confirmation from Dominica Immigration; do not publish from the 2012 nationality guidance alone. |
 | Jamaica | PICA entry-visa table explicitly lists Bangladesh (Commonwealth) as no visa required. PICA requires a valid approved travel document and completed/signed Immigration/Customs C5 form. The table does not state a Bangladesh-specific maximum stay. | Verified/publishable in research files. PICA table's printed update date is 19 July 2023; recheck if the authority issues a newer country-specific schedule. Not imported or published in production. |
 | Antigua & Barbuda | Bangladesh is absent from the visa-exempt list and therefore requires an entry visa. eVisa is available. Conditional VOA page lists valid US/Canada/UK/Schengen visa or residence as a condition and USD100 fee, but the eVisa FAQ says arriving without a visa is not permitted. | Pending. Reconcile the conflicting VOA and eVisa FAQ instructions for ordinary Bangladeshi passports. |
 | Guatemala | Bangladesh ordinary passports are Category C (visa consultada). The 2026 IGM checklist requires a Guatemalan guarantor and prior IGM review. | Pending. MINEX tariff lists USD50 single / USD150 multiple tourist visa; IGM 2026 checklist separately lists a USD25 visa-service filing charge. Confirm whether fees are separate/additive and confirm Bangladesh application jurisdiction. |
@@ -35,9 +35,12 @@ The discovery ledger contains 250 destinations. The nine destinations in this ba
 - Barbados Ministry of Foreign Affairs, Planning to Visit: https://www.foreign.gov.bb/planning-to-visit/
 
 ### Dominica
-- Government of Dominica, Do I Need a Visa to Enter Dominica?: https://www.dominica.gov.dm/services/passports-and-travel-documents-non-nationals/do-i-need-a-visa-to-enter-into-dominica
-- Government of Dominica, Entry Requirements for Non-Nationals: https://www.dominica.gov.dm/services/passports-and-travel-documents-non-nationals/what-are-the-entry-requirements-for-the-commonwealth-of-dominica
-- The Commonwealth, Member Countries: https://thecommonwealth.org/our-member-countries
+- Government of Dominica, Do I Need a Visa to Enter Dominica (article dated 21 December 2012): https://dominica.gov.dm/services/passports-and-travel-documents-non-nationals/do-i-need-a-visa-to-enter-into-dominica
+- Government of Dominica, Entry Requirements for Non-Nationals: https://dominica.gov.dm/services/passports-and-travel-documents-non-nationals/what-are-the-entry-requirements-for-the-commonwealth-of-dominica
+- The Commonwealth, Bangladesh member profile: https://thecommonwealth.org/our-member-countries/bangladesh
+- Government of Dominica, Immigration (Passport Exemption) Regulations: https://www.dominica.gov.dm/laws/chapters/chap18-01.pdf
+
+The visa-exemption webpage is dated 21 December 2012. It is an official lead but not sufficient on its own for 2026 publication; obtain current Bangladesh-specific confirmation from Dominica Immigration.
 
 ### Jamaica
 - Jamaica Passport, Immigration and Citizenship Agency, Entry Visa Requirements: https://www.pica.gov.jm/immigration/entry-visa-requirements/
