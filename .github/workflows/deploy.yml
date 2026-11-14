@@ -145,6 +145,30 @@ jobs:
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_02.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_02.csv --base-url=https://api.unigo-bd.com; else echo "No pending full-audit batch."; fi'
 
+      - name: Seed newly researched country records
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/new_country_visa_batch.csv ]; then mkdir -p storage/app/imports && cp database/data/new_country_visa_batch.csv storage/app/imports/unigo_visa_requirements_research_template.csv && php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force; else echo "No new-country seed batch."; fi'
+
+      - name: Validate new-country full audit batch 03
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_03.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_03.csv --base-url=https://api.unigo-bd.com --dry-run; else echo "No new-country full-audit batch."; fi'
+
+      - name: Import and publish new-country full audit batch 03
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_03.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_03.csv --base-url=https://api.unigo-bd.com; else echo "No new-country full-audit batch."; fi'
+
       - name: Verify imported visa records by readback
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
