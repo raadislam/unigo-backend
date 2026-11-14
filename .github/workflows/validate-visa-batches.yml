@@ -1,28 +1,46 @@
 name: Validate Visa Research Batches
+
 on:
   push:
     branches:
-      - automation/country-discovery-batches-06-07-20261114
+      - automation/country-discovery-batch-09-research-20261114
+    paths:
+      - 'database/data/visa_full_audit_batch_06.csv'
+      - 'database/data/visa_full_audit_batch_07.csv'
+      - 'database/data/visa_full_audit_batch_08.csv'
+      - 'database/data/visa_full_audit_batch_09.csv'
+      - 'database/data/new_country_visa_batch_06_07.csv'
+      - 'database/data/new_country_visa_batch_08.csv'
+      - 'database/data/new_country_visa_batch_09.csv'
+      - 'database/data/country_discovery_ledger.csv'
+      - 'scripts/validate_visa_batches.py'
+      - '.github/workflows/deploy.yml'
+      - '.github/workflows/validate-visa-batches.yml'
+      - 'docs/visa-discovery-batch-09-release-checklist.md'
   pull_request:
     paths:
       - 'database/data/visa_full_audit_batch_06.csv'
       - 'database/data/visa_full_audit_batch_07.csv'
       - 'database/data/visa_full_audit_batch_08.csv'
+      - 'database/data/visa_full_audit_batch_09.csv'
       - 'database/data/new_country_visa_batch_06_07.csv'
       - 'database/data/new_country_visa_batch_08.csv'
+      - 'database/data/new_country_visa_batch_09.csv'
+      - 'database/data/country_discovery_ledger.csv'
       - 'scripts/validate_visa_batches.py'
+      - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
-permissions:
-  contents: read
+      - 'docs/visa-discovery-batch-09-release-checklist.md'
+
 jobs:
-  validate-visa-batches:
+  validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout backend
         uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Validate CSV schema, field limits, sources and idempotency keys
-        run: python scripts/validate_visa_batches.py
+      - name: Validate CSV schema, field limits, official sources and idempotency keys
+        run: python3 scripts/validate_visa_batches.py

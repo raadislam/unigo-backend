@@ -14,6 +14,11 @@ on:
       - '.github/workflows/import-staged-country-batch.yml'
       - 'scripts/import_staged_country_batch.php'
       - 'scripts/run-staged-country-import-20261114.trigger'
+      - 'database/data/new_country_visa_batch_09.csv'
+      - 'database/data/visa_full_audit_batch_09.csv'
+      - 'scripts/validate_visa_batches.py'
+      - '.github/workflows/validate-visa-batches.yml'
+      - 'docs/visa-discovery-batch-09-release-checklist.md'
   workflow_dispatch:
 
 concurrency:

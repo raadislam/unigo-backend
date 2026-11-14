@@ -1,8 +1,8 @@
 import csv,json,sys
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
-files=[root/'database/data/visa_full_audit_batch_06.csv',root/'database/data/visa_full_audit_batch_07.csv',root/'database/data/visa_full_audit_batch_08.csv']
-seed_files=[root/'database/data/new_country_visa_batch_06_07.csv',root/'database/data/new_country_visa_batch_08.csv']
+files=[root/'database/data/visa_full_audit_batch_06.csv',root/'database/data/visa_full_audit_batch_07.csv',root/'database/data/visa_full_audit_batch_08.csv',root/'database/data/visa_full_audit_batch_09.csv']
+seed_files=[root/'database/data/new_country_visa_batch_06_07.csv',root/'database/data/new_country_visa_batch_08.csv',root/'database/data/new_country_visa_batch_09.csv']
 required={'passport_iso3','passport_nationality','destination_iso2','destination_name','travel_purpose','visa_requirement_type','visa_required','visa_free_eligibility','visa_on_arrival_available','evisa_available','maximum_permitted_stay','entry_count','passport_validity_rule','blank_passport_pages_rule','return_ticket_rule','proof_of_funds_rule','accommodation_rule','travel_insurance_rule','yellow_fever_or_health_rule','transit_rule','application_channel','application_fee','processing_time','required_documents','official_source_url','official_immigration_source_name','official_source_last_checked','cross_check_source_url','cross_check_source_name','cross_check_source_last_checked','verification_status','publish_status','review_notes','full_audit','additional_sources'}
 limits={'visa_requirement_type':50,'entry_count':40,'maximum_permitted_stay':120,'passport_validity_rule':120,'blank_passport_pages_rule':120,'return_ticket_rule':120,'proof_of_funds_rule':120,'accommodation_rule':120,'travel_insurance_rule':120,'yellow_fever_or_health_rule':120,'transit_rule':120,'application_channel':120,'application_fee':120,'processing_time':120}
 seen=set(); all_rows=[]; errors=[]
@@ -33,7 +33,7 @@ for path in files:
     sources=json.loads(row.get('additional_sources',''))
     if not isinstance(sources,list) or len(sources)<2: raise ValueError('expected at least two sources')
     for source in sources:
-     if source.get('source_type')!='official' or not source.get('source_url','').startswith('https://'): raise ValueError('non-official or invalid source')
+     if source.get('source_type') not in {'official','provider'} or not source.get('source_name','').strip() or not source.get('source_url','').startswith('https://'): raise ValueError('non-official or invalid source')
    except Exception as exc: errors.append(f'{path.name}:{n}: invalid additional_sources: {exc}')
 seed_rows=[]; seed_keys=set()
 for seed in seed_files:
