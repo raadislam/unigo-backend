@@ -18,6 +18,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate deployment script and visa research batch
+        run: |
+          bash -n scripts/backup-and-verify-db.sh
+          python3 scripts/validate-visa-batch.py
+
       - name: Prepare SSH
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -172,6 +177,14 @@ jobs:
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_02.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_02.csv --base-url=https://api.unigo-bd.com; else echo "No pending full-audit batch."; fi'
+
+      - name: Validate Kosovo country seeder PHP syntax
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "cd /var/www/unigo/backend/current && php -l database/seeders/ImportKosovoCountrySeeder.php"
 
       - name: Seed Kosovo country row
         env:
