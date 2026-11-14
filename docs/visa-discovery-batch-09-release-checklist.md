@@ -42,9 +42,9 @@ Seven further destinations were researched using official immigration, foreign-m
 | Georgia | Bangladesh is not visa-free. The eVisa country page requires a valid Schengen/OECD visa or residence permit, while the official FAQ says applicants without a supporting document may continue with that section blank. | **Pending review** because the two official eVisa instructions conflict. VFS Global is the Bangladesh application-centre partner; service fees are not government visa fees. |
 | Bahrain | NPRA describes a one-year multi-entry eVisa for 212 nationalities and a separate VOA list, but the accessible official pages did not confirm Bangladesh's inclusion. | Ledger-only pending nationality-list confirmation. |
 | Kuwait | The MOI tourist eVisa nationality list does not include Bangladesh. A conditional GCC-resident route exists for eligible professions, but the ordinary BGD tourist route without GCC residence was not established. | Ledger-only pending sponsor/embassy route confirmation. |
-| Timor-Leste | Customs guidance describes VOA at Dili airport/seaport for many nationalities, but Decree-Law 5/2010 restricts arrival visas to an authorized nationality list that was not found. | Ledger-only pending confirmation that Bangladesh is authorized. |
+| Timor-Leste | Current Customs Authority guidance expressly permits nationals of countries other than Indonesia, Portugal and the United States to apply for VOA at Dili International Airport or Dili Sea Port. Bangladesh is in this general group; land-border entry requires prior authorization. | **Verified research staged**; USD30 cash, six-month passport validity, one blank page, onward ticket/departure funds, sufficient funds and accommodation. Standard stay duration is not stated. |
 
-Batch 10 adds three verified/publishable research rows and one pending/draft row. Bahrain, Kuwait and Timor-Leste remain in the discovery ledger without visa records because the Bangladesh-specific route is not yet established.
+Batch 10 adds **four verified/publishable research rows** (Armenia, Azerbaijan, Pakistan and Timor-Leste) and one pending/draft row (Georgia). Bahrain and Kuwait remain ledger-only because Bangladesh-specific eligibility or the ordinary non-GCC route is not established.
 
 ## Staged backlog and import state
 
@@ -52,10 +52,10 @@ Batch 10 adds three verified/publishable research rows and one pending/draft row
 |---|---:|---:|---:|
 | 06–08 | 15 | 12 | 3 |
 | 09 | 4 | 0 | 4 |
-| 10 | 4 | 3 | 1 |
-| **Total** | **23** | **15** | **8** |
+| 10 | 5 | 4 | 1 |
+| **Total** | **24** | **16** | **8** |
 
-These are repository-staged research rows, not production records. The 12 verified rows from batches 06–08 are missing from production. The current guarded import workflow intentionally inserts them as `pending_review` and unpublished; a separate database readback, verification and publication pass is still required. The three verified batch-10 rows have not been imported and need a reviewed import path. The eight pending/draft rows must remain unpublished.
+These are repository-staged research rows, not production records. The 12 verified rows from batches 06–08 are missing from production. The current guarded import workflow intentionally inserts them as `pending_review` and unpublished; a separate database readback, verification and publication pass is still required. The four verified batch-10 rows have not been imported and need a reviewed import path. The eight pending/draft rows must remain unpublished.
 
 ## Live production and frontend parity
 
