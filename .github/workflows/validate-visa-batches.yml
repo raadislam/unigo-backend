@@ -7,7 +7,9 @@ on:
     paths:
       - 'database/data/visa_full_audit_batch_06.csv'
       - 'database/data/visa_full_audit_batch_07.csv'
+      - 'database/data/visa_full_audit_batch_08.csv'
       - 'database/data/new_country_visa_batch_06_07.csv'
+      - 'database/data/new_country_visa_batch_08.csv'
       - 'scripts/validate_visa_batches.py'
       - '.github/workflows/validate-visa-batches.yml'
 permissions:
