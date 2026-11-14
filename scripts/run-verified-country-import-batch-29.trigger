@@ -1,1 +1,1 @@
-Retry batch 29 after correcting applicant checklist document-name lengths to the production API limit. Allowlist: GF, GP, MQ, RE, PM. Research-only pending: BL, MF, YT.
+Retry batch 29 after preserving applicant-level checklist notes in the API and moving publication after complete field/source readback. Allowlist: GF, GP, MQ, RE, PM. Research-only pending: BL, MF, YT.
