@@ -27,6 +27,7 @@ on:
       - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
       - 'app/Console/Commands/VisaRequirementAuditCommand.php'
       - 'app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php'
+      - 'tests/Feature/VisaRequirementApplicantChecklistMetadataTest.php'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
       - '.github/workflows/import-verified-country-batch-38.yml'
@@ -48,12 +49,35 @@ jobs:
       - name: Set up PHP for importer syntax validation
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, pdo_sqlite, sqlite3, bcmath, curl, xml, zip
       - name: Validate importer PHP syntax
         run: |
           php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
           php -l app/Console/Commands/VisaRequirementAuditCommand.php
           php -l app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php
+          php -l tests/Feature/VisaRequirementApplicantChecklistMetadataTest.php
+      - name: Install Composer dependencies for regression tests
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Run applicant checklist metadata regression tests
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+        run: php artisan test --filter=VisaRequirementApplicantChecklistMetadataTest
+      - name: Lint embedded batch 38 production readback PHP
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          workflow = Path(".github/workflows/import-verified-country-batch-38.yml").read_text()
+          marker = "cat > /tmp/batch38-readback.php <<'PHP'\n"
+          start = workflow.index(marker) + len(marker)
+          end = workflow.index("\n          PHP\n", start)
+          lines = workflow[start:end].splitlines()
+          php = "\n".join(line[10:] if line.startswith("          ") else line for line in lines) + "\n"
+          Path("/tmp/batch38-readback.php").write_text(php)
+          PY
+          php -l /tmp/batch38-readback.php
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
