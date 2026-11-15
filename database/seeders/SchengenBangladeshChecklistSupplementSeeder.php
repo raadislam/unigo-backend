@@ -363,6 +363,7 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
         ];
 
         $sourceDirectory = 'https://www.eeas.europa.eu/bangladesh/travel-study_en';
+        $visaCodeSource = 'https://eur-lex.europa.eu/eli/reg/2009/810/oj/eng';
 
         foreach ($groups as $group) {
             foreach ($group['countries'] as $iso2) {
@@ -470,6 +471,18 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     'source_last_checked_at' => $checkedAt,
                     'is_primary' => false,
                     'verification_notes' => 'Used to verify the competent Schengen visa issuing mission and representation arrangement for Bangladesh. It is not a substitute for the destination-specific supporting-document checklist.',
+                ]
+            );
+
+            VisaRequirementSource::updateOrCreate(
+                ['visa_requirement_id' => $requirement->id, 'source_url' => $visaCodeSource],
+                [
+                    'source_type' => 'official',
+                    'source_name' => 'European Union — Visa Code, Regulation (EC) No 810/2009',
+                    'source_url' => $visaCodeSource,
+                    'source_last_checked_at' => $checkedAt,
+                    'is_primary' => false,
+                    'verification_notes' => 'General common framework for Schengen visa applications and supporting documents. It does not replace a destination-specific Bangladesh checklist or a mission request for additional documents.',
                 ]
             );
 
