@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services;
+namespace App\Services;
 
-use App\\Models\\VisaRequirement;
-use setasign\\Fpdi\\Tcpdf\\Fpdi;
+use App\Models\VisaRequirement;
+use setasign\Fpdi\Tcpdf\Fpdi;
 
 class VisaChecklistPdfService
 {
