@@ -1,0 +1,149 @@
+name: Verify batch 37 production publication
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/verify-verified-country-batch-37.trigger
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Prepare authorized VPS connection
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Trust configured VPS host
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Read-only database, import-summary and public API verification
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /var/www/unigo/backend/current
+          php artisan visa:requirements-audit > /tmp/batch37-readonly-audit.txt
+          if [ ! -s /tmp/batch37-import-result.json ]; then
+            echo "Batch 37 import result file is missing."
+            exit 1
+          fi
+          php -r '
+          $j=json_decode(file_get_contents("/tmp/batch37-import-result.json"),true);
+          if (!is_array($j) || ($j["rows"]??0)!==2 || !empty($j["failures"]) || ($j["read_back"]??0)!==2 || ($j["reverified"]??0)!==2 || ($j["republished"]??0)!==2) {
+              fwrite(STDERR,json_encode($j,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL);
+              exit(1);
+          }
+          '
+          cat > /tmp/batch37-verify-readonly.php <<'PHP'
+          <?php
+          require '/var/www/unigo/backend/current/vendor/autoload.php';
+          $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $records = \App\Models\VisaRequirement::query()
+              ->with(['country:id,name,slug,iso2', 'sources'])
+              ->where('passport_nationality_iso3', 'BGD')
+              ->where('travel_purpose', 'tourism')
+              ->get();
+          $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published)->count();
+          $pending = $records->count() - $published;
+          $duplicates = \Illuminate\Support\Facades\DB::table('visa_requirements')
+              ->where('passport_nationality_iso3', 'BGD')
+              ->where('travel_purpose', 'tourism')
+              ->select('country_id', 'passport_nationality_iso3', 'travel_purpose')
+              ->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')
+              ->havingRaw('COUNT(*) > 1')
+              ->count();
+          $find = fn ($iso2) => $records->first(fn ($row) => $row->country?->iso2 === $iso2);
+          $ag = $find('AG');
+          $gm = $find('GM');
+          $sourceCheck = function ($row, $url) {
+              return $row && $row->sources->contains(fn ($source) => $source->is_primary && $source->source_type === 'official' && $source->source_url === $url);
+          };
+          $checklists = function ($row) {
+              if (! $row || ! is_array($row->applicant_checklists)) return false;
+              $types = array_column($row->applicant_checklists, 'applicant_type');
+              return count(array_diff(['employee','self_employed_or_business_owner','student','retired'], $types)) === 0;
+          };
+          $result = [
+              'country_count' => \App\Models\Country::query()->count(),
+              'requirement_count' => $records->count(),
+              'source_count' => \Illuminate\Support\Facades\DB::table('visa_requirement_sources')->count(),
+              'published_count' => $published,
+              'pending_count' => $pending,
+              'duplicate_keys' => $duplicates,
+              'AG' => $ag ? [
+                  'verification_status' => $ag->verification_status,
+                  'is_published' => (bool) $ag->is_published,
+                  'visa_required' => (bool) $ag->visa_required,
+                  'visa_free_available' => (bool) $ag->visa_free_available,
+                  'evisa_available' => (bool) $ag->evisa_available,
+                  'visa_on_arrival_available' => (bool) $ag->visa_on_arrival_available,
+                  'primary_source_verified' => $sourceCheck($ag, 'https://immigration.gov.ag/frequently-asked-questions/visa-faqs/'),
+                  'photo_status' => data_get($ag->photo_specifications, 'status'),
+                  'four_checklists' => $checklists($ag),
+                  'official_source_count' => $ag->sources->where('source_type', 'official')->count(),
+              ] : null,
+              'GM' => $gm ? [
+                  'verification_status' => $gm->verification_status,
+                  'is_published' => (bool) $gm->is_published,
+                  'visa_required' => (bool) $gm->visa_required,
+                  'visa_free_available' => (bool) $gm->visa_free_available,
+                  'evisa_available' => (bool) $gm->evisa_available,
+                  'visa_on_arrival_available' => (bool) $gm->visa_on_arrival_available,
+                  'maximum_permitted_stay' => $gm->maximum_permitted_stay,
+                  'primary_source_verified' => $sourceCheck($gm, 'https://gambia.gov.gm/immigration-and-visas/'),
+                  'photo_status' => data_get($gm->photo_specifications, 'status'),
+                  'four_checklists' => $checklists($gm),
+                  'official_source_count' => $gm->sources->where('source_type', 'official')->count(),
+              ] : null,
+          ];
+          if ($result['country_count'] !== 250 || $result['requirement_count'] !== 131 || $published !== 129 || $pending !== 2 || $duplicates !== 0) {
+              fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+              exit(1);
+          }
+          if (! $ag || $ag->verification_status !== 'verified' || ! $ag->is_published || ! $ag->visa_required || ! $ag->evisa_available || ! $ag->visa_on_arrival_available || $ag->visa_free_available || ! $sourceCheck($ag, 'https://immigration.gov.ag/frequently-asked-questions/visa-faqs/') || data_get($ag->photo_specifications, 'status') !== 'verified' || ! $checklists($ag)) {
+              fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+              exit(1);
+          }
+          if (! $gm || $gm->verification_status !== 'verified' || ! $gm->is_published || $gm->visa_required || ! $gm->visa_free_available || $gm->evisa_available || $gm->visa_on_arrival_available || ! str_contains(strtolower($gm->maximum_permitted_stay), '90 days') || ! $sourceCheck($gm, 'https://gambia.gov.gm/immigration-and-visas/') || data_get($gm->photo_specifications, 'status') !== 'not_applicable' || ! $checklists($gm)) {
+              fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+              exit(1);
+          }
+          $apiBase = rtrim(config('app.url'), '/');
+          $list = \Illuminate\Support\Facades\Http::timeout(30)->get($apiBase . '/api/visa-requirements', ['passport' => 'BGD', 'purpose' => 'tourism'])->throw()->json();
+          if (data_get($list, 'meta.total') !== 129) throw new RuntimeException('Public API list total is not 129.');
+          foreach (['AG','GM'] as $iso2) {
+              $detail = \Illuminate\Support\Facades\Http::timeout(30)->get($apiBase . '/api/visa-requirements/' . $iso2, ['passport' => 'BGD', 'purpose' => 'tourism'])->throw()->json();
+              if (strtoupper((string) data_get($detail, 'data.country.iso2')) !== $iso2) throw new RuntimeException('Public API detail identity mismatch for ' . $iso2);
+              if (data_get($detail, 'data.verification_status') !== 'verified' || ! data_get($detail, 'data.is_published')) throw new RuntimeException('Public API publication mismatch for ' . $iso2);
+              if ($iso2 === 'AG' && (! data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.evisa_available') || ! data_get($detail, 'data.visa_on_arrival_available') || data_get($detail, 'data.visa_free_available'))) throw new RuntimeException('Antigua public API route flags mismatch.');
+              if ($iso2 === 'GM' && (data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.visa_free_available') || data_get($detail, 'data.evisa_available') || data_get($detail, 'data.visa_on_arrival_available'))) throw new RuntimeException('Gambia public API Commonwealth exemption flags mismatch.');
+          }
+          $result['public_api_total'] = data_get($list, 'meta.total');
+          $result['public_api_details_verified'] = ['AG','GM'];
+          $result['import_summary'] = json_decode(file_get_contents('/tmp/batch37-import-result.json'), true);
+          echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          PHP
+          php -l /tmp/batch37-verify-readonly.php >/dev/null
+          php /tmp/batch37-verify-readonly.php > /tmp/batch37-verified-readback.json
+          cat /tmp/batch37-verified-readback.json
+          REMOTE
