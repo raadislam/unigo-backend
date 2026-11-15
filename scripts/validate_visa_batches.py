@@ -25,6 +25,7 @@ files = [
     root / "database/data/visa_full_audit_batch_33.csv",
     root / "database/data/visa_full_audit_batch_36.csv",
     root / "database/data/visa_full_audit_batch_38.csv",
+    root / "database/data/visa_full_audit_batch_47.csv",
 ]
 seed_files = [
     root / "database/data/new_country_visa_batch_06_07.csv",
@@ -46,6 +47,7 @@ seed_files = [
     root / "database/data/new_country_visa_batch_36.csv",
     root / "database/data/new_country_visa_batch_38.csv",
 ]
+update_files = {"visa_full_audit_batch_47.csv"}
 required = {
     "passport_iso3", "passport_nationality", "destination_iso2", "destination_name",
     "travel_purpose", "visa_requirement_type", "visa_required", "visa_free_eligibility",
@@ -79,6 +81,7 @@ earliest_checked = today - timedelta(days=3)
 latest_checked = today + timedelta(days=1)
 seen = set()
 all_rows = []
+update_keys = set()
 errors = []
 
 for path in files:
@@ -91,7 +94,7 @@ for path in files:
         if missing:
             errors.append(f"{path.name}: missing columns {sorted(missing)}")
         rows = list(reader)
-        if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv"}:
+        if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_47.csv"}:
             missing_photo_fields = {"photo_specifications", "applicant_checklists"} - set(reader.fieldnames or [])
             if missing_photo_fields:
                 errors.append(f"{path.name}: missing photo/checklist columns {sorted(missing_photo_fields)}")
@@ -120,6 +123,8 @@ for path in files:
                 errors.append("Batch 41 Zimbabwe route or fee fields do not match official Category C and fee guidance")
     for line, row in enumerate(rows, 2):
         key = (row.get("passport_iso3"), row.get("destination_iso2"), row.get("travel_purpose"))
+        if path.name in update_files:
+            update_keys.add(key)
         if key in seen:
             errors.append(f"{path.name}:{line}: duplicate key {key}")
         seen.add(key)
@@ -141,7 +146,37 @@ for path in files:
         for field, limit in limits.items():
             if len(row.get(field, "") or "") > limit:
                 errors.append(f"{path.name}:{line}: {field} exceeds {limit} characters")
-        if path.name in {"visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"}:
+        if path.name == "visa_full_audit_batch_47.csv":
+            schema_limits = {"visa_requirement_type": 50, "maximum_permitted_stay": 120, "entry_count": 40, "application_channel": 180, "application_fee": 120, "processing_time": 120}
+            for field, limit in schema_limits.items():
+                if len(row.get(field, "") or "") > limit:
+                    errors.append(f"{path.name}:{line}: {field} exceeds actual schema limit {limit}")
+            if row.get("destination_iso2") != "IM" or row.get("destination_name") != "Isle of Man" or row.get("visa_required") != "true" or row.get("visa_free_eligibility") != "false" or row.get("visa_on_arrival_available") != "false" or row.get("evisa_available") != "false":
+                errors.append("Batch 47 Isle of Man route flags or identity are incorrect")
+            if row.get("verification_status") != "verified" or row.get("publish_status") != "published" or (row.get("notes") or "").strip():
+                errors.append("Batch 47 existing-record update must be verified, published and have no unmapped notes")
+            if row.get("official_source_last_checked") != "2026-11-15" or row.get("cross_check_source_last_checked") != "2026-11-15":
+                errors.append("Batch 47 source dates must be 2026-11-15")
+            if "6 months" not in row.get("maximum_permitted_stay", "").lower() or "13 weeks" not in row.get("processing_time", "").lower() or "BDT 22,997" not in row.get("application_fee", "") or "VFS" not in row.get("application_channel", ""):
+                errors.append("Batch 47 stay, processing, fee or Bangladesh application-channel data is incomplete")
+            try:
+                batch47_photo = json.loads(row.get("photo_specifications", ""))
+                batch47_checklists = json.loads(row.get("applicant_checklists", ""))
+                batch47_sources = json.loads(row.get("additional_sources", ""))
+                if batch47_photo.get("status") != "no_fixed_size_published" or batch47_photo.get("captured_at_vac") is not True or batch47_photo.get("biometric_capture") is not True or batch47_photo.get("no_fixed_size_published") is not True:
+                    errors.append("Batch 47 must record no fixed photo size and VAC biometric capture separately")
+                if batch47_photo.get("dimensions_mm") or batch47_photo.get("digital_dimensions_px") or batch47_photo.get("digital_pixels"):
+                    errors.append("Batch 47 must not invent photo dimensions")
+                if len(batch47_checklists) != 4 or {item.get("applicant_type") for item in batch47_checklists} != {"employee", "self_employed_or_business_owner", "student", "retired"}:
+                    errors.append("Batch 47 must contain all four applicant checklist types")
+                if len(batch47_sources) < 8:
+                    errors.append("Batch 47 must contain at least eight additional official/provider sources")
+                for source in batch47_sources:
+                    if source.get("source_type") not in {"official", "provider"} or source.get("source_last_checked_at") != "2026-11-15" or not (source.get("verification_notes") or "").strip():
+                        errors.append("Batch 47 additional sources must be official/provider, dated and explained")
+            except Exception as exc:
+                errors.append(f"Batch 47 structured research JSON is invalid: {exc}")
+        if path.name in {"visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv", "visa_full_audit_batch_47.csv"}:
             schema_limits = {"visa_requirement_type": 50, "maximum_permitted_stay": 120, "entry_count": 40, "application_channel": 180, "application_fee": 120, "processing_time": 120}
             for field, limit in schema_limits.items():
                 if len(row.get(field, "") or "") > limit:
@@ -179,7 +214,7 @@ for path in files:
                     if not applicant_type:
                         raise ValueError("applicant_type is required")
                     applicant_types.add(applicant_type)
-                    if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_38.csv"}:
+                    if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_38.csv", "visa_full_audit_batch_47.csv"}:
                         if not checklist.get("source_name") or not (checklist.get("source_url") or "").startswith("https://") or checklist.get("checked_at") != "2026-11-15":
                             raise ValueError("batch 38 applicant checklist needs an official source name, HTTPS URL and checked date")
                     if path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}:
@@ -202,7 +237,7 @@ for path in files:
                         notes = document.get("notes")
                         if notes is not None and (not isinstance(notes, str) or len(notes) > 1000):
                             raise ValueError("checklist document notes exceed 1000 characters")
-                if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}):
+                if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv", "visa_full_audit_batch_47.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}):
                     expected_applicant_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
                     if applicant_types != expected_applicant_types:
                         raise ValueError(f"expected four applicant types, got {sorted(applicant_types)}")
@@ -216,7 +251,7 @@ for path in files:
                 photo = json.loads(photo_raw)
                 if not isinstance(photo, dict) or not photo.get("status"):
                     raise ValueError("photo specification needs a status")
-                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"}:
+                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv", "visa_full_audit_batch_47.csv"}:
                     if not photo.get("source_name") or not (photo.get("source_url") or "").startswith("https://"):
                         raise ValueError("new batch photo specification needs an official source name and HTTPS URL")
                     date.fromisoformat(str(photo.get("checked_at", ""))[:10])
@@ -314,7 +349,7 @@ for seed in seed_files:
 audit_keys = {
     (row.get("passport_iso3"), row.get("destination_iso2"), row.get("travel_purpose"))
     for row in all_rows
-}
+} - update_keys
 if seed_keys != audit_keys:
     errors.append(
         f"seed/full-audit key mismatch; seed-only={sorted(seed_keys - audit_keys)} "
@@ -327,7 +362,7 @@ if errors:
     sys.exit(1)
 
 print(
-    f"VALIDATION PASSED: {len(all_rows)} unique BGD tourism records; "
+    f"VALIDATION PASSED: {len(all_rows) - len(update_keys)} new BGD tourism records plus {len(update_keys)} existing-record updates; "
     f"{sum(row['publish_status'] == 'published' for row in all_rows)} verified/publishable; "
     f"{sum(row['publish_status'] == 'draft' for row in all_rows)} pending; seed/full-audit keys match."
 )
