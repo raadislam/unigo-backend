@@ -62,7 +62,7 @@ jobs:
               if len(rows) != 1 or rows[0].get("destination_iso2") != "TA" or rows[0].get("passport_iso3") != "BGD" or rows[0].get("travel_purpose") != "tourism":
                   raise SystemExit(f"{name} does not contain the single TA / BGD / tourism allowlist.")
           manifest = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
-          Path("verified-batch-45-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          Path("verified-batch-45/manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
           print("BATCH45_IMMUTABLE_ALLOWLIST", json.dumps(manifest, sort_keys=True))
           PY
       - name: Upload exact allowlisted files
@@ -71,7 +71,6 @@ jobs:
           name: verified-batch-45-source-files
           path: |
             verified-batch-45/
-            verified-batch-45-manifest.json
           if-no-files-found: error
           retention-days: 30
 
@@ -95,7 +94,7 @@ jobs:
           import json
           from pathlib import Path
 
-          manifest = json.loads(Path("verified-batch-45/verified-batch-45-manifest.json").read_text())
+          manifest = json.loads(Path("verified-batch-45/manifest.json").read_text())
           for name, expected in manifest.items():
               actual = hashlib.sha256((Path("verified-batch-45") / name).read_bytes()).hexdigest()
               if actual != expected:
