@@ -35,6 +35,7 @@ class VisaChecklistPdfService
         $pdf->SetAuthor('UniGo Tours & Travels');
         $pdf->SetTitle(($requirement->country?->name ?? 'Destination').' visa checklist');
         $pdf->SetSubject('Bangladeshi ordinary passport visa checklist');
+        $pdf->SetKeywords('visa checklist, Bangladesh, UniGo, tourism');
         $pdf->SetMargins(16, 44, 16);
         $pdf->SetHeaderMargin(0);
         $pdf->SetFooterMargin(12);
