@@ -245,9 +245,12 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
+          scp -i ~/.ssh/unigo_deploy -P "$VPS_PORT" database/seeders/SchengenBangladeshChecklistSupplementSeeder.php "$VPS_USER@$VPS_HOST:/tmp/SchengenBangladeshChecklistSupplementSeeder.php"
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
           cd /var/www/unigo/backend/current
+          install -m 0644 /tmp/SchengenBangladeshChecklistSupplementSeeder.php database/seeders/SchengenBangladeshChecklistSupplementSeeder.php
+          rm -f /tmp/SchengenBangladeshChecklistSupplementSeeder.php
           php artisan db:seed --class='Database\Seeders\SchengenBangladeshChecklistSupplementSeeder' --force
           php <<'PHP'
           <?php
