@@ -86,11 +86,7 @@ class VisaChecklistPdfService
         $pdf->SetXY($left, $qrY + 1);
         $pdf->SetFont('dejavusans', 'B', 8);
         $pdf->SetTextColor(8, 43, 76);
-        $pdf->MultiCell($contentWidth - $qrSize - 5, 5, 'For full information, please visit here.', 0, 'L', false, 1);
-        $pdf->SetFont('dejavusans', '', 7);
-        $pdf->SetTextColor(82, 101, 121);
-        $pdf->MultiCell($contentWidth - $qrSize - 5, 4, 'Scan the QR code for the latest destination guidance and official sources.', 0, 'L', false, 1);
-
+        $pdf->MultiCell($contentWidth - $qrSize - 5, 5, 'To get full information, please visit here.', 0, 'L', false, 1);
         $url = 'https://unigo-bd.com/visa-services/'.($requirement->country?->slug ?? '').'/';
         $pdf->write2DBarcode($url, 'QRCODE,H', $pageWidth - $right - $qrSize, $qrY, $qrSize, $qrSize, ['border' => 0, 'padding' => 1], 'N');
 
