@@ -312,7 +312,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > production-result.json <<'REMOTE'
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE' | tee production-result.json
           set -euo pipefail
           APP=/var/www/unigo/backend/current
           SHARED=/var/www/unigo/backend/shared
@@ -334,6 +334,7 @@ jobs:
           cp /tmp/batch46-post-import-audit.json "$SHARED/imports/batch46-post-import-audit.json"
           cat /tmp/batch46-production-readback.json
           REMOTE
+          test -s production-result.json
           python3 -m json.tool production-result.json > /dev/null
           scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch46-production-readback.json" production-readback.json
           scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch46-post-import-audit.json" production-post-import-audit.json
