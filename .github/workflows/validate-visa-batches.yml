@@ -12,6 +12,7 @@ on:
       - 'database/data/photo_checklist_research_batch_*.csv'
       - 'scripts/validate_visa_batches.py'
       - 'scripts/validate_visa_batch_45.py'
+      - 'scripts/batch45_readback.php'
       - 'database/seeders/TristanDaCunhaCountryBackfillSeeder.php'
       - '.github/workflows/import-verified-country-batch-45.yml'
       - 'docs/visa-discovery-batch-45-tristan-da-cunha-research.md'
@@ -83,6 +84,7 @@ jobs:
           php -l app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php
           php -l database/seeders/SchengenBangladeshChecklistSupplementSeeder.php
           php -l database/seeders/TristanDaCunhaCountryBackfillSeeder.php
+          php -l scripts/batch45_readback.php
           php -l tests/Feature/VisaRequirementApplicantChecklistMetadataTest.php
       - name: Install Composer dependencies for regression tests
         run: composer install --no-interaction --prefer-dist --no-progress
