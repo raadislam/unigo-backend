@@ -8,7 +8,7 @@
 
 ## Discovery outcome
 
-Ascension Island is a distinct destination with its own Entry Control Ordinance and eVisa system. It is not safe to reuse Saint Helena or Tristan da Cunha entry rules. The ISO 3166/MA's official 2011 subdivision notice identifies Ascension as SH-AC and Tristan da Cunha as SH-TA. The existing UniGo master did not contain a separate AC destination row at the start of this batch.
+Ascension Island is a distinct destination with its own Entry Control Ordinance and eVisa system. It is not safe to reuse Saint Helena or Tristan da Cunha entry rules. The ISO 3166/MA's official 2011 subdivision notice identifies Ascension as SH-AC and Tristan da Cunha as SH-TA. An official copy of the ISO 3166-1 reserved-code list also records AC for Ascension Island. UniGo leaves the alpha-3 field null rather than treating a reserved alpha-3 element as an assigned code. The existing UniGo master did not contain a separate AC destination row at the start of this batch.
 
 The candidate is retained as research-only until the production master row is added through the guarded country-master workflow and the Bangladesh-specific nationality result is confirmed. No Bangladesh tourism visa requirement is created by this batch.
 
@@ -60,3 +60,4 @@ Until then, keep the Bangladesh tourism record pending and unpublished. Do not i
 6. Ascension Island Government — Tourist E-Visa Help Sheet (version 1, September 2018): https://www.ascension-visas.com/media/1010/tourist-e-visa-help-sheet.pdf
 7. UK Home Office — Immigration Rules Appendix Visitor: Visa National List (updated 29 October 2026): https://www.gov.uk/guidance/immigration-rules/immigration-rules-appendix-visitor-visa-national-list
 8. ISO 3166/MA — ISO 3166-2 Newsletter II-3 (corrected 15 December 2011): https://www.iso.org/files/live/sites/isoorg/files/archive/pdf/en/iso_3166-2_newsletter_ii-3_2011-12-13.pdf
+9. Hong Kong Digital Policy Office — official copy of the ISO 3166-1 reserved-code elements list (28 July 2003), including AC for Ascension Island: https://www.digitalpolicy.gov.hk/en/our_work/data_governance/policies_standards/interoperability_framework/common_schemas/doc/ISO_3166-1_List_of_reserved_code_elements_%282003-07-28%29.pdf
