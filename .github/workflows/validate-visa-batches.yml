@@ -18,6 +18,7 @@ on:
       - 'docs/schengen-bangladesh-vfs-checklist-audit-2026-11-15.md'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
+      - '.github/workflows/update-schengen-checklists.yml'
       - '.github/workflows/import-verified-country-batch-38.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
   pull_request:
@@ -36,6 +37,7 @@ on:
       - 'docs/schengen-bangladesh-vfs-checklist-audit-2026-11-15.md'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
+      - '.github/workflows/update-schengen-checklists.yml'
       - '.github/workflows/import-verified-country-batch-38.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
 
@@ -93,5 +95,5 @@ jobs:
         run: python3 scripts/validate_schengen_checklist_seeder.py
       - name: Validate CSV schema, field limits, official sources and idempotency keys
         run: python3 scripts/validate_visa_batches.py
-      - name: Validate batch 38 import workflow YAML
-        run: ruby -e 'require "yaml"; YAML.load_file(".github/workflows/import-verified-country-batch-38.yml"); puts "Batch 38 workflow YAML syntax OK"'
+      - name: Validate production import workflow YAML
+        run: ruby -e 'require "yaml"; [".github/workflows/import-verified-country-batch-38.yml", ".github/workflows/update-schengen-checklists.yml"].each { |path| YAML.load_file(path); puts "#{path} YAML syntax OK" }'
