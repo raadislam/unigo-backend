@@ -47,6 +47,8 @@ jobs:
           php -l tests/Unit/VisaChecklistPdfServiceTest.php
       - name: Run automated PDF tests
         run: composer test
+        env:
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       - name: Verify PDF libraries
         run: |
           php -r "require 'vendor/autoload.php'; new setasign\Fpdi\Tcpdf\Fpdi(); echo 'FPDI/TCPDF autoload OK'.PHP_EOL;"
