@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: unigo-staged-country-import
+  group: unigo-backend-production
   cancel-in-progress: false
 
 jobs:
