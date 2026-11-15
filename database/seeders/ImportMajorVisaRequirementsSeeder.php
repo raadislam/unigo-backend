@@ -126,11 +126,11 @@ class ImportMajorVisaRequirementsSeeder extends Seeder
                             ['visa_requirement_id' => $record->id, 'source_url' => $row['cross_check_source_url']],
                             [
                                 'source_type' => 'secondary',
-                                'source_name' => 'Additional official cross-check',
+                                'source_name' => $row['cross_check_source_name'] ?: 'Additional official cross-check',
                                 'source_url' => $row['cross_check_source_url'],
-                                'source_last_checked_at' => ! empty($row['official_source_last_checked']) ? $row['official_source_last_checked'] . ' 00:00:00' : now(),
+                                'source_last_checked_at' => ! empty($row['cross_check_source_last_checked']) ? $row['cross_check_source_last_checked'] . ' 00:00:00' : (! empty($row['official_source_last_checked']) ? $row['official_source_last_checked'] . ' 00:00:00' : now()),
                                 'is_primary' => false,
-                                'verification_notes' => 'Additional official reference; review alongside the primary source.',
+                                'verification_notes' => 'Additional official cross-check: ' . ($row['cross_check_source_name'] ?: 'review alongside the primary source.'),
                             ]
                         );
                     }
