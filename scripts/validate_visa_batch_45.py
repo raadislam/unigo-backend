@@ -1,0 +1,81 @@
+import csv
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SEED = ROOT / "database/data/new_country_visa_batch_45.csv"
+AUDIT = ROOT / "database/data/visa_full_audit_batch_45.csv"
+SEEDER = ROOT / "database/seeders/TristanDaCunhaCountryBackfillSeeder.php"
+
+def read_one(path):
+    with path.open(encoding="utf-8-sig", newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    if len(rows) != 1:
+        raise SystemExit(f"{path.name}: expected exactly one allowlisted row, found {len(rows)}")
+    return rows[0]
+
+seed = read_one(SEED)
+row = read_one(AUDIT)
+for label, item in (("seed", seed), ("audit", row)):
+    if item.get("passport_iso3") != "BGD" or item.get("destination_iso2") != "TA" or item.get("travel_purpose") != "tourism":
+        raise SystemExit(f"{label}: only the TA / BGD / tourism key is permitted")
+    if not item.get("official_source_url", "").startswith("https://") or not item.get("cross_check_source_url", "").startswith("https://"):
+        raise SystemExit(f"{label}: primary and cross-check sources must be HTTPS")
+    if item.get("official_source_last_checked") != "2026-11-15" or item.get("cross_check_source_last_checked") != "2026-11-15":
+        raise SystemExit(f"{label}: source checked dates must be 2026-11-15")
+
+if seed.get("verification_status") != "pending_review":
+    raise SystemExit("Seed import must create the record as pending_review before full-audit verification.")
+if row.get("verification_status") != "verified" or row.get("publish_status") != "published" or row.get("full_audit") != "true":
+    raise SystemExit("The full-audit row must be explicitly verified, publication-approved and full_audit=true.")
+if row.get("visa_required") != "false" or row.get("visa_free_eligibility") != "false" or row.get("visa_on_arrival_available") != "false" or row.get("evisa_available") != "false":
+    raise SystemExit("The no-visa / prior-permission route must not be misclassified as visa-free, VOA or eVisa.")
+if "no visa" not in row.get("visa_requirement_type", "").lower() or "permission" not in row.get("visa_requirement_type", "").lower():
+    raise SystemExit("Requirement type must state no visa and prior territorial permission.")
+if "no universal maximum" not in row.get("maximum_permitted_stay", "").lower():
+    raise SystemExit("Do not invent a universal stay limit.")
+if "GBP 30" not in row.get("application_fee", "") or "GBP 15" not in row.get("application_fee", ""):
+    raise SystemExit("Main-island landing charges must distinguish cruise and yacht passengers.")
+if len(row.get("application_fee", "")) > 120 or len(row.get("processing_time", "")) > 120 or len(row.get("entry_count", "")) > 40 or len(row.get("application_channel", "")) > 180:
+    raise SystemExit("A field exceeds its actual database column length.")
+if "tdcenquiries@tdc-gov.com" not in row.get("application_channel", ""):
+    raise SystemExit("Official advance-approval email channel is missing.")
+documents = [part.strip() for part in row.get("required_documents", "").split("|") if part.strip()]
+if len(documents) < 6 or any(len(part) > 500 for part in documents):
+    raise SystemExit("Required document checklist is incomplete or exceeds the schema limit.")
+
+photo = json.loads(row.get("photo_specifications", ""))
+if not isinstance(photo, dict) or photo.get("status") != "not_specified" or photo.get("checked_at") != "2026-11-15" or not photo.get("source_name") or not photo.get("source_url", "").startswith("https://"):
+    raise SystemExit("Photo status must remain not_specified with official source metadata; do not invent a photo size.")
+if photo.get("dimensions_mm") or photo.get("digital_dimensions_px"):
+    raise SystemExit("No photo dimensions may be invented for this route.")
+
+checklists = json.loads(row.get("applicant_checklists", ""))
+expected_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
+if not isinstance(checklists, list) or {item.get("applicant_type") for item in checklists} != expected_types:
+    raise SystemExit("Four applicant-type checklists are required.")
+for checklist in checklists:
+    if not checklist.get("source_name") or not checklist.get("source_url", "").startswith("https://") or checklist.get("checked_at") != "2026-11-15":
+        raise SystemExit("Applicant checklist source metadata is incomplete.")
+    if not isinstance(checklist.get("documents"), list) or len(checklist["documents"]) < 6:
+        raise SystemExit("Each applicant checklist must contain the official visitor document set.")
+    for document in checklist["documents"]:
+        if not document.get("name") or document.get("status") not in {"required", "conditional", "if_applicable"}:
+            raise SystemExit("Applicant checklist document is invalid.")
+
+extra = json.loads(row.get("additional_sources", ""))
+if not isinstance(extra, list) or len(extra) < 2:
+    raise SystemExit("At least two additional official sources are required.")
+for source in extra:
+    if source.get("source_type") != "official" or not source.get("source_name") or not source.get("source_url", "").startswith("https://") or source.get("source_last_checked_at") != "2026-11-15" or not source.get("verification_notes"):
+        raise SystemExit("Additional source metadata must be official, dated and explained.")
+
+seeder = SEEDER.read_text(encoding="utf-8")
+for marker in ("['iso2' => 'TA']", "'slug' => 'tristan-da-cunha'", "'iso3' => null", "'is_published' => false"):
+    if marker not in seeder:
+        raise SystemExit(f"Country backfill seeder is missing safe territory handling: {marker}")
+
+print("BATCH45_ALLOWLIST_VALIDATED TA")
+print("BATCH45_ROWS 1")
+print("BATCH45_SEED_ROWS 1")
+print("BATCH45_SOURCE_CHECKED 2026-11-15")
