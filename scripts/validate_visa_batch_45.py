@@ -11,6 +11,7 @@ AUDIT = ROOT / "database/data/visa_full_audit_batch_45.csv"
 SEEDER = ROOT / "database/seeders/TristanDaCunhaCountryBackfillSeeder.php"
 IMPORT_SEEDER = ROOT / "database/seeders/ImportMajorVisaRequirementsSeeder.php"
 READBACK = ROOT / "scripts/batch45_readback.php"
+REPAIR = ROOT / "scripts/batch45_repair_source.php"
 WORKFLOW = ROOT / ".github/workflows/import-verified-country-batch-45.yml"
 
 def read_one(path):
@@ -87,6 +88,7 @@ for source in extra:
 seeder = SEEDER.read_text(encoding="utf-8")
 import_seeder = IMPORT_SEEDER.read_text(encoding="utf-8")
 readback = READBACK.read_text(encoding="utf-8")
+repair = REPAIR.read_text(encoding="utf-8")
 for marker in ("['iso2' => 'TA']", "'slug' => 'tristan-da-cunha'", "'iso3' => null", "'is_published' => false"):
     if marker not in seeder:
         raise SystemExit(f"Country backfill seeder is missing safe territory handling: {marker}")
@@ -95,6 +97,12 @@ if "$row['cross_check_source_name']" not in import_seeder or "$row['cross_check_
     raise SystemExit("Country seed importer must preserve the named cross-check source and its checked date.")
 if "APP_ROOT" not in readback or "/api/visa-requirements/TA" not in readback or "BATCH45_READBACK_ERROR" not in readback:
     raise SystemExit("Batch 45 readback script is missing the scoped TA database/API checks.")
+if "$source->source_type === 'official'" not in readback or "data_get($source, 'source_type') === 'official'" not in readback or "official')->count() >= 4" not in readback:
+    raise SystemExit("Batch 45 readback must require the government cross-check to be public as an official source.")
+if "https://www.tristandc.com/visitsadmin.php" not in repair or "'source_type' => 'official'" not in repair or "TRISTAN_CROSS_CHECK_SOURCE_REPAIRED" not in repair or "where('passport_nationality_iso3', 'BGD')" not in repair or "where('iso2', 'TA')" not in repair:
+    raise SystemExit("Batch 45 source repair is not restricted to the official TA / BGD / tourism cross-check.")
+if any(token in repair.lower() for token in ("truncate table", "drop table", "delete from visa_requirements")):
+    raise SystemExit("Batch 45 source repair must only update the one reviewed source classification.")
 if any(token in readback.lower() for token in ("truncate table", "drop table", "delete from visa_requirements")):
     raise SystemExit("Batch 45 readback script must remain read-only.")
 
@@ -102,7 +110,7 @@ workflow = WORKFLOW.read_text(encoding="utf-8")
 for forbidden in ("migrate:fresh", "migrate:reset", "key:generate", "DROP TABLE", "TRUNCATE TABLE"):
     if forbidden.lower() in workflow.lower():
         raise SystemExit(f"Batch 45 workflow contains a forbidden destructive operation: {forbidden}")
-for required in ("mysqldump", "gzip -t", "docker run", "--dry-run", "--unpublish-only", "visa:requirements-audit", "batch45-readback.php"):
+for required in ("mysqldump", "gzip -t", "docker run", "--dry-run", "--unpublish-only", "visa:requirements-audit", "batch45-readback.php", "batch45-repair-source.php", "TRISTAN_CROSS_CHECK_SOURCE_REPAIRED", "staging-source-repair.json"):
     if required not in workflow:
         raise SystemExit(f"Batch 45 workflow is missing a required safety stage: {required}")
 
