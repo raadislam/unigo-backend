@@ -49,7 +49,7 @@ class VisaChecklistPdfServiceTest extends TestCase
         ], $documents);
     }
 
-    public function test_sponsor_filter_uses_the_selected_sponsor_occupation_without_applicant_or_optional_documents(): void
+    public function test_sponsor_checklist_is_rejected_until_verified_sponsor_specific_requirements_exist(): void
     {
         $requirement = new VisaRequirement();
         $requirement->required_documents = ['Applicant passport'];
@@ -64,15 +64,43 @@ class VisaChecklistPdfServiceTest extends TestCase
                 'applicant_type' => 'business_owner',
                 'documents' => [
                     ['name' => 'Trade licence', 'status' => 'required'],
-                    ['name' => 'Tax return', 'status' => 'if_applicable'],
+                ],
+            ],
+        ];
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Verified sponsor-specific required documents are not available');
+
+        app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
+            'scope' => 'sponsor',
+            'sponsor_occupation' => 'business',
+            'funding' => 'full',
+        ]);
+    }
+
+    public function test_business_occupation_matches_the_published_combined_business_profile(): void
+    {
+        $requirement = new VisaRequirement();
+        $requirement->required_documents = [];
+        $requirement->applicant_checklists = [
+            [
+                'applicant_type' => 'self_employed_or_business_owner',
+                'documents' => [
+                    ['name' => 'Trade licence', 'status' => 'required'],
+                    ['name' => 'Conditional tax evidence', 'status' => 'if_applicable'],
+                ],
+            ],
+            [
+                'applicant_type' => 'employee',
+                'documents' => [
+                    ['name' => 'Employment certificate', 'status' => 'required'],
                 ],
             ],
         ];
 
         $documents = app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
-            'scope' => 'sponsor',
-            'sponsor_occupation' => 'business',
-            'funding' => 'full',
+            'scope' => 'applicant',
+            'applicant_occupation' => 'business',
         ]);
 
         $this->assertSame(['Trade licence'], $documents);
