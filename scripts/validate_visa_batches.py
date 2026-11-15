@@ -162,9 +162,9 @@ for path in files:
                 errors.append(f"{path.name}:{line}: Bahamas route flags or source are inconsistent")
         checklist_raw = (row.get("applicant_checklists", "") or "").strip()
         photo_raw = (row.get("photo_specifications", "") or "").strip()
-        if (path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not checklist_raw:
+        if row.get("verification_status") == "verified" and row.get("publish_status") == "published" and (path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not checklist_raw:
             errors.append(f"{path.name}:{line}: applicant_checklists is required for the new publishable batch")
-        if (path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not photo_raw:
+        if row.get("verification_status") == "verified" and row.get("publish_status") == "published" and (path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not photo_raw:
             errors.append(f"{path.name}:{line}: photo_specifications is required for the new publishable batch")
         if checklist_raw:
             try:
