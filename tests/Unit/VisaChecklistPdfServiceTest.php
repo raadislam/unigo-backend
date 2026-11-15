@@ -47,6 +47,8 @@ class VisaChecklistPdfServiceTest extends TestCase
         $this->assertStringContainsString('35 × 45 mm', $html);
         $this->assertStringContainsString('https://example.gov/visa', $html);
 
+        $this->assertFileExists(resource_path('pdf/unigo-letterhead.svg'));
+
         $pdf = $service->generate($requirement, ['scope' => 'applicant']);
         $this->assertStringStartsWith('%PDF-', $pdf);
         $this->assertStringContainsString('%%EOF', $pdf);
