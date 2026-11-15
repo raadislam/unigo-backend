@@ -1,12 +1,12 @@
 <?php
 
-namespace Tests\\Unit;
+namespace Tests\Unit;
 
-use App\\Models\\Country;
-use App\\Models\\VisaRequirement;
-use App\\Services\\VisaChecklistPdfService;
-use Illuminate\\Support\\Collection;
-use Tests\\TestCase;
+use App\Models\Country;
+use App\Models\VisaRequirement;
+use App\Services\VisaChecklistPdfService;
+use Illuminate\Support\Collection;
+use Tests\TestCase;
 
 class VisaChecklistPdfServiceTest extends TestCase
 {
@@ -35,10 +35,10 @@ class VisaChecklistPdfServiceTest extends TestCase
 
         $this->assertStringStartsWith('%PDF-', $pdf);
         $this->assertStringContainsString('%%EOF', $pdf);
-        preg_match_all('/\\/Type\\s*\\/Page\\b/', $pdf, $pages);
+        preg_match_all('/\/Type\s*\/Page\b/', $pdf, $pages);
         $this->assertGreaterThan(1, count($pages[0]));
 
-        preg_match_all('/<([0-9A-F]{4,})>\\s*Tj/', $pdf, $matches);
+        preg_match_all('/<([0-9A-F]{4,})>\s*Tj/', $pdf, $matches);
         $text = '';
         foreach ($matches[1] as $hex) {
             $decoded = @iconv('UTF-16BE', 'UTF-8//IGNORE', hex2bin($hex));
