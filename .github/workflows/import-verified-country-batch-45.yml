@@ -38,6 +38,7 @@ jobs:
           php -l database/seeders/TristanDaCunhaCountryBackfillSeeder.php
           php -l database/seeders/ImportMajorVisaRequirementsSeeder.php
           php -l scripts/batch45_readback.php
+          php -l scripts/batch45_repair_source.php
           php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
       - name: Validate workflow syntax and create immutable allowlist artifact
         run: |
@@ -47,6 +48,7 @@ jobs:
           cp database/data/new_country_visa_batch_45.csv verified-batch-45/verified_seed_batch_45.csv
           cp database/data/visa_full_audit_batch_45.csv verified-batch-45/verified_full_audit_batch_45.csv
           cp scripts/batch45_readback.php verified-batch-45/
+          cp scripts/batch45_repair_source.php verified-batch-45/
           python3 - <<'PY'
           import csv
           import hashlib
@@ -55,7 +57,7 @@ jobs:
 
           root = Path("verified-batch-45")
           files = sorted(path for path in root.iterdir() if path.is_file())
-          if len(files) != 4:
+          if len(files) != 5:
               raise SystemExit("Batch 45 artifact must contain exactly four reviewed files.")
           for name in ("verified_seed_batch_45.csv", "verified_full_audit_batch_45.csv"):
               with (root / name).open(encoding="utf-8-sig", newline="") as handle:
@@ -100,7 +102,7 @@ jobs:
               actual = hashlib.sha256((Path("verified-batch-45") / name).read_bytes()).hexdigest()
               if actual != expected:
                   raise SystemExit(f"Batch 45 artifact checksum mismatch: {name}")
-          if set(manifest) != {"TristanDaCunhaCountryBackfillSeeder.php", "verified_seed_batch_45.csv", "verified_full_audit_batch_45.csv", "batch45_readback.php"}:
+          if set(manifest) != {"TristanDaCunhaCountryBackfillSeeder.php", "verified_seed_batch_45.csv", "verified_full_audit_batch_45.csv", "batch45_readback.php", "batch45_repair_source.php"}:
               raise SystemExit("Batch 45 artifact file allowlist changed.")
           print("BATCH45_ARTIFACT_CHECKSUMS_VERIFIED")
           PY
@@ -331,6 +333,15 @@ jobs:
           cp verified-batch-45/verified_full_audit_batch_45.csv storage/app/imports/verified_full_audit_batch_45.csv
           php artisan db:seed --class=TristanDaCunhaCountryBackfillSeeder --force > staging-country-seeder.log
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > staging-requirement-seeder.log
+          APP_ROOT="$PWD" php scripts/batch45_repair_source.php > staging-source-repair.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("staging-source-repair.json").read_text())
+          if data.get("result") != "TRISTAN_CROSS_CHECK_SOURCE_REPAIRED" or data.get("source_type") != "official" or data.get("source_url") != "https://www.tristandc.com/visitsadmin.php":
+              raise SystemExit("The official TA cross-check source repair failed: " + json.dumps(data))
+          print("STAGING_OFFICIAL_CROSS_CHECK_SOURCE_CONFIRMED", json.dumps(data))
+          PY
           php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $ta=$rows->filter(fn($r)=>$r->country?->iso2==="TA"); if(\App\Models\Country::count()!==251 || $rows->count()!==136 || $published!==133 || $pending!==3 || $ta->count()!==1 || $ta->first()->verification_status!=="pending_review" || (bool)$ta->first()->is_published) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA"=>$ta->count()])); exit(1); } echo "STAGING_SEED_READBACK countries=251 requirements=136 published=133 pending=3 TA=1".PHP_EOL;'
           nohup php artisan serve --host=127.0.0.1 --port=8000 > staging-server.log 2>&1 &
           for attempt in $(seq 1 60); do
@@ -371,6 +382,7 @@ jobs:
           scp -P "$VPS_PORT" verified-batch-45/verified_seed_batch_45.csv "$VPS_USER@$VPS_HOST:/tmp/verified_seed_batch_45.csv"
           scp -P "$VPS_PORT" verified-batch-45/verified_full_audit_batch_45.csv "$VPS_USER@$VPS_HOST:/tmp/verified_full_audit_batch_45.csv"
           scp -P "$VPS_PORT" verified-batch-45/batch45_readback.php "$VPS_USER@$VPS_HOST:/tmp/batch45-readback.php"
+          scp -P "$VPS_PORT" verified-batch-45/batch45_repair_source.php "$VPS_USER@$VPS_HOST:/tmp/batch45-repair-source.php"
       - name: Execute allowlisted production import and immediate database/API readback
         id: production
         env:
@@ -395,6 +407,15 @@ jobs:
           php artisan optimize:clear >/dev/null
           php artisan db:seed --class=TristanDaCunhaCountryBackfillSeeder --force > /tmp/batch45-country-seeder.log
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > /tmp/batch45-requirement-seeder.log
+          APP_ROOT="$APP" php /tmp/batch45-repair-source.php > /tmp/batch45-source-repair.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("/tmp/batch45-source-repair.json").read_text())
+          if data.get("result") != "TRISTAN_CROSS_CHECK_SOURCE_REPAIRED" or data.get("source_type") != "official" or data.get("source_url") != "https://www.tristandc.com/visitsadmin.php":
+              raise SystemExit("The production TA cross-check source repair failed: " + json.dumps(data))
+          print("PRODUCTION_OFFICIAL_CROSS_CHECK_SOURCE_CONFIRMED", json.dumps(data))
+          PY
           touch /tmp/batch45-import-started.marker
           php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_45.csv > /tmp/batch45-import-result.json
           php -r '$j=json_decode(file_get_contents("/tmp/batch45-import-result.json"),true); if(!is_array($j)||($j["rows"]??0)!==1||($j["read_back"]??0)!==1||($j["reverified"]??0)!==1||($j["republished"]??0)!==1||!empty($j["failures"])) { fwrite(STDERR,"BATCH45_IMPORT_RESULT_MISMATCH ".json_encode($j).PHP_EOL); exit(1); }'
@@ -403,11 +424,13 @@ jobs:
           python3 -m json.tool /tmp/batch45-readback.json > /dev/null
           mkdir -p /var/www/unigo/backend/shared/imports
           cp /tmp/batch45-import-result.json /var/www/unigo/backend/shared/imports/batch45-import-result.json
+          cp /tmp/batch45-source-repair.json /var/www/unigo/backend/shared/imports/batch45-source-repair.json
           cp /tmp/batch45-readback.json /var/www/unigo/backend/shared/imports/batch45-readback.json
           cp /tmp/batch45-audit-after.json /var/www/unigo/backend/shared/imports/batch45-post-import-audit.json
           cat /tmp/batch45-readback.json
           REMOTE
           python3 -m json.tool batch45-production-result.json > /dev/null
+          scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/tmp/batch45-source-repair.json" batch45-source-repair.json
           cat batch45-production-result.json
       - name: Withhold batch 45 if production import or readback fails
         if: failure() && steps.production.outcome == 'failure'
@@ -452,7 +475,9 @@ jobs:
             staging-requirement-seeder.log
             staging-dry-run.json
             staging-import-result.json
+            staging-source-repair.json
             staging-audit.json
+            batch45-source-repair.json
             staging-readback.json
             batch45-production-result.json
           if-no-files-found: warn
