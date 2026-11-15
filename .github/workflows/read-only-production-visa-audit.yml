@@ -142,6 +142,32 @@ jobs:
                    or (row.get("effective_until") and str(row.get("effective_until"))[:10] < today))
               and (row.get("country") or {}).get("iso2")
           )))
+          pending_records = [
+              row for row in records
+              if row.get("passport_nationality_iso3") == "BGD"
+              and row.get("travel_purpose") == "tourism"
+              and (row.get("verification_status") != "verified" or row.get("is_published") is not True
+                   or (row.get("effective_from") and str(row.get("effective_from"))[:10] > today)
+                   or (row.get("effective_until") and str(row.get("effective_until"))[:10] < today))
+          ]
+          print("PENDING_BGD_RECORDS " + json.dumps([
+              {
+                  "id": row.get("id"),
+                  "country_id": row.get("country", {}).get("id") if row.get("country") else None,
+                  "iso2": row.get("country", {}).get("iso2") if row.get("country") else None,
+                  "verification_status": row.get("verification_status"),
+                  "is_published": row.get("is_published"),
+                  "effective_from": row.get("effective_from"),
+                  "effective_until": row.get("effective_until"),
+                  "source_count": len(row.get("sources") or []),
+                  "primary_source_urls": [source.get("source_url") for source in (row.get("sources") or []) if source.get("is_primary")],
+              }
+              for row in pending_records
+          ], ensure_ascii=False))
+          print("ORPHAN_BGD_TOURISM_RECORDS " + json.dumps([
+              {"id": row.get("id"), "country_id": None, "verification_status": row.get("verification_status"), "is_published": row.get("is_published")}
+              for row in pending_records if not row.get("country")
+          ], ensure_ascii=False))
           PY
 
       - name: Audit applicant checklist coverage without changing production
