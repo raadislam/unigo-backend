@@ -27,6 +27,7 @@ on:
       - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
       - 'app/Console/Commands/VisaRequirementAuditCommand.php'
       - 'app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php'
+      - 'tests/Feature/VisaRequirementApplicantChecklistMetadataTest.php'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
       - '.github/workflows/import-verified-country-batch-38.yml'
@@ -54,6 +55,15 @@ jobs:
           php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
           php -l app/Console/Commands/VisaRequirementAuditCommand.php
           php -l app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php
+          php -l tests/Feature/VisaRequirementApplicantChecklistMetadataTest.php
+      - name: Install Composer dependencies for regression tests
+        run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Run applicant checklist metadata regression tests
+        env:
+          APP_ENV: testing
+          DB_CONNECTION: sqlite
+          DB_DATABASE: ':memory:'
+        run: php artisan test --filter=VisaRequirementApplicantChecklistMetadataTest
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
