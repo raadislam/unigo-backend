@@ -12,6 +12,16 @@ on:
       - 'database/data/photo_checklist_research_batch_*.csv'
       - 'scripts/validate_visa_batches.py'
       - 'scripts/validate_visa_batch_45.py'
+      - 'scripts/validate_visa_batch_47.py'
+      - 'scripts/batch47_preflight.php'
+      - 'scripts/batch47_readback.php'
+      - '.github/workflows/import-verified-country-batch-47.yml'
+      - 'docs/visa-discovery-batch-47-isle-of-man-research.md'
+      - 'scripts/validate_visa_batch_47.py'
+      - 'scripts/batch47_preflight.php'
+      - 'scripts/batch47_readback.php'
+      - '.github/workflows/import-verified-country-batch-47.yml'
+      - 'docs/visa-discovery-batch-47-isle-of-man-research.md'
       - 'scripts/batch45_readback.php'
       - 'scripts/batch45_repair_source.php'
       - 'database/seeders/TristanDaCunhaCountryBackfillSeeder.php'
@@ -91,6 +101,8 @@ jobs:
           php -l database/seeders/ImportMajorVisaRequirementsSeeder.php
           php -l scripts/batch45_readback.php
           php -l scripts/batch45_repair_source.php
+          php -l scripts/batch47_preflight.php
+          php -l scripts/batch47_readback.php
           php -l tests/Feature/VisaRequirementApplicantChecklistMetadataTest.php
       - name: Install Composer dependencies for regression tests
         run: composer install --no-interaction --prefer-dist --no-progress
@@ -148,9 +160,13 @@ jobs:
         run: python3 scripts/validate_schengen_checklist_seeder.py
       - name: Validate CSV schema, field limits, official sources and idempotency keys
         run: python3 scripts/validate_visa_batches.py
+      - name: Validate strict Isle of Man batch 47 allowlist
+        run: |
+          python3 -m py_compile scripts/validate_visa_batch_47.py
+          python3 scripts/validate_visa_batch_47.py
       - name: Validate strict batch 45 allowlist and territory metadata
         run: |
           python3 -m py_compile scripts/validate_visa_batch_45.py
           python3 scripts/validate_visa_batch_45.py
       - name: Validate production import workflow YAML
-        run: ruby -e 'require "yaml"; [".github/workflows/import-verified-country-batch-38.yml", ".github/workflows/import-verified-country-batch-45.yml", ".github/workflows/import-verified-country-batches-19-20.yml", ".github/workflows/update-schengen-checklists.yml", ".github/workflows/dispatch-frontend-after-visa-publication.yml"].each { |path| YAML.load_file(path); puts "#{path} YAML syntax OK" }'
+        run: ruby -e 'require "yaml"; [".github/workflows/import-verified-country-batch-38.yml", ".github/workflows/import-verified-country-batch-45.yml", ".github/workflows/import-verified-country-batch-47.yml", ".github/workflows/import-verified-country-batches-19-20.yml", ".github/workflows/update-schengen-checklists.yml", ".github/workflows/dispatch-frontend-after-visa-publication.yml"].each { |path| YAML.load_file(path); puts "#{path} YAML syntax OK" }'
