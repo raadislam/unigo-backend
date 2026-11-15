@@ -37,7 +37,7 @@ jobs:
         run: composer install --prefer-dist --no-interaction
       - name: Verify PDF libraries
         run: |
-          php -r "require 'vendor/autoload.php'; new setasign\\Fpdi\\Tcpdf\\Fpdi(); echo 'FPDI/TCPDF autoload OK'.PHP_EOL;"
+          php -r "require 'vendor/autoload.php'; new setasign\Fpdi\Tcpdf\Fpdi(); echo 'FPDI/TCPDF autoload OK'.PHP_EOL;"
       - name: Commit generated lock file
         run: |
           if ! git diff --quiet -- composer.lock; then
