@@ -102,7 +102,6 @@ class VisaChecklistPdfService
     {
         $scope = $options['scope'] ?? 'applicant';
         $applicantOccupation = $options['applicant_occupation'] ?? 'employee';
-        $sponsorOccupation = $options['sponsor_occupation'] ?? 'employee';
         $funding = $options['funding'] ?? 'self';
         $documents = [];
 
@@ -114,7 +113,7 @@ class VisaChecklistPdfService
             throw new InvalidArgumentException('A sponsor-only checklist cannot be generated until verified sponsor-specific requirements are recorded.');
         }
 
-        if ($scope !== 'sponsor') {
+        {
             foreach ($requirement->required_documents ?? [] as $document) {
                 $this->appendRequiredDocument($documents, $document);
             }
@@ -129,7 +128,7 @@ class VisaChecklistPdfService
                 }
             }
         }
-\n
+
         return array_values($documents);
     }
 
