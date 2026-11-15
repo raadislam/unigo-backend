@@ -1,15 +1,10 @@
 name: Update Schengen Bangladesh Checklists
 
 on:
-  workflow_run:
-    workflows:
-      - Deploy UniGo Backend
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       confirm:
-        description: Confirm the backed-up production checklist update
+        description: Confirm the restore-tested production checklist update
         required: true
         type: choice
         options:
@@ -17,7 +12,7 @@ on:
           - apply
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: unigo-schengen-checklist-production
@@ -25,31 +20,16 @@ concurrency:
 
 jobs:
   update:
-    if: (github.event_name == 'workflow_dispatch' && inputs.confirm == 'apply') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    if: inputs.confirm == 'apply'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout backend
         uses: actions/checkout@v7
         with:
           ref: main
 
-      - name: Check one-time production update trigger
-        id: gate
-        if: github.event_name == 'workflow_run'
-        run: |
-          if test -f .github/enable-schengen-checklist-update.once; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Confirm manual production update
-        id: manual
-        if: github.event_name == 'workflow_dispatch'
-        run: echo "run=true" >> "$GITHUB_OUTPUT"
-
       - name: Prepare SSH
-        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -74,80 +54,180 @@ jobs:
           done
           exit 1
 
-      - name: Verify deployed seeder and take a production database backup
-        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
+      - name: Create production preflight and database backup
+        id: backup
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
-          APP_DIR="/var/www/unigo/backend/current"
-          SHARED_DIR="/var/www/unigo/backend/shared"
-          cd "$APP_DIR"
-          test -f "$SHARED_DIR/.env"
-          test -f "database/seeders/SchengenBangladeshChecklistSupplementSeeder.php"
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > backup-meta.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          cd "$APP"
+          test -f /var/www/unigo/backend/shared/.env
+          test -f database/seeders/SchengenBangladeshChecklistSupplementSeeder.php
           command -v mysqldump >/dev/null
           command -v gzip >/dev/null
-          php artisan migrate:status --no-ansi >/tmp/unigo-schengen-migration-status.txt
-          if grep -q 'Pending' /tmp/unigo-schengen-migration-status.txt; then
-            cat /tmp/unigo-schengen-migration-status.txt
-            echo "Pending migrations found; refusing to update production checklists."
+          php artisan migrate:status --no-ansi > /tmp/schengen-migrations.txt
+          if grep -q "Pending" /tmp/schengen-migrations.txt; then
+            echo "Pending production migrations detected; refusing checklist update."
             exit 1
           fi
-          mkdir -p "$SHARED_DIR/backups"
-          BACKUP="$SHARED_DIR/backups/unigo-schengen-checklists-preupdate-$(date -u +%Y%m%dT%H%M%SZ).sql"
-          BACKUP_GZ="$BACKUP.gz"
-          BACKUP_PATH="$BACKUP" php <<'PHP'
+          php artisan visa:requirements-audit > /tmp/schengen-audit-before.txt
+          cat > /tmp/schengen-preflight.php <<'PHP'
           <?php
           require getcwd() . '/vendor/autoload.php';
           $app = require getcwd() . '/bootstrap/app.php';
-          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
-          $default = config('database.default');
-          $db = config('database.connections.' . $default);
-          if (! is_array($db) || $default !== 'mysql' || empty($db['database']) || empty($db['username'])) {
-              fwrite(STDERR, "Production database is not a configured MySQL connection.\n");
-              exit(1);
-          }
-          $host = $db['host'] ?? '127.0.0.1';
-          $port = (string) ($db['port'] ?? 3306);
-          $command = [
-              'mysqldump',
-              '--single-transaction',
-              '--quick',
-              '--routines',
-              '--triggers',
-              '--no-tablespaces',
-              '--default-character-set=utf8mb4',
-              '--host=' . $host,
-              '--port=' . $port,
-              '--user=' . $db['username'],
-              $db['database'],
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $countryCount = \App\Models\Country::query()->count();
+          $records = \App\Models\VisaRequirement::query()
+              ->where('passport_nationality_iso3', 'BGD')
+              ->where('travel_purpose', 'tourism')
+              ->get();
+          $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published)->count();
+          $pending = $records->count() - $published;
+          $duplicates = \Illuminate\Support\Facades\DB::table('visa_requirements')
+              ->where('passport_nationality_iso3', 'BGD')
+              ->where('travel_purpose', 'tourism')
+              ->select('country_id', 'passport_nationality_iso3', 'travel_purpose')
+              ->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')
+              ->havingRaw('COUNT(*) > 1')
+              ->count();
+          $result = [
+              'country_count' => $countryCount,
+              'requirement_count' => $records->count(),
+              'source_count' => \Illuminate\Support\Facades\DB::table('visa_requirement_sources')->count(),
+              'published_count' => $published,
+              'pending_count' => $pending,
+              'duplicate_keys' => $duplicates,
           ];
-          $environment = array_merge($_ENV, ['MYSQL_PWD' => (string) ($db['password'] ?? '')]);
-          $pipes = [];
-          $process = proc_open($command, [0 => ['pipe', 'r'], 1 => ['file', getenv('BACKUP_PATH'), 'w'], 2 => ['pipe', 'w']], $pipes, getcwd(), $environment);
-          if (! is_resource($process)) {
-              fwrite(STDERR, "Unable to start production database backup.\n");
+          if ($countryCount < 250 || $duplicates !== 0) {
+              fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
               exit(1);
           }
-          fclose($pipes[0]);
-          $error = stream_get_contents($pipes[2]);
-          fclose($pipes[2]);
-          $status = proc_close($process);
-          if ($status !== 0) {
-              fwrite(STDERR, "Production database backup failed: " . $error . "\n");
-              exit(1);
-          }
+          echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
           PHP
-          gzip -9 "$BACKUP"
-          gzip -t "$BACKUP_GZ"
-          echo "SCHENGEN_DATABASE_BACKUP_CREATED=$BACKUP_GZ"
+          php -l /tmp/schengen-preflight.php >/dev/null
+          php /tmp/schengen-preflight.php > /tmp/schengen-preflight.json
+          cat > /tmp/schengen-backup.php <<'PHP'
+          <?php
+          require getcwd() . '/vendor/autoload.php';
+          $app = require getcwd() . '/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $connectionName = config('database.default');
+          $db = config('database.connections.' . $connectionName);
+          if (! $db || empty($db['database']) || empty($db['username'])) {
+              throw new RuntimeException('Configured production database connection is incomplete.');
+          }
+          $quote = fn ($value) => '"' . str_replace(["\\", '"'], ["\\\\", '\\"'], (string) $value) . '"';
+          $cnf = '/tmp/unigo-schengen-mysql.cnf';
+          $content = "[client]\n";
+          $content .= 'host=' . $quote($db['host'] ?? '127.0.0.1') . "\n";
+          $content .= 'user=' . $quote($db['username']) . "\n";
+          $content .= 'password=' . $quote($db['password'] ?? '') . "\n";
+          $content .= 'port=' . $quote($db['port'] ?? 3306) . "\n";
+          if (! empty($db['unix_socket'])) $content .= 'socket=' . $quote($db['unix_socket']) . "\n";
+          file_put_contents($cnf, $content, LOCK_EX);
+          chmod($cnf, 0600);
+          $directory = '/var/www/unigo/backend/shared/backups';
+          if (! is_dir($directory) && ! mkdir($directory, 0750, true) && ! is_dir($directory)) {
+              throw new RuntimeException('Unable to create the shared backup directory.');
+          }
+          $path = $directory . '/unigo-schengen-checklists-preupdate-' . gmdate('Ymd\\THis\\Z') . '.sql.gz';
+          $command = 'bash -o pipefail -c ' . escapeshellarg(
+              'mysqldump --defaults-extra-file=' . escapeshellarg($cnf) .
+              ' --single-transaction --routines --triggers --no-tablespaces --default-character-set=utf8mb4 ' .
+              escapeshellarg($db['database']) . ' | gzip -c > ' . escapeshellarg($path)
+          );
+          exec($command, $output, $status);
+          @unlink($cnf);
+          if ($status !== 0 || ! is_file($path) || filesize($path) < 1024) {
+              throw new RuntimeException('Production database backup creation failed.');
+          }
+          exec('gzip -t ' . escapeshellarg($path), $gzipOutput, $gzipStatus);
+          if ($gzipStatus !== 0) throw new RuntimeException('Production backup gzip integrity check failed.');
+          $preflight = json_decode(file_get_contents('/tmp/schengen-preflight.json'), true);
+          if (! is_array($preflight)) throw new RuntimeException('Production preflight JSON is missing.');
+          $meta = [
+              'preflight' => $preflight,
+              'backup_path' => $path,
+              'sha256' => hash_file('sha256', $path),
+              'size_bytes' => filesize($path),
+              'database_name' => $db['database'],
+              'created_at_utc' => gmdate(DATE_ATOM),
+          ];
+          echo json_encode($meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          @unlink('/tmp/schengen-preflight.php');
+          @unlink('/tmp/schengen-backup.php');
+          PHP
+          php -l /tmp/schengen-backup.php >/dev/null
+          php /tmp/schengen-backup.php
           REMOTE
+          python3 -m json.tool backup-meta.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("backup-meta.json").read_text())
+          with open(Path.home() / ".schengen-backup-meta", "w") as handle:
+              handle.write(data["backup_path"] + "\n" + data["sha256"] + "\n" + data["database_name"] + "\n")
+          print("PRODUCTION_BACKUP_CREATED", data["backup_path"])
+          print("PRODUCTION_BACKUP_SHA256", data["sha256"])
+          print("PRODUCTION_BACKUP_SIZE_BYTES", data["size_bytes"])
+          PY
+          BACKUP_PATH="$(sed -n '1p' ~/.schengen-backup-meta)"
+          BACKUP_SHA="$(sed -n '2p' ~/.schengen-backup-meta)"
+          scp -i ~/.ssh/unigo_deploy -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" production-backup.sql.gz
+          echo "$BACKUP_SHA  production-backup.sql.gz" | sha256sum -c -
+          gzip -t production-backup.sql.gz
+          echo "database_name=$(sed -n '3p' ~/.schengen-backup-meta)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore-test production backup in isolated MySQL 8
+        id: restore
+        env:
+          DB_NAME: ${{ steps.backup.outputs.database_name }}
+        run: |
+          set -euo pipefail
+          RESTORE_DB_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$RESTORE_DB_PASSWORD"
+          docker run -d --name unigo-schengen-restore -e MYSQL_ROOT_PASSWORD="$RESTORE_DB_PASSWORD" -e MYSQL_DATABASE="$DB_NAME" -p 3307:3306 mysql:8.0
+          trap 'docker rm -f unigo-schengen-restore >/dev/null 2>&1 || true' EXIT
+          AUTH_READY=false
+          for attempt in $(seq 1 90); do
+            if docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-schengen-restore mysql -uroot -N -B -e "SELECT 1" >/dev/null 2>&1; then
+              AUTH_READY=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$AUTH_READY" != "true" ]; then
+            docker logs --tail 80 unigo-schengen-restore || true
+            echo "Isolated MySQL did not become ready for authenticated queries."
+            exit 1
+          fi
+          docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-schengen-restore mysql -uroot -N -B -e "SELECT 1" | grep -qx "1"
+          echo "ISOLATED_MYSQL_AUTHENTICATED_READY"
+          gzip -dc production-backup.sql.gz | docker exec -i -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-schengen-restore mysql -uroot "$DB_NAME"
+          RESTORE_COUNTS="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-schengen-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT (SELECT COUNT(*) FROM countries),(SELECT COUNT(*) FROM visa_requirements),(SELECT COUNT(*) FROM visa_requirement_sources),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND verification_status='verified' AND is_published=1),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND NOT (verification_status='verified' AND is_published=1)),(SELECT COUNT(*) FROM (SELECT country_id,passport_nationality_iso3,travel_purpose FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' GROUP BY country_id,passport_nationality_iso3,travel_purpose HAVING COUNT(*)>1) d);")"
+          echo "$RESTORE_COUNTS" > restore-test-counts.txt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          meta = json.loads(Path("backup-meta.json").read_text())
+          actual = list(map(int, Path("restore-test-counts.txt").read_text().split()))
+          expected = meta["preflight"]
+          keys = ("country_count", "requirement_count", "source_count", "published_count", "pending_count", "duplicate_keys")
+          for index, key in enumerate(keys):
+              if actual[index] != expected[key]:
+                  raise SystemExit(f"Restore mismatch for {key}: expected {expected[key]}, got {actual[index]}")
+          print("ISOLATED_MYSQL_RESTORE_COUNTS_MATCH_PRODUCTION_PREFLIGHT")
+          PY
+          echo "RESTORE_TEST_PASSED=true" >> "$GITHUB_ENV"
+          rm -f production-backup.sql.gz
 
       - name: Apply Schengen checklist and photo supplements with production readback
-        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
+        if: env.RESTORE_TEST_PASSED == 'true'
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
@@ -225,7 +305,6 @@ jobs:
           REMOTE
 
       - name: Verify public API checklist and photo data for all 29 Schengen countries
-        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
         run: |
           python3 - <<'PY'
           import json
@@ -250,16 +329,3 @@ jobs:
               print(f"PUBLIC_SCHENGEN_CHECKLIST_OK {iso2}")
           print("PUBLIC_SCHENGEN_CHECKLISTS_OK countries=29")
           PY
-
-      - name: Consume one-time update trigger
-        if: steps.gate.outputs.run == 'true' && steps.manual.outputs.run != 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if test -f .github/enable-schengen-checklist-update.once; then
-            git rm .github/enable-schengen-checklist-update.once
-            git commit -m "Consume one-time Schengen checklist update trigger"
-            git push origin HEAD:main
-          fi
