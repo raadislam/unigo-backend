@@ -226,19 +226,49 @@ try {
     $apiBase = rtrim((string) config('app.url'), '/');
     batch47Require($apiBase !== '', 'The production API base URL is not configured.');
 
-    $list = \Illuminate\Support\Facades\Http::timeout(45)
-        ->acceptJson()
-        ->get($apiBase . '/api/visa-requirements', ['passport' => 'BGD', 'purpose' => 'tourism'])
-        ->throw()
-        ->json();
+    $list = null;
+    for ($attempt = 0; $attempt < 5; $attempt++) {
+        try {
+            $list = \\Illuminate\\Support\\Facades\\Http::timeout(45)
+                ->acceptJson()
+                ->get($apiBase . '/api/visa-requirements', ['passport' => 'BGD', 'purpose' => 'tourism'])
+                ->throw()
+                ->json();
+            if ((int) data_get($list, 'meta.total') === 135) {
+                break;
+            }
+        } catch (\\Throwable $exception) {
+            if ($attempt === 4) {
+                throw $exception;
+            }
+        }
+        if ($attempt < 4) {
+            sleep(10);
+        }
+    }
 
     batch47Require((int) data_get($list, 'meta.total') === 135, 'The public BGD tourism API total is not 135.');
 
-    $detail = \Illuminate\Support\Facades\Http::timeout(45)
-        ->acceptJson()
-        ->get($apiBase . '/api/visa-requirements/IM', ['passport' => 'BGD', 'purpose' => 'tourism'])
-        ->throw()
-        ->json();
+    $detail = null;
+    for ($attempt = 0; $attempt < 5; $attempt++) {
+        try {
+            $detail = \\Illuminate\\Support\\Facades\\Http::timeout(45)
+                ->acceptJson()
+                ->get($apiBase . '/api/visa-requirements/IM', ['passport' => 'BGD', 'purpose' => 'tourism'])
+                ->throw()
+                ->json();
+            if (data_get($detail, 'data.verification_status') === 'verified' && data_get($detail, 'data.is_published') === true) {
+                break;
+            }
+        } catch (\\Throwable $exception) {
+            if ($attempt === 4) {
+                throw $exception;
+            }
+        }
+        if ($attempt < 4) {
+            sleep(10);
+        }
+    }
 
     batch47Require(strtoupper((string) data_get($detail, 'data.country.iso2')) === 'IM', 'The public API returned the wrong destination.');
     batch47Require(strtoupper((string) data_get($detail, 'data.passport_nationality_iso3')) === 'BGD', 'The public API returned the wrong passport nationality.');
