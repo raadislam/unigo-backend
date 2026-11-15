@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SEED = ROOT / "database/data/new_country_visa_batch_45.csv"
 AUDIT = ROOT / "database/data/visa_full_audit_batch_45.csv"
 SEEDER = ROOT / "database/seeders/TristanDaCunhaCountryBackfillSeeder.php"
+IMPORT_SEEDER = ROOT / "database/seeders/ImportMajorVisaRequirementsSeeder.php"
 READBACK = ROOT / "scripts/batch45_readback.php"
 WORKFLOW = ROOT / ".github/workflows/import-verified-country-batch-45.yml"
 
@@ -84,11 +85,14 @@ for source in extra:
         raise SystemExit("Additional source metadata must be official, dated and explained.")
 
 seeder = SEEDER.read_text(encoding="utf-8")
+import_seeder = IMPORT_SEEDER.read_text(encoding="utf-8")
 readback = READBACK.read_text(encoding="utf-8")
 for marker in ("['iso2' => 'TA']", "'slug' => 'tristan-da-cunha'", "'iso3' => null", "'is_published' => false"):
     if marker not in seeder:
         raise SystemExit(f"Country backfill seeder is missing safe territory handling: {marker}")
 
+if "$row['cross_check_source_name']" not in import_seeder or "$row['cross_check_source_last_checked']" not in import_seeder:
+    raise SystemExit("Country seed importer must preserve the named cross-check source and its checked date.")
 if "APP_ROOT" not in readback or "/api/visa-requirements/TA" not in readback or "BATCH45_READBACK_ERROR" not in readback:
     raise SystemExit("Batch 45 readback script is missing the scoped TA database/API checks.")
 if any(token in readback.lower() for token in ("truncate table", "drop table", "delete from visa_requirements")):
