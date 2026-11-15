@@ -93,23 +93,24 @@ jobs:
 
           workflow = Path(".github/workflows/import-verified-country-batch-41.yml").read_text()
           step_start = workflow.index("name: Filter and validate exact UG and ZW allowlist")
-          prepare_marker = "python3 - <<'PY'\\n"
+          prepare_marker = "python3 - <<'PY'\n"
           prepare_start = workflow.index(prepare_marker, step_start) + len(prepare_marker)
-          prepare_end = workflow.index("\\n          PY", prepare_start)
+          prepare_end = workflow.index("\n          PY", prepare_start)
           prepare_source = textwrap.dedent(workflow[prepare_start:prepare_end])
           compile(prepare_source, "batch41_prepare.py", "exec")
 
           for stage in ("preflight", "readback"):
-              marker = f"cat > /tmp/batch41-{stage}.php <<'PHP'\\n"
+              marker = f"cat > /tmp/batch41-{stage}.php <<'PHP'\n"
               start = workflow.index(marker) + len(marker)
-              end = workflow.index("\\n          PHP", start)
+              end = workflow.index("\n          PHP", start)
               source = textwrap.dedent(workflow[start:end])
               target = Path(f"/tmp/batch41-{stage}.php")
-              target.write_text(source + "\\n")
+              target.write_text(source + "\n")
               subprocess.run(["php", "-l", str(target)], check=True)
           PY
       - name: Validate batch 41 import workflow YAML
-        run: ruby -e 'require "yaml"; YAML.load_file(".github/workflows/import-verified-country-batch-41.yml", aliases: true)'
+        run: |
+          ruby -e 'require "yaml"; YAML.load_file(".github/workflows/import-verified-country-batch-41.yml", aliases: true)'
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
