@@ -21,8 +21,8 @@ expected = {
     "destination_iso2": "MY",
     "destination_name": "Malaysia",
     "travel_purpose": "tourism",
-    "verification_status": "verified",
-    "publish_status": "published",
+    "verification_status": "pending_review",
+    "publish_status": "draft",
     "full_audit": "true",
     "visa_required": "true",
     "visa_free_eligibility": "false",
@@ -112,8 +112,12 @@ for source in sources:
         raise SystemExit("BATCH55_VALIDATION_ERROR duplicate additional source URL")
     source_urls.add(source["source_url"])
 
-if "3 versus 6 months" not in row.get("review_notes", ""):
-    raise SystemExit("BATCH55_VALIDATION_ERROR bank-statement route conflict must be documented")
+if "3 months" not in row.get("review_notes", "") or "6 months" not in row.get("review_notes", ""):
+    raise SystemExit("BATCH55_VALIDATION_ERROR bank-statement and SEV validity conflicts must be documented")
+if "SEV validity conflicts" not in row.get("maximum_permitted_stay", ""):
+    raise SystemExit("BATCH55_VALIDATION_ERROR visa-validity conflict must be explicit")
+if row.get("verification_status") != "pending_review" or row.get("publish_status") != "draft":
+    raise SystemExit("BATCH55_VALIDATION_ERROR unresolved official-source conflicts must block publication")
 if "35 × 45 mm" not in photo.get("notes", "") or "not an official" not in photo.get("notes", ""):
     raise SystemExit("BATCH55_VALIDATION_ERROR agency photo-size conflict must be documented")
 
@@ -128,5 +132,6 @@ print(json.dumps({
     "checklist_profiles": sorted(types),
     "documents_per_profile": {item["applicant_type"]: len(item["documents"]) for item in checklists},
     "additional_official_sources": len(sources),
+    "publication_state": "pending_review / draft",
     "validation": "passed"
 }, ensure_ascii=False))
