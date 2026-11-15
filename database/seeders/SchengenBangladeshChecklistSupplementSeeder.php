@@ -242,7 +242,7 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     ['name' => 'For minors travelling without a parent/legal guardian: notarised guardian consent containing identity, purpose and travel period details', 'status' => 'if_applicable'],
                     ['name' => 'Reason letter explaining non-use of a previous Croatian visa or refusal by another country, if applicable', 'status' => 'if_applicable'],
                 ],
-                'notes' => 'VFS states that the Croatian Embassy may request additional documents, certified translations and apostille certification. The page also states that flight and hotel reservations are sufficient; confirmed bookings are not required. Apostille is therefore conditional, not an automatic universal tourist requirement.',
+                'notes' => 'The Croatian Ministry confirms that Bangladeshi applicants can submit at the VFS centre in Dhaka and that the Embassy in New Delhi is competent for Bangladesh. The VFS one-pager contains some generic India-oriented wording, so use the Bangladesh VFS portal and confirm the live appointment instructions. The Embassy may request additional documents, certified translations and apostille certification. Flight and hotel reservations are sufficient; confirmed bookings are not required. Apostille is conditional, not an automatic universal tourist requirement.',
             ],
             'BE' => [
                 'countries' => ['BE'],
@@ -497,6 +497,20 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                         'source_last_checked_at' => $checkedAt,
                         'is_primary' => false,
                         'verification_notes' => 'The Embassy states that from June 2025 Bangladeshi public documents no longer require legalisation at the Italian Consular Office but require an apostille from the Bangladesh Ministry of Foreign Affairs through MyGov. Apply this to relevant public documents, not as a blanket requirement for every applicant.',
+                    ]
+                );
+            }
+
+            if ($iso2 === 'HR') {
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => 'https://mvep.gov.hr/services-consular-portal/consular-information-22802/visas-22807/visa-requirements-overview-22879/22879?country=159'],
+                    [
+                        'source_type' => 'official',
+                        'source_name' => 'Croatian Ministry of Foreign Affairs — Visa requirements for Bangladesh',
+                        'source_url' => 'https://mvep.gov.hr/services-consular-portal/consular-information-22802/visas-22807/visa-requirements-overview-22879/22879?country=159',
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => 'Confirms Bangladeshi ordinary passport holders require a visa and may submit at the VFS application centre in Dhaka; the Croatian Embassy in New Delhi is the competent mission.',
                     ]
                 );
             }
