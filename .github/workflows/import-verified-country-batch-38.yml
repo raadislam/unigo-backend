@@ -1,0 +1,552 @@
+name: Import verified tourism updates batch 38
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - scripts/run-verified-country-import-batch-38.trigger
+  workflow_dispatch:
+
+concurrency:
+  group: unigo-verified-tourism-batch-38
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+
+      - name: Filter and validate exact AR and BS allowlist
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import csv
+          import json
+          from datetime import date
+          from pathlib import Path
+
+          today = date.today().isoformat()
+          seed_path = "database/data/new_country_visa_batch_38.csv"
+          audit_path = "database/data/visa_full_audit_batch_38.csv"
+
+          def read_rows(path):
+              with open(path, newline="", encoding="utf-8-sig") as handle:
+                  reader = csv.DictReader(handle)
+                  return reader.fieldnames, list(reader)
+
+          def require(condition, message):
+              if not condition:
+                  raise SystemExit(message)
+
+          seed_headers, seeds = read_rows(seed_path)
+          audit_headers, audits = read_rows(audit_path)
+          allowlist = {"AR", "BS"}
+          require(seed_headers and audit_headers, "Batch 38 files need headers")
+          require(len(seeds) == 2 and len(audits) == 2, "Batch 38 must contain exactly two seed and audit rows")
+          require({r.get("destination_iso2") for r in seeds} == allowlist, "Seed allowlist must be AR,BS")
+          require({r.get("destination_iso2") for r in audits} == allowlist, "Audit allowlist must be AR,BS")
+
+          seed_rows = []
+          audit_rows = []
+          required_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
+
+          for iso2 in sorted(allowlist):
+              sr = [r for r in seeds if r.get("destination_iso2") == iso2]
+              ar = [r for r in audits if r.get("destination_iso2") == iso2]
+              require(len(sr) == 1 and len(ar) == 1, f"{iso2}: duplicate or missing row")
+              seed = dict(sr[0])
+              audit = dict(ar[0])
+
+              for row, label in ((seed, "seed"), (audit, "audit")):
+                  require(row.get("passport_iso3") == "BGD", f"{iso2}: {label} passport must be BGD")
+                  require(row.get("travel_purpose") == "tourism", f"{iso2}: {label} purpose must be tourism")
+                  require(row.get("verification_status") == "verified", f"{iso2}: {label} must be verified")
+                  require(row.get("official_source_url", "").startswith("https://"), f"{iso2}: invalid primary source")
+                  require(row.get("official_source_last_checked") == today, f"{iso2}: primary source not checked today")
+
+              require(audit.get("publish_status") == "published", f"{iso2}: audit not approved for publication")
+              require(audit.get("full_audit", "").lower() == "true", f"{iso2}: full_audit must be true")
+              require(audit.get("cross_check_source_url", "").startswith("https://"), f"{iso2}: invalid cross-check source")
+              require(audit.get("cross_check_source_last_checked") == today, f"{iso2}: cross-check not checked today")
+              require(audit.get("required_documents", "").strip(), f"{iso2}: required documents missing")
+              require(len(audit.get("visa_requirement_type", "")) <= 50, f"{iso2}: requirement type exceeds schema")
+              require(len(audit.get("maximum_permitted_stay", "")) <= 120, f"{iso2}: stay field exceeds schema")
+              require(len(audit.get("application_channel", "")) <= 180, f"{iso2}: application channel exceeds schema")
+              require(len(audit.get("application_fee", "")) <= 120, f"{iso2}: fee field exceeds schema")
+              require(len(audit.get("processing_time", "")) <= 120, f"{iso2}: processing field exceeds schema")
+
+              extra = json.loads(audit.get("additional_sources") or "[]")
+              require(isinstance(extra, list) and len(extra) >= 2, f"{iso2}: at least two additional sources required")
+              for item in extra:
+                  require(item.get("source_type") == "official", f"{iso2}: non-official source in allowlist")
+                  require(item.get("source_name") and item.get("source_url", "").startswith("https://"), f"{iso2}: invalid additional source")
+                  require(item.get("source_last_checked_at") == today and item.get("verification_notes"), f"{iso2}: additional source metadata incomplete")
+
+              photo = json.loads(audit.get("photo_specifications") or "{}")
+              checks = json.loads(audit.get("applicant_checklists") or "[]")
+              require(isinstance(photo, dict) and photo.get("source_name") and photo.get("source_url", "").startswith("https://") and photo.get("checked_at") == today, f"{iso2}: photo metadata incomplete")
+              require(isinstance(checks, list) and {x.get("applicant_type") for x in checks} == required_types, f"{iso2}: four applicant checklists missing")
+
+              if iso2 == "AR":
+                  require(audit.get("visa_required") == "true" and audit.get("visa_free_eligibility") == "false", "AR must be visa-required")
+                  require(audit.get("visa_on_arrival_available") == "false" and audit.get("evisa_available") == "false", "AR must use consular tourist visa")
+                  require("90 days" in audit.get("maximum_permitted_stay", "").lower(), "AR 90-day stay missing")
+                  require("migraciones.gob.ar" in audit.get("official_source_url", ""), "AR primary source missing")
+                  require(photo.get("status") == "verified" and photo.get("dimensions_mm") == {"width": 40, "height": 40, "unit": "mm"}, "AR photo must be verified 40x40mm")
+              if iso2 == "BS":
+                  require(audit.get("visa_required") == "false" and audit.get("visa_free_eligibility") == "true", "BS must be visa-free")
+                  require(audit.get("visa_on_arrival_available") == "false" and audit.get("evisa_available") == "false", "BS must not be misclassified as VOA/eVisa")
+                  require("three months" in audit.get("maximum_permitted_stay", "").lower(), "BS three-month visit period missing")
+                  require("cdn.bahamas.gov.bs" in audit.get("official_source_url", ""), "BS current Government schedule missing")
+                  require(photo.get("status") == "not_applicable" and not photo.get("dimensions_mm") and not photo.get("digital_dimensions_px"), "BS photo must be not_applicable")
+
+              for key in ("cross_check_source_url", "cross_check_source_name", "cross_check_source_last_checked"):
+                  seed[key] = ""
+              seed_rows.append(seed)
+              audit_rows.append(audit)
+
+          out = Path("verified-batch-38")
+          out.mkdir(exist_ok=True)
+          for filename, headers, rows in (
+              ("verified_seed_batch_38.csv", seed_headers, seed_rows),
+              ("verified_full_audit_batch_38.csv", audit_headers, audit_rows),
+          ):
+              with open(out / filename, "w", newline="", encoding="utf-8") as handle:
+                  writer = csv.DictWriter(handle, fieldnames=headers, extrasaction="ignore")
+                  writer.writeheader()
+                  writer.writerows(rows)
+
+          print("BATCH38_ALLOWLIST_VALIDATED AR,BS")
+          print("BATCH38_ROWS 2")
+          PY
+
+      - name: Validate importer PHP syntax
+        run: php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
+
+      - name: Upload exact allowlisted files
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-batch-38-source-files
+          path: verified-batch-38/
+          if-no-files-found: error
+          retention-days: 7
+
+  import:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+
+      - name: Download exact allowlisted files
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-batch-38-source-files
+          path: verified-batch-38
+
+      - name: Set up PHP for isolated restore and staging dry-run
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: curl, fileinfo, intl, mbstring, pdo_mysql, xml, zip, bcmath
+          coverage: none
+
+      - name: Install application dependencies for isolated staging only
+        run: composer install --no-interaction --prefer-dist --no-dev --no-scripts --optimize-autoloader
+
+      - name: Prepare authorized VPS connection
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Trust configured VPS host
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Fresh production audit, migration check and backup
+        id: backup
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > backup-meta.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          cd "$APP"
+          php artisan migrate:status --no-ansi > /tmp/batch38-migrations.txt
+          if grep -q "Pending" /tmp/batch38-migrations.txt; then
+            echo "Pending production migrations detected; refusing import."
+            exit 1
+          fi
+          php artisan visa:requirements-audit > /tmp/batch38-audit-before.txt
+          cat > /tmp/batch38-preflight.php <<'PHP'
+          <?php
+          require '/var/www/unigo/backend/current/vendor/autoload.php';
+          $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $countryCount = \App\Models\Country::query()->count();
+          $records = \App\Models\VisaRequirement::query()->with('country:id,name,iso2')
+              ->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->get();
+          $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published)->count();
+          $pending = $records->count() - $published;
+          $duplicates = \Illuminate\Support\Facades\DB::table('visa_requirements')
+              ->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')
+              ->select('country_id', 'passport_nationality_iso3', 'travel_purpose')
+              ->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')->havingRaw('COUNT(*) > 1')->count();
+          $arCountry = \App\Models\Country::query()->where('iso2', 'AR')->first();
+          $bsCountry = \App\Models\Country::query()->where('iso2', 'BS')->first();
+          $ar = $records->filter(fn ($row) => $row->country?->iso2 === 'AR');
+          $bs = $records->filter(fn ($row) => $row->country?->iso2 === 'BS');
+          $result = [
+              'country_count' => $countryCount,
+              'requirement_count' => $records->count(),
+              'source_count' => \Illuminate\Support\Facades\DB::table('visa_requirement_sources')->count(),
+              'published_count' => $published,
+              'pending_count' => $pending,
+              'duplicate_keys' => $duplicates,
+              'ar_country_present' => (bool) $arCountry,
+              'bs_country_present' => (bool) $bsCountry,
+              'ar_requirement_count' => $ar->count(),
+              'bs_requirement_count' => $bs->count(),
+          ];
+          if ($countryCount !== 250 || $records->count() !== 131 || $published !== 129 || $pending !== 2 || $duplicates !== 0 || ! $arCountry || ! $bsCountry || $ar->count() !== 0 || $bs->count() !== 0) {
+              fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+              exit(1);
+          }
+          echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          PHP
+          php -l /tmp/batch38-preflight.php >/dev/null
+          php /tmp/batch38-preflight.php > /tmp/batch38-preflight.json
+          cat > /tmp/batch38-backup.php <<'PHP'
+          <?php
+          require '/var/www/unigo/backend/current/vendor/autoload.php';
+          $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $connectionName = config('database.default');
+          $db = config('database.connections.' . $connectionName);
+          if (! $db || empty($db['database']) || empty($db['username'])) {
+              throw new RuntimeException('Configured production database connection is incomplete.');
+          }
+          $quote = fn ($value) => '"' . str_replace(["\\", '"'], ["\\\\", '\\"'], (string) $value) . '"';
+          $cnf = "/tmp/unigo-batch38-mysql.cnf";
+          $content = "[client]\n";
+          $content .= "host=" . $quote($db['host'] ?? '127.0.0.1') . "\n";
+          $content .= "user=" . $quote($db['username']) . "\n";
+          $content .= "password=" . $quote($db['password'] ?? '') . "\n";
+          $content .= "port=" . $quote($db['port'] ?? 3306) . "\n";
+          if (! empty($db['unix_socket'])) $content .= "socket=" . $quote($db['unix_socket']) . "\n";
+          file_put_contents($cnf, $content, LOCK_EX);
+          chmod($cnf, 0600);
+          $directory = "/var/www/unigo/backend/shared/backups";
+          if (! is_dir($directory) && ! mkdir($directory, 0750, true) && ! is_dir($directory)) {
+              throw new RuntimeException('Unable to create the shared backup directory.');
+          }
+          $path = $directory . "/unigo-pre-verified-batch-38-" . gmdate("Ymd\\THis\\Z") . ".sql.gz";
+          $command = "bash -o pipefail -c " . escapeshellarg(
+              "mysqldump --defaults-extra-file=" . escapeshellarg($cnf) .
+              " --single-transaction --routines --triggers --no-tablespaces " .
+              escapeshellarg($db['database']) . " | gzip -c > " . escapeshellarg($path)
+          );
+          exec($command, $output, $status);
+          @unlink($cnf);
+          if ($status !== 0 || ! is_file($path) || filesize($path) < 1024) {
+              throw new RuntimeException('Production backup creation failed.');
+          }
+          exec("gzip -t " . escapeshellarg($path), $gzipOutput, $gzipStatus);
+          if ($gzipStatus !== 0) throw new RuntimeException('Production backup gzip integrity check failed.');
+          $preflight = json_decode(file_get_contents('/tmp/batch38-preflight.json'), true);
+          if (! is_array($preflight)) throw new RuntimeException('Production preflight JSON is missing.');
+          $meta = [
+              'preflight' => $preflight,
+              'backup_path' => $path,
+              'sha256' => hash_file('sha256', $path),
+              'size_bytes' => filesize($path),
+              'database_name' => $db['database'],
+              'created_at_utc' => gmdate(DATE_ATOM),
+          ];
+          echo json_encode($meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          @unlink('/tmp/batch38-preflight.php');
+          @unlink('/tmp/batch38-backup.php');
+          PHP
+          php -l /tmp/batch38-backup.php >/dev/null
+          php /tmp/batch38-backup.php
+          REMOTE
+          python3 -m json.tool backup-meta.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("backup-meta.json").read_text())
+          with open(Path.home() / ".backup-meta-summary", "w") as f:
+              f.write(data["backup_path"] + "\n" + data["sha256"] + "\n" + data["database_name"] + "\n")
+          print("PRODUCTION_BACKUP_CREATED", data["backup_path"])
+          print("PRODUCTION_BACKUP_SHA256", data["sha256"])
+          print("PRODUCTION_BACKUP_SIZE_BYTES", data["size_bytes"])
+          PY
+          BACKUP_PATH="$(sed -n '1p' ~/.backup-meta-summary)"
+          BACKUP_SHA="$(sed -n '2p' ~/.backup-meta-summary)"
+          scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" production-backup.sql.gz
+          echo "$BACKUP_SHA  production-backup.sql.gz" | sha256sum -c -
+          gzip -t production-backup.sql.gz
+          echo "backup_path=$BACKUP_PATH" >> "$GITHUB_OUTPUT"
+          echo "backup_sha256=$BACKUP_SHA" >> "$GITHUB_OUTPUT"
+          echo "database_name=$(sed -n '3p' ~/.backup-meta-summary)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore-test production backup in isolated MySQL 8
+        id: restore
+        env:
+          DB_NAME: ${{ steps.backup.outputs.database_name }}
+        run: |
+          set -euo pipefail
+          RESTORE_DB_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$RESTORE_DB_PASSWORD"
+          docker run -d --name unigo-batch38-restore -e MYSQL_ROOT_PASSWORD="$RESTORE_DB_PASSWORD" -e MYSQL_DATABASE="$DB_NAME" -p 3307:3306 mysql:8.0
+          for attempt in $(seq 1 90); do
+            if docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch38-restore mysqladmin -uroot ping --silent >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch38-restore mysqladmin -uroot ping --silent
+          gzip -dc production-backup.sql.gz | docker exec -i -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch38-restore mysql -uroot "$DB_NAME"
+          RESTORE_COUNTS="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch38-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT (SELECT COUNT(*) FROM countries),(SELECT COUNT(*) FROM visa_requirements),(SELECT COUNT(*) FROM visa_requirement_sources),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND verification_status='verified' AND is_published=1),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND NOT (verification_status='verified' AND is_published=1)),(SELECT COUNT(*) FROM (SELECT country_id,passport_nationality_iso3,travel_purpose FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' GROUP BY country_id,passport_nationality_iso3,travel_purpose HAVING COUNT(*)>1) d);")"
+          echo "RESTORE_TEST_COUNTS $RESTORE_COUNTS"
+          echo "$RESTORE_COUNTS" > restore-test-counts.txt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          meta=json.loads(Path("backup-meta.json").read_text())
+          actual=list(map(int,Path("restore-test-counts.txt").read_text().split()))
+          expected=meta["preflight"]
+          keys=("country_count","requirement_count","source_count","published_count","pending_count","duplicate_keys")
+          for index,key in enumerate(keys):
+              if actual[index] != expected[key]:
+                  raise SystemExit(f"Restore mismatch for {key}: expected {expected[key]}, got {actual[index]}")
+          print("ISOLATED_MYSQL_RESTORE_COUNTS_MATCH_PRODUCTION_PREFLIGHT")
+          PY
+          echo "restore_password=$RESTORE_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "RESTORE_TEST_PASSED=true" >> "$GITHUB_ENV"
+
+      - name: Prepare restored database as isolated Laravel staging API
+        env:
+          DB_NAME: ${{ steps.backup.outputs.database_name }}
+        run: |
+          set -euo pipefail
+          cat > .env <<EOF
+          APP_NAME=UniGoBatch37Staging
+          APP_ENV=testing
+          APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1:8000
+          LOG_CHANNEL=stderr
+          LOG_LEVEL=error
+          CACHE_STORE=array
+          SESSION_DRIVER=array
+          QUEUE_CONNECTION=sync
+          FILESYSTEM_DISK=local
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3307
+          DB_DATABASE=$DB_NAME
+          DB_USERNAME=root
+          DB_PASSWORD=$restore_password
+          UNIGO_ADMIN_API_SECRET=unigo-batch38-isolated-staging-secret
+          MAIL_MAILER=array
+          EOF
+          php artisan package:discover --ansi
+          php artisan config:clear
+          php artisan migrate:status --no-ansi > staging-migrations.txt
+          if grep -q "Pending" staging-migrations.txt; then
+            cat staging-migrations.txt
+            exit 1
+          fi
+          mkdir -p storage/app/imports
+          cp verified-batch-38/verified_seed_batch_37.csv storage/app/imports/unigo_visa_requirements_research_template.csv
+          cp verified-batch-38/verified_full_audit_batch_37.csv storage/app/imports/verified_full_audit_batch_37.csv
+          php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > staging-seeder.log
+          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $ar=$rows->filter(fn($r)=>$r->country?->iso2==="AR")->count(); $bs=$rows->filter(fn($r)=>$r->country?->iso2==="BS")->count(); if($rows->count()!==133 || $ar!==1 || $bs!==1) { fwrite(STDERR,json_encode(["total"=>$rows->count(),"AR"=>$ar,"BS"=>$bs])); exit(1); } echo "STAGING_SEED_READBACK total=133 AR=1 BS=1".PHP_EOL;'
+          nohup php artisan serve --host=127.0.0.1 --port=8000 > staging-server.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/up >/dev/null 2>&1; then
+              break
+            fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/up >/dev/null
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_37.csv --base-url=http://127.0.0.1:8000 --dry-run > staging-dry-run.json
+          python3 -m json.tool staging-dry-run.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path("staging-dry-run.json").read_text())
+          if data.get("rows") != 2 or data.get("failures") not in ([], None):
+              raise SystemExit("Isolated staging dry-run did not validate both allowlisted rows: "+json.dumps(data))
+          print("ISOLATED_STAGING_DRY_RUN_PASSED", json.dumps({k:data.get(k) for k in ("mode","rows","updated","sources_added","failures")}))
+          PY
+
+      - name: Upload verified files and importer command to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          scp -P "$VPS_PORT" verified-batch-38/verified_seed_batch_37.csv "$VPS_USER@$VPS_HOST:/tmp/verified_seed_batch_37.csv"
+          scp -P "$VPS_PORT" verified-batch-38/verified_full_audit_batch_37.csv "$VPS_USER@$VPS_HOST:/tmp/verified_full_audit_batch_37.csv"
+          scp -P "$VPS_PORT" app/Console/Commands/VisaRequirementResearchCsvImportCommand.php "$VPS_USER@$VPS_HOST:/tmp/VisaRequirementResearchCsvImportCommand.php"
+
+      - name: Execute allowlisted production import and readback
+        id: production
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > batch38-production-result.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          cd "$APP"
+          mkdir -p storage/app/imports
+          php -l /tmp/VisaRequirementResearchCsvImportCommand.php >/dev/null
+          install -m 0644 /tmp/VisaRequirementResearchCsvImportCommand.php app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
+          rm -f /tmp/VisaRequirementResearchCsvImportCommand.php
+          php artisan optimize:clear >/dev/null
+          install -m 0644 /tmp/verified_seed_batch_37.csv storage/app/imports/unigo_visa_requirements_research_template.csv
+          install -m 0644 /tmp/verified_full_audit_batch_37.csv storage/app/imports/verified_full_audit_batch_37.csv
+          php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > /tmp/batch38-seeder.log
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_37.csv > /tmp/batch38-import-result.json
+          python3 -m json.tool /tmp/batch38-import-result.json > /dev/null
+          php artisan visa:requirements-audit > /tmp/batch38-audit-after.txt
+          cat > /tmp/batch38-readback.php <<'PHP'
+          <?php
+          require '/var/www/unigo/backend/current/vendor/autoload.php';
+          $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $records = \App\Models\VisaRequirement::query()->with(['country:id,name,slug,iso2', 'sources'])
+              ->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->get();
+          $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published)->count();
+          $pending = $records->count() - $published;
+          $duplicates = \Illuminate\Support\Facades\DB::table('visa_requirements')
+              ->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')
+              ->select('country_id', 'passport_nationality_iso3', 'travel_purpose')
+              ->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')->havingRaw('COUNT(*) > 1')->count();
+          $find = fn ($iso2) => $records->first(fn ($row) => $row->country?->iso2 === $iso2);
+          $ar = $find('AR');
+          $bs = $find('BS');
+          $sourceCheck = fn ($row, $url) => $row && $row->sources->contains(fn ($source) => $source->is_primary && $source->source_type === 'official' && $source->source_url === $url);
+          $checklists = function ($row) {
+              if (! $row || ! is_array($row->applicant_checklists)) return false;
+              $types = array_column($row->applicant_checklists, 'applicant_type');
+              return count(array_diff(['employee','self_employed_or_business_owner','student','retired'], $types)) === 0;
+          };
+          $result = [
+              'country_count' => \App\Models\Country::query()->count(),
+              'requirement_count' => $records->count(),
+              'published_count' => $published,
+              'pending_count' => $pending,
+              'duplicate_keys' => $duplicates,
+              'AR' => $ar ? [
+                  'verification_status' => $ar->verification_status,
+                  'is_published' => (bool) $ar->is_published,
+                  'visa_required' => (bool) $ar->visa_required,
+                  'visa_free_available' => (bool) $ar->visa_free_available,
+                  'evisa_available' => (bool) $ar->evisa_available,
+                  'visa_on_arrival_available' => (bool) $ar->visa_on_arrival_available,
+                  'primary_source_verified' => $sourceCheck($ar, 'https://www.migraciones.gob.ar/accesible/indexdnm.php?visas='),
+                  'photo_status' => data_get($ar->photo_specifications, 'status'),
+                  'photo_dimensions_mm' => data_get($ar->photo_specifications, 'dimensions_mm'),
+                  'four_checklists' => $checklists($ar),
+                  'official_source_count' => $ar->sources->where('source_type', 'official')->count(),
+              ] : null,
+              'BS' => $bs ? [
+                  'verification_status' => $bs->verification_status,
+                  'is_published' => (bool) $bs->is_published,
+                  'visa_required' => (bool) $bs->visa_required,
+                  'visa_free_available' => (bool) $bs->visa_free_available,
+                  'evisa_available' => (bool) $bs->evisa_available,
+                  'visa_on_arrival_available' => (bool) $bs->visa_on_arrival_available,
+                  'maximum_permitted_stay' => $bs->maximum_permitted_stay,
+                  'primary_source_verified' => $sourceCheck($bs, 'https://cdn.bahamas.gov.bs/tenant/tenanttgotb/documents/Visa-Requirements-for-Visitors-Travelling-to-TheBahamas1-20240216054224-20250528004922.pdf'),
+                  'photo_status' => data_get($bs->photo_specifications, 'status'),
+                  'four_checklists' => $checklists($bs),
+                  'official_source_count' => $bs->sources->where('source_type', 'official')->count(),
+              ] : null,
+          ];
+          if ($result['country_count'] !== 250 || $result['requirement_count'] !== 133 || $published !== 131 || $pending !== 2 || $duplicates !== 0) {
+              fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+              exit(1);
+          }
+          foreach (['AR','BS'] as $iso2) {
+              $row = $find($iso2);
+              if (! $row || $row->verification_status !== 'verified' || ! $row->is_published) {
+                  fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+                  exit(1);
+              }
+          }
+          if (! $result['AR']['visa_required'] || $result['AR']['visa_free_available'] || $result['AR']['evisa_available'] || $result['AR']['visa_on_arrival_available'] || ! $result['AR']['primary_source_verified'] || $result['AR']['photo_status'] !== 'verified' || data_get($result['AR'], 'photo_dimensions_mm.width') != 40 || data_get($result['AR'], 'photo_dimensions_mm.height') != 40 || ! $result['AR']['four_checklists']) {
+              fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+              exit(1);
+          }
+          if ($result['BS']['visa_required'] || ! $result['BS']['visa_free_available'] || $result['BS']['evisa_available'] || $result['BS']['visa_on_arrival_available'] || ! str_contains(strtolower($result['BS']['maximum_permitted_stay']), 'three months') || ! $result['BS']['primary_source_verified'] || $result['BS']['photo_status'] !== 'not_applicable' || ! $result['BS']['four_checklists']) {
+              fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+              exit(1);
+          }
+          $apiBase = rtrim(config('app.url'), '/');
+          $list = \Illuminate\Support\Facades\Http::timeout(30)->get($apiBase . '/api/visa-requirements', ['passport' => 'BGD', 'purpose' => 'tourism'])->throw()->json();
+          if (data_get($list, 'meta.total') !== 131) throw new RuntimeException('Public API list total is not 131.');
+          foreach (['AR','BS'] as $iso2) {
+              $detail = \Illuminate\Support\Facades\Http::timeout(30)->get($apiBase . '/api/visa-requirements/' . $iso2, ['passport' => 'BGD', 'purpose' => 'tourism'])->throw()->json();
+              if (strtoupper((string) data_get($detail, 'data.country.iso2')) !== $iso2) throw new RuntimeException('Public API detail identity mismatch for ' . $iso2);
+              if (data_get($detail, 'data.verification_status') !== 'verified' || ! data_get($detail, 'data.is_published')) throw new RuntimeException('Public API publication mismatch for ' . $iso2);
+              if ($iso2 === 'AR' && (! data_get($detail, 'data.visa_required') || data_get($detail, 'data.visa_free_available') || data_get($detail, 'data.evisa_available') || data_get($detail, 'data.visa_on_arrival_available'))) throw new RuntimeException('Argentina public API route flags mismatch.');
+              if ($iso2 === 'BS' && (data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.visa_free_available') || data_get($detail, 'data.evisa_available') || data_get($detail, 'data.visa_on_arrival_available'))) throw new RuntimeException('Bahamas public API route flags mismatch.');
+          }
+          $result['public_api_total'] = data_get($list, 'meta.total');
+          $result['public_api_details_verified'] = ['AR','BS'];
+          echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          PHP
+          php -l /tmp/batch38-readback.php >/dev/null
+          php /tmp/batch38-readback.php > /tmp/batch38-readback.json
+          php -r '$j=json_decode(file_get_contents("/tmp/batch38-import-result.json"),true); if (!is_array($j) || ($j["rows"]??0)!==2 || !empty($j["failures"]) || ($j["read_back"]??0)!==2 || ($j["reverified"]??0)!==2 || ($j["republished"]??0)!==2) { fwrite(STDERR, json_encode($j)); exit(1); }'
+          python3 -m json.tool /tmp/batch38-readback.json > /dev/null
+          mkdir -p /var/www/unigo/backend/shared/imports
+          cp /tmp/batch38-import-result.json /var/www/unigo/backend/shared/imports/batch38-import-result.json
+          cp /tmp/batch38-readback.json /var/www/unigo/backend/shared/imports/batch38-readback.json
+          cp /tmp/batch38-audit-after.txt /var/www/unigo/backend/shared/imports/batch38-post-import-audit.txt
+          cat /tmp/batch38-readback.json
+          REMOTE
+          python3 -m json.tool batch38-production-result.json > /dev/null
+          cat batch38-production-result.json
+
+      - name: Upload non-sensitive audit and verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unigo-batch-38-audit-results
+          path: |
+            backup-meta.json
+            restore-test-counts.txt
+            staging-migrations.txt
+            staging-seeder.log
+            staging-dry-run.json
+            staging-server.log
+            batch38-production-result.json
+          if-no-files-found: warn
+          retention-days: 30
