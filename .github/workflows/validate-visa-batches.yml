@@ -49,7 +49,7 @@ jobs:
       - name: Set up PHP for importer syntax validation
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
+          php-version: '8.4'
           extensions: mbstring, pdo_mysql, pdo_sqlite, sqlite3, bcmath, curl, xml, zip
       - name: Validate importer PHP syntax
         run: |
