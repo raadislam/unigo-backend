@@ -96,9 +96,9 @@ jobs:
           scp -P "$VPS_PORT" database/data/country_discovery_ledger.csv "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/country_discovery_ledger.csv"
       - name: Fresh production preflight and dry-run
         env:
-          VPS_HOST: \${{ secrets.VPS_HOST }}
-          VPS_PORT: \${{ secrets.VPS_PORT }}
-          VPS_USER: \${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
           set +e
@@ -170,9 +170,9 @@ jobs:
       - name: Create fresh production backup
         id: backup
         env:
-          VPS_HOST: \${{ secrets.VPS_HOST }}
-          VPS_PORT: \${{ secrets.VPS_PORT }}
-          VPS_USER: \${{ secrets.VPS_USER }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
           ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > backup-meta.json <<'REMOTE'
