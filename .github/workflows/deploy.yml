@@ -144,7 +144,12 @@ jobs:
 
           composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
-          php artisan migrate --force
+          MIGRATION_STATUS="$(php artisan migrate:status --no-ansi)"
+          printf '%s\n' "$MIGRATION_STATUS"
+          if printf '%s\n' "$MIGRATION_STATUS" | grep -q 'Pending'; then
+            echo "Pending migrations detected. Use a separately reviewed migration workflow after a fresh backup and isolated restore test."
+            exit 1
+          fi
 
           php artisan config:clear
           php artisan route:clear
@@ -164,140 +169,6 @@ jobs:
         run: |
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit'
 
-      - name: Validate official fee and processing-time batch
-        id: validate_fee_batch
-        continue-on-error: true
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_fee_processing_batch_01.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_fee_processing_batch_01.csv --base-url=https://api.unigo-bd.com --dry-run; else echo "No pending visa research CSV."; fi'
-
-      - name: Import official fee and processing-time batch
-        if: steps.validate_fee_batch.outcome == 'success'
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_fee_processing_batch_01.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_fee_processing_batch_01.csv --base-url=https://api.unigo-bd.com; else echo "No pending visa research CSV."; fi'
-
-      - name: Validate full audit batch 02 for Japan and Australia
-        id: validate_audit_02
-        continue-on-error: true
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_02.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_02.csv --base-url=https://api.unigo-bd.com --dry-run; else echo "No pending full-audit batch."; fi'
-
-      - name: Import full audit batch 02 for Japan and Australia
-        if: steps.validate_audit_02.outcome == 'success'
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_02.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_02.csv --base-url=https://api.unigo-bd.com; else echo "No pending full-audit batch."; fi'
-
-      - name: Seed newly researched country records
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/new_country_visa_batch.csv ]; then mkdir -p storage/app/imports && cp database/data/new_country_visa_batch.csv storage/app/imports/unigo_visa_requirements_research_template.csv && php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force; else echo "No new-country seed batch."; fi'
-
-      - name: Validate new-country full audit batch 03
-        id: validate_audit_03
-        continue-on-error: true
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_03.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_03.csv --base-url=https://api.unigo-bd.com --dry-run; else echo "No new-country full-audit batch."; fi'
-
-      - name: Import and publish new-country full audit batch 03
-        if: steps.validate_audit_03.outcome == 'success'
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_03.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_03.csv --base-url=https://api.unigo-bd.com; else echo "No new-country full-audit batch."; fi'
-
-      - name: Validate Schengen full audit batch 04
-        id: validate_audit_04
-        continue-on-error: true
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_04.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_04.csv --base-url=https://api.unigo-bd.com --dry-run; else echo "No Schengen full-audit batch."; fi'
-
-      - name: Import and publish Schengen full audit batch 04
-        if: steps.validate_audit_04.outcome == 'success'
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_04.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_04.csv --base-url=https://api.unigo-bd.com; else echo "No Schengen full-audit batch."; fi'
-
-      - name: Validate remaining-country full audit batch 05
-        id: validate_audit_05
-        continue-on-error: true
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_05.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_05.csv --base-url=https://api.unigo-bd.com --dry-run; else echo "No remaining-country full-audit batch."; fi'
-
-      - name: Import and publish remaining-country full audit batch 05
-        if: steps.validate_audit_05.outcome == 'success'
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && if [ -f database/data/visa_full_audit_batch_05.csv ]; then php artisan visa:requirements-import-research --file=database/data/visa_full_audit_batch_05.csv --base-url=https://api.unigo-bd.com; else echo "No remaining-country full-audit batch."; fi'
-
-      - name: Enrich published visa records with verified photo specifications and applicant checklists
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan db:seed --class=VisaPhotoChecklistSupplementSeeder --force'
-
-      - name: Import detailed applicant checklists from uploaded PDFs
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan db:seed --class=UploadedAgencyVisaChecklistSeeder --force'
-
-      - name: Repair primary official sources for Korea and Singapore
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan db:seed --class=VisaPrimarySourceRepairSeeder --force'
-
-      - name: Verify imported visa records by readback
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit'
       - name: Verify public country directory and visa requirement API
         run: |
           python3 - <<'PY'
