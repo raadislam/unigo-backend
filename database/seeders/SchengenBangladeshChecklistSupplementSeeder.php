@@ -5,12 +5,15 @@ namespace Database\Seeders;
 use App\Models\VisaRequirement;
 use App\Models\VisaRequirementSource;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class SchengenBangladeshChecklistSupplementSeeder extends Seeder
 {
     public function run(): void
     {
-        $checkedAt = '2026-11-15 00:00:00';
+        DB::beginTransaction();
+        try {
+            $checkedAt = '2026-11-15 00:00:00';
 
         $groups = [
             'DE' => [
@@ -484,6 +487,11 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     ]
                 );
             }
+        }
+            DB::commit();
+        } catch (\Throwable $exception) {
+            DB::rollBack();
+            throw $exception;
         }
     }
 }
