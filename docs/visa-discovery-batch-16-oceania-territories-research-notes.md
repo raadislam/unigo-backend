@@ -126,3 +126,25 @@ The country-table `is_published` flag is separate from the visa-requirement publ
 The last successful frontend parity run confirmed 41 generated pages, 41 sitemap entries and 41 live pages. The backend API audit later confirmed 41 public destinations. No new records were imported, so no frontend build or deployment was performed in this batch.
 
 **Batch 16 records are research-ready only. Production database import, readback, verification and publication remain separate steps and have not occurred.**
+
+
+## 2026-11-15 follow-up — Niue (NU)
+
+**Outcome:** Bangladesh ordinary-passport tourism route is now established from the current Government of Niue visitor-visa form and travel guidance, but the record remains research-complete / unpublished because the official sources conflict on passport validity and the form omits the fee currency.
+
+- **Visa route:** Bangladesh does not appear in the published visa-waiver list. The official Niue travel guidance says all other travellers must apply for a visitor visa before travel. Do not describe this as visa-free or visa-on-arrival.
+- **Application:** Government of Niue Visitor's Visa application form (Niue Immigration – Finance and Planning): https://www.niueisland.com/library/files/niuevisitorsvisaapplicationform1.pdf. Submit a completed and signed form, passport bio-page copy, itinerary and booked-accommodation confirmation; the form says payment confirmation and supporting documents are to be sent to Immigration.Niue@gov.nu. It gives the Niue High Commission address in Wellington for the account and lists an application fee of 27 per application, but does not specify the currency.
+- **Processing:** the form states 7–14 days if the application form is complete and all required documents are provided together.
+- **Stay:** the Immigration Act defines a visitor as a person entering for a period not exceeding 30 days; the actual temporary permit controls the lawful stay and its expiry.
+- **Passport validity conflict:** Niue Tourism's current visitor guidance says passports must be valid for at least 3 months from arrival. Section 29(1)(a) of the Immigration Act 2011 (official Ministry of Finance PDF updated October 2026) requires a visa or temporary-permit holder's passport to be valid for at least 6 months after the visa or permit expires. This is a material conflict; do not publish a single passport rule until the Chief Immigration Officer confirms how the two statements apply to ordinary visitors.
+- **Other entry conditions:** pre-booked accommodation for the entire stay is mandatory; sufficient funds may be requested; return/onward tickets are required and visitors without them may be refused; travel insurance including medical evacuation is strongly advised. The published visitor visa checklist does not list a separate passport-style photo or any photo dimensions. This is not proof that Immigration cannot request one.
+- **Transit:** under section 34 of the Act, the transit exemption applies only while the passenger remains on the arriving craft or in an immigration place and departs within 24 hours; after 24 hours the passenger is deemed to have arrived and must comply with ordinary entry requirements.
+- **Production decision:** no production import was made. Niue's country row already exists, but no BGD tourism requirement was added. The record stays pending until written confirmation of the 3-month versus 6-month passport rule and the currency of the 27 fee.
+
+### Official source register checked 15 November 2026
+
+1. Government of Niue, Visitor's Visa Application Form (3 pages): https://www.niueisland.com/library/files/niuevisitorsvisaapplicationform1.pdf
+2. Government of Niue, Ministry of Finance, Immigration Act 2011 (official PDF, October 2026): https://mof.gov.nu/wp-content/uploads/2026/10/Immigration-Act-2011.pdf
+3. Niue Tourism, Travelling to Niue — entry/visa requirements, accommodation, passport validity and return-ticket guidance: https://www.niueisland.com/discover-niue/travelling-to-niue
+4. Government of Niue, Niue Immigration Department — official contact and legislation: https://mof.gov.nu/immigration/
+
