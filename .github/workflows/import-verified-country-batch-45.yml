@@ -409,7 +409,7 @@ jobs:
             echo "Pending production migrations detected after backup; refusing import."
             exit 1
           fi
-          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $taCountry=\App\Models\Country::where("iso2","TA")->exists(); $taRows=$rows->filter(fn($r)=>$r->country?->iso2==="TA"); $taRecord=$taRows->first(); $taPending=$taRecord && $taRecord->verification_status==="pending_review" && !(bool)$taRecord->is_published; $clean=\App\Models\Country::count()===250 && $rows->count()===135 && $published===133 && $pending===2 && !$taCountry && $taRows->count()===0; $countryOnly=\App\Models\Country::count()===251 && $rows->count()===135 && $published===133 && $pending===2 && $taCountry && $taRows->count()===0; $requirementPending=\App\Models\Country::count()===251 && $rows->count()===136 && $published===133 && $pending===3 && $taCountry && $taRows->count()===1 && $taPending; if(!$clean && !$countryOnly && !$requirementPending) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA_country_exists"=>$taCountry,"TA_requirement_count"=>$taRows->count()])); exit(1); } echo "PRODUCTION_PREWRITE_COUNTS_RECONFIRMED TA_PARTIAL_RECOVERY_ALLOWED".PHP_EOL;'
+          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $taCountry=\App\Models\Country::where("iso2","TA")->exists(); $taRows=$rows->filter(fn($r)=>$r->country?->iso2==="TA"); $taRecord=$taRows->first(); $taPending=$taRecord && $taRecord->verification_status==="pending_review" && !(bool)$taRecord->is_published; $clean=\App\Models\Country::count()===250 && $rows->count()===135 && $published===133 && $pending===2 && !$taCountry && $taRows->count()===0; $countryOnly=\App\Models\Country::count()===251 && $rows->count()===135 && $published===133 && $pending===2 && $taCountry && $taRows->count()===0; $requirementPending=\App\Models\Country::count()===251 && $rows->count()===136 && $published===133 && $pending===3 && $taCountry && $taRows->count()===1 && $taPending; if(!$clean && !$countryOnly && !$requirementPending) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA_country_exists"=>$taCountry,"TA_requirement_count"=>$taRows->count()])); exit(1); } fwrite(STDERR, "PRODUCTION_PREWRITE_COUNTS_RECONFIRMED TA_PARTIAL_RECOVERY_ALLOWED" . PHP_EOL);'
           install -m 0644 /tmp/TristanDaCunhaCountryBackfillSeeder.php database/seeders/TristanDaCunhaCountryBackfillSeeder.php
           install -m 0644 /tmp/verified_seed_batch_45.csv storage/app/imports/unigo_visa_requirements_research_template.csv
           install -m 0644 /tmp/verified_full_audit_batch_45.csv storage/app/imports/verified_full_audit_batch_45.csv
@@ -419,11 +419,12 @@ jobs:
           APP_ROOT="$APP" php /tmp/batch45-repair-source.php > /tmp/batch45-source-repair.json
           python3 - <<'PY'
           import json
+          import sys
           from pathlib import Path
           data = json.loads(Path("/tmp/batch45-source-repair.json").read_text())
           if data.get("result") != "TRISTAN_CROSS_CHECK_SOURCE_REPAIRED" or data.get("source_type") != "official" or data.get("source_url") != "https://www.tristandc.com/visitsadmin.php":
               raise SystemExit("The production TA cross-check source repair failed: " + json.dumps(data))
-          print("PRODUCTION_OFFICIAL_CROSS_CHECK_SOURCE_CONFIRMED", json.dumps(data))
+          print("PRODUCTION_OFFICIAL_CROSS_CHECK_SOURCE_CONFIRMED", json.dumps(data), file=sys.stderr)
           PY
           touch /tmp/batch45-import-started.marker
           php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_45.csv > /tmp/batch45-import-result.json
