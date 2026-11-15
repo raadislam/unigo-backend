@@ -69,11 +69,11 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           workflow = Path(".github/workflows/import-verified-country-batch-38.yml").read_text()
-          marker = "cat > /tmp/batch38-readback.php <<'PHP'\\n"
+          marker = "cat > /tmp/batch38-readback.php <<'PHP'\n"
           start = workflow.index(marker) + len(marker)
-          end = workflow.index("\\n          PHP\\n", start)
+          end = workflow.index("\n          PHP\n", start)
           lines = workflow[start:end].splitlines()
-          php = "\\n".join(line[10:] if line.startswith("          ") else line for line in lines) + "\\n"
+          php = "\n".join(line[10:] if line.startswith("          ") else line for line in lines) + "\n"
           Path("/tmp/batch38-readback.php").write_text(php)
           PY
           php -l /tmp/batch38-readback.php
