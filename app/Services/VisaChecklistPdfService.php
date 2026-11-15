@@ -42,7 +42,7 @@ class VisaChecklistPdfService
         $pdf->SetAutoPageBreak(true, 34);
         $pdf->setPrintHeader(true);
         $pdf->setPrintFooter(true);
-        $pdf->SetFont('helvetica', '', 11);
+        $pdf->SetFont('dejavusans', '', 11);
         $pdf->AddPage();
 
         $html = $this->buildHtml($requirement, $options);
@@ -64,6 +64,8 @@ class VisaChecklistPdfService
         $html = '<h1 style="color:#082b4c;font-size:17pt;">'.$this->escape($country).' Visa Checklist</h1>';
         $html .= '<p style="font-size:10pt;color:#526579;">Bangladeshi ordinary passport | '.ucfirst($this->escape((string) $requirement->travel_purpose)).'</p>';
         $html .= $this->section('Visa route and conditions', [
+            'Passport nationality' => $requirement->passport_nationality_name ?? 'Bangladesh',
+            'Passport nationality code' => $requirement->passport_nationality_iso3,
             'Requirement type' => $requirement->requirement_type,
             'Visa required' => $this->boolean($requirement->visa_required),
             'Visa-free available' => $this->boolean($requirement->visa_free_available),
@@ -80,10 +82,14 @@ class VisaChecklistPdfService
         if ($scope !== 'sponsor') {
             $html .= $this->section('Required documents', $requirement->required_documents ?? []);
             $profiles = $requirement->applicant_checklists ?? [];
+            $selectedOccupation = $options['applicant_occupation'] ?? null;
             foreach ($profiles as $profile) {
                 $type = is_array($profile) ? ($profile['applicant_type'] ?? 'Applicant') : 'Applicant';
                 $documents = is_array($profile) ? ($profile['documents'] ?? []) : [];
-                $html .= '<h2>'. $this->escape(ucwords(str_replace(['_', '-'], ' ', $type))).' checklist</h2>';
+                $normalType = strtolower(str_replace([' ', '-'], '_', $type));
+                $isSelected = $selectedOccupation && ($normalType === $selectedOccupation || ($selectedOccupation === 'business' && (str_contains($normalType, 'business') || str_contains($normalType, 'self_employed'))));
+                $profileTitle = ucwords(str_replace(['_', '-'], ' ', $type)).($isSelected ? ' (selected profile)' : '');
+                $html .= '<h2>'.$this->escape($profileTitle).' checklist</h2>';
                 $html .= $this->documentList($documents);
                 $html .= $this->section('Checklist source', [
                     'Source' => $profile['source_name'] ?? null,
@@ -138,6 +144,7 @@ class VisaChecklistPdfService
                 $url = $this->escape($source->source_url);
                 $html .= '<a href="'.$url.'">'.$url.'</a><br />';
             }
+            $html .= 'Primary source: '.($source->is_primary ? 'Yes' : 'No').'<br />';
             $html .= 'Last checked: '.$this->escape((string) $source->source_last_checked_at).'</p>';
         }
         $html .= '<p style="font-size:9pt;color:#526579;">Conditional and if-applicable documents must be prepared only when the stated circumstances apply. Requirements, fees and processing times can change. Confirm the latest instructions with the responsible authority before applying.</p>';
