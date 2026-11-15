@@ -29,6 +29,7 @@ on:
       - 'app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php'
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
+      - '.github/workflows/import-verified-country-batch-38.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
 
 permissions:
