@@ -518,6 +518,20 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                 );
             }
 
+            if ($iso2 === 'IT') {
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => 'https://mofa-servicedirectory.apostille.mygov.bd/eapostille'],
+                    [
+                        'source_type' => 'official',
+                        'source_name' => 'Bangladesh Ministry of Foreign Affairs — e-Apostille portal',
+                        'source_url' => 'https://mofa-servicedirectory.apostille.mygov.bd/eapostille',
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => 'Official Bangladesh portal for e-Apostille services. Use only for documents that the receiving Italian authority requires to be apostilled.',
+                    ]
+                );
+            }
+
             if ($iso2 === 'HR') {
                 VisaRequirementSource::updateOrCreate(
                     ['visa_requirement_id' => $requirement->id, 'source_url' => 'https://mvep.gov.hr/services-consular-portal/consular-information-22802/visas-22807/visa-requirements-overview-22879/22879?country=159'],
