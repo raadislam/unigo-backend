@@ -15,7 +15,7 @@ The Council of the EU confirms 29 Schengen countries, including Bulgaria and Rom
 |---|---|---|
 | Austria | France represents Austria for short-stay Schengen visas | France-Visas/VFS France Bangladesh process. Use the France-Visas personalised checklist; do not use Austria's separate long-stay VFS page as a Type C checklist. |
 | Belgium | VFS Belgium Bangladesh | VFS gives photo and biometric guidance but points applicants to the Belgian Embassy in New Delhi for the document list. Do not copy India-only apostille instructions into Bangladesh requirements. |
-| Bulgaria | No Bangladesh VFS checklist or local representation found in the reviewed sources | Destination-specific Bangladesh checklist remains unverified; direct applicants to the competent Bulgarian mission. |
+| Bulgaria | VFS Global Bangladesh is the official partner of the Embassy of Bulgaria | Bangladesh VFS portal is confirmed. The portal is dynamically served; the accessible text confirms a digital photograph is captured at the VAC, but does not expose printed-photo dimensions/count or the full tourism checklist. Check the live Tourism category before applying. |
 | Croatia | Croatian Embassy in New Delhi / VFS Croatia Bangladesh | Croatian MFA confirms Bangladesh applicants can submit at VFS Dhaka. Tourist checklist and photo specification are published; the one-pager has some generic India-oriented wording, so confirm the live Bangladesh appointment instructions. Apostille may be requested for supporting documents; conditional, not automatic. |
 | Czechia | France represents Czechia for short-stay Schengen visas | France-Visas/VFS France Bangladesh process; use personalised checklist. Documents in Czech must be translated into French or English. |
 | Denmark | Danish Embassy / VFS Denmark Bangladesh | Tourism checklist published. Denmark also represents Norway. |
@@ -23,7 +23,7 @@ The Council of the EU confirms 29 Schengen countries, including Bulgaria and Rom
 | Finland | Sweden represents Finland | Sweden VFS Bangladesh checklist and photo guidance apply to represented short-stay cases. |
 | France | VFS France Bangladesh / France-Visas | Applicant-specific checklist generated through France-Visas. Static VFS page directs applicants to France-Visas. |
 | Germany | German Embassy / VFS Germany Bangladesh | January 2026 tourism checklist published. |
-| Greece | No Bangladesh VFS checklist or local representation found in the reviewed sources | Destination-specific Bangladesh checklist remains unverified; direct applicants to the competent Greek mission. |
+| Greece | VFS Global Bangladesh is the official partner of the Embassy of Greece | Bangladesh VFS portal is confirmed. The accessible page does not expose the current tourism checklist or photo specification; treat those fields as unverified until the live category checklist is checked. |
 | Hungary | Swiss Embassy represents Hungary for short-stay Schengen tourism | Swiss Embassy Dhaka tourism checklist explicitly covers Switzerland, Liechtenstein and Hungary. |
 | Iceland | Sweden represents Iceland | Sweden VFS Bangladesh checklist and photo guidance apply to represented short-stay cases. |
 | Italy | Italian Embassy / VFS Italy Bangladesh | Tourism checklist published. It expressly requires apostilles for specified civil-status documents and certain minor-related documents. |
@@ -43,7 +43,7 @@ The Council of the EU confirms 29 Schengen countries, including Bulgaria and Rom
 | Sweden | Swedish Embassy / VFS Sweden Bangladesh | Tourism checklist and photo guidance published. From 15 October 2026, decisions are made by the Swedish Migration Agency, not the Embassy in Dhaka. |
 | Switzerland | Swiss Embassy Dhaka | Tourism checklist published; includes Hungary and Liechtenstein. |
 
-## Verified photo details captured
+## Coverage status\n\n- 27 of 29 Schengen destinations have a Bangladesh VFS route or a verified short-stay representation/application route identified in this audit.\n- Bulgaria and Greece have direct VFS Bangladesh portals, but their dynamically served tourism checklist details were not extractable from the accessible page text. Bulgaria confirms a digital photo capture at the VAC.\n- Lithuania and Romania remain without a Bangladesh-specific VFS/competent-mission tourism checklist located in this review; keep their destination-specific checklist and photo fields unverified.\n\n## Verified photo details captured
 
 - Germany / Estonia route: one recent biometric photograph, 35 × 45 mm, white background, face coverage 70–80%; the Estonia restriction above still applies.
 - Denmark / Norway route: one colour photograph, 35 × 45 mm, light background, head length 30–36 mm, no older than six months.
@@ -56,7 +56,7 @@ The Council of the EU confirms 29 Schengen countries, including Bulgaria and Rom
 - France / Austria / Czechia / Portugal: France-Visas generates the applicable personalised checklist; the Bangladesh VFS static page does not publish a complete country-specific printed-photo specification. Do not copy another country's measurements.
 - Spain: Embassy guidance says recent colour passport-size photograph on a light background; the cited page does not publish an exact dimension or maximum age.
 - Belgium: VFS states that a live digital photograph is captured at the appointment; the photo-count instruction is still route-dependent.
-- Bulgaria, Greece, Lithuania and Romania: exact Bangladesh-route photo specifications were not verified in the reviewed VFS/mission sources. Keep photo details unverified rather than assuming 35 × 45 mm.
+- Bulgaria: VFS confirms a digital photo is captured at the Bangladesh VAC, but the accessible portal does not state printed-photo dimensions or copy count.\n- Greece: the Bangladesh VFS portal is confirmed, but exact tourism photo specifications were not retrievable from the accessible page.\n- Lithuania and Romania: exact Bangladesh-route photo specifications were not verified. Keep them unverified rather than assuming 35 × 45 mm.
 
 ## Apostille and legalisation findings
 
@@ -85,7 +85,7 @@ Bangladesh's Apostille Convention status: the Convention entered into force for 
 - Italy Embassy Dhaka — apostille requirement for Bangladeshi public documents, effective June 2025: https://ambdhaka.esteri.it/en/servizi-consolari-e-visti/
 - Croatia VFS — Bangladesh visa information, photo and conditional apostille guidance: https://visa.vfsglobal.com/one-pager/croatia/bangladesh/english/
 - Croatian Ministry of Foreign Affairs — Bangladesh visa requirements and VFS Dhaka submission: https://mvep.gov.hr/services-consular-portal/consular-information-22802/visas-22807/visa-requirements-overview-22879/22879?country=159
-- Belgium VFS — Bangladesh visa information and photo specification: https://visa.vfsglobal.com/one-pager/belgium/bangladesh/english/index.html
+- Belgium VFS — Bangladesh visa information and photo specification: https://visa.vfsglobal.com/one-pager/belgium/bangladesh/english/index.html\n- Bulgaria VFS — official partner of the Embassy of Bulgaria in Bangladesh: https://visa.vfsglobal.com/bgd/en/bgr/\n- Bulgaria VFS — photo captured at the Bangladesh VAC: https://visa.vfsglobal.com/bgd/en/bgr/attend-centre/what-happens-at-centre\n- Greece VFS — official partner of the Embassy of Greece in Bangladesh: https://visa.vfsglobal.com/bgd/en/grc/
 - France VFS Bangladesh: https://visa.vfsglobal.com/bgd/en/fra
 - France-Visas Bangladesh: https://france-visas.gouv.fr/en/bangladesh
 - Spain Embassy Dhaka — Schengen visas: https://www.exteriores.gob.es/Embajadas/dhaka/en/ServiciosConsulares/Paginas/Consular/Visados-Schengen.aspx

@@ -272,6 +272,40 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                 ],
                 'notes' => 'VFS Belgium Bangladesh publishes photo, insurance, biometric and return-ties guidance but refers applicants to the Embassy of Belgium in New Delhi for the category-specific supporting document list. The VFS page contains an apostille paragraph referring to India’s Ministry of External Affairs; it must not be treated as a Bangladesh apostille instruction.',
             ],
+            'BG' => [
+                'countries' => ['BG'],
+                'representation' => 'VFS Global Bangladesh is the official partner of the Embassy of Bulgaria in Bangladesh',
+                'source_name' => 'VFS Global — Bulgaria Visa Application Centre Bangladesh',
+                'source_url' => 'https://visa.vfsglobal.com/bgd/en/bgr/',
+                'source_type' => 'provider',
+                'photo' => [
+                    'status' => 'partially_specified',
+                    'route' => 'Bulgaria short-stay application through VFS Global Bangladesh',
+                    'captured_at_vac' => true,
+                    'copies' => 'VFS states that a digital photograph is captured at the appointment. The accessible Bangladesh portal does not state the printed-photo size or count.',
+                    'notes' => 'The VFS Bangladesh centre page confirms a digital photograph is captured during biometric submission. Exact printed-photo dimensions and copy count were not available in the accessible Bangladesh portal text. Confirm the current Tourism category checklist before attending.',
+                    'source_name' => 'VFS Global — Bulgaria Bangladesh, what happens at the centre',
+                    'source_url' => 'https://visa.vfsglobal.com/bgd/en/bgr/attend-centre/what-happens-at-centre',
+                ],
+                'documents' => [],
+                'notes' => 'VFS Global confirms it is the official partner of the Embassy of Bulgaria in Bangladesh. The Bangladesh portal dynamically serves category-specific documents; its full tourism checklist was not extractable in this review. The displayed checklist therefore contains the common EU Visa Code baseline and applicant-profile evidence only. Confirm the current Tourism category list with VFS before submission. No Bangladesh-specific apostille rule was verified.',
+            ],
+            'GR' => [
+                'countries' => ['GR'],
+                'representation' => 'VFS Global is the official partner of the Embassy of Greece in Bangladesh',
+                'source_name' => 'VFS Global — Greece Visa Application Centre Bangladesh',
+                'source_url' => 'https://visa.vfsglobal.com/bgd/en/grc/',
+                'source_type' => 'provider',
+                'photo' => [
+                    'status' => 'not_verified',
+                    'route' => 'Greece short-stay application through VFS Global Bangladesh',
+                    'notes' => 'The VFS Bangladesh portal confirms the official application channel, but the accessible page did not expose the current tourism photo specifications or whether a printed photograph is required. Confirm the live Tourism category checklist before submission.',
+                    'source_name' => 'VFS Global — Greece Bangladesh visa information',
+                    'source_url' => 'https://visa.vfsglobal.com/bgd/en/grc/',
+                ],
+                'documents' => [],
+                'notes' => 'VFS Global confirms it is the official partner of the Embassy of Greece in Bangladesh. The accessible Bangladesh portal is dynamically served and the current Tourism checklist could not be retrieved in this review. The displayed checklist contains the common EU Visa Code baseline and applicant-profile evidence only; confirm the current category-specific list with VFS before submission. No Bangladesh-specific apostille rule was verified.',
+            ],
             'FR' => [
                 'countries' => ['FR', 'AT', 'CZ', 'PT'],
                 'representation' => 'Embassy of France / VFS France Bangladesh; France represents Austria, Czechia and Portugal for short-stay Schengen visas',
@@ -322,8 +356,6 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
         ];
 
         $unverified = [
-            'BG' => 'No Bangladesh-specific VFS or competent-mission tourism checklist was located in this review. Do not infer photo dimensions or apostille requirements. Check the competent Bulgarian mission before advising applicants.',
-            'GR' => 'No Bangladesh-specific VFS or competent-mission tourism checklist was located in this review. Do not infer photo dimensions or apostille requirements. Check the competent Greek mission before advising applicants.',
             'LT' => 'No Bangladesh-specific VFS or competent-mission tourism checklist was located in this review. Do not infer photo dimensions or apostille requirements. Check the competent Lithuanian mission before advising applicants.',
             'RO' => 'No Bangladesh-specific VFS or competent-mission tourism checklist was located in this review. Do not infer photo dimensions or apostille requirements. Check the competent Romanian mission before advising applicants.',
         ];
@@ -410,7 +442,7 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
             }
 
             $countryBaseDocuments = $baseDocuments;
-            if (isset($unverified[$iso2])) {
+            if (($photo['status'] ?? '') === 'not_verified') {
                 $countryBaseDocuments[2]['status'] = 'conditional';
                 $countryBaseDocuments[2]['notes'] = 'The Bangladesh-route photo requirement and specifications have not been verified in the reviewed mission/provider sources. Confirm the current competent-mission checklist before submission.';
             }
@@ -422,7 +454,9 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
             $requirement->forceFill([
                 'photo_specifications' => $photo,
                 'required_documents' => collect($requirement->required_documents ?? [])
-                    ->when(in_array($photo['status'] ?? '', ['verified', 'partially_specified'], true), fn ($items) => $items->merge(['Recent colour photograph meeting the destination-specific Schengen photo rules or live-photo capture instruction']))
+                    ->when($iso2 === 'NL', fn ($items) => $items->merge(['Live digital photograph captured at the VFS appointment; a printed photo is not required when this live-photo route is used']))
+                    ->when($iso2 === 'BG', fn ($items) => $items->merge(['Digital photograph captured at the VFS Bangladesh appointment; the accessible portal does not state printed-photo size/count, so verify the live Tourism checklist']))
+                    ->when(in_array($photo['status'] ?? '', ['verified', 'partially_specified'], true) && ! in_array($iso2, ['NL', 'BG'], true), fn ($items) => $items->merge(['Recent colour photograph meeting the destination-specific Schengen photo rules or live-photo capture instruction']))
                     ->when($iso2 === 'IT', fn ($items) => $items->merge(['Apostilled English translations of civil-status documents and specified minor-related documents, only where applicable under the Italy VFS checklist']))
                     ->when($iso2 === 'HR', fn ($items) => $items->merge(['Apostille/international certification of supporting public documents if specifically requested by the Croatian Embassy']))
                     ->unique()

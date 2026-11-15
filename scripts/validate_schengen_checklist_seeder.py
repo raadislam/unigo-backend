@@ -31,7 +31,7 @@ for applicant_type in ("employee", "self_employed_or_business_owner", "student",
     if f"'{applicant_type}' => [" not in source:
         raise SystemExit(f"Applicant checklist profile missing: {applicant_type}")
 
-for code in ("BG", "GR", "LT", "RO"):
+for code in ("LT", "RO"):
     if f"'{code}' => 'No Bangladesh-specific" not in source:
         raise SystemExit(f"Unverified country status missing: {code}")
 
@@ -53,4 +53,10 @@ if "status' => 'not_verified'" not in source or "status' => 'partially_specified
 if "2026-11-15" not in source:
     raise SystemExit("Checklist research date is missing")
 
-print("SCHENGEN_CHECKLIST_COVERAGE_OK countries=29 verified_routes=25 unverified_routes=4 profiles=4 apostille=country_specific")
+if "VFS Global — Bulgaria Visa Application Centre Bangladesh" not in source or "VFS Global — Greece Visa Application Centre Bangladesh" not in source:
+    raise SystemExit("Bulgaria or Greece Bangladesh VFS route is missing")
+
+if "captured_at_vac" not in source or "The accessible Bangladesh portal does not state the printed-photo size or count" not in source:
+    raise SystemExit("Bulgaria live-photo capture limitation is not documented")
+
+print("SCHENGEN_CHECKLIST_COVERAGE_OK countries=29 verified_routes=27 unverified_routes=2 profiles=4 apostille=country_specific")
