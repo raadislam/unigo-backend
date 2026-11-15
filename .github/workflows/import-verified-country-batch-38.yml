@@ -584,7 +584,7 @@ jobs:
           PHP
           php -l /tmp/batch38-readback.php >/dev/null
           php /tmp/batch38-readback.php > /tmp/batch38-readback.json
-          php -r '$j=json_decode(file_get_contents("/tmp/batch38-import-result.json"),true); if (!is_array($j) || ($j["rows"]??0)!==2 || !empty($j["failures"]) || ($j["read_back"]??0)!==2 || ($j["reverified"]??0)!==2 || ($j["republished"]??0)!==2) { fwrite(STDERR, json_encode($j)); exit(1); }'
+          php -r '$j=json_decode(file_get_contents("/tmp/batch38-import-result.json"),true); if (!is_array($j) || ($j["rows"]??0)!==2 || !empty($j["failures"]) || ($j["read_back"]??0)!==2 || ($j["reverified"]??0)!==2 || ($j["republished"]??0)!==2) { fwrite(STDERR, "BATCH38_IMPORT_RESULT_MISMATCH " . json_encode($j) . PHP_EOL); exit(1); }'
           python3 -m json.tool /tmp/batch38-readback.json > /dev/null
           mkdir -p /var/www/unigo/backend/shared/imports
           cp /tmp/batch38-import-result.json /var/www/unigo/backend/shared/imports/batch38-import-result.json
