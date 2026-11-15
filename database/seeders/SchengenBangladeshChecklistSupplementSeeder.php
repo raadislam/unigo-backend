@@ -550,6 +550,30 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
             );
 
             if ($iso2 === 'IT') {
+                $vfsChecklistUrl = 'https://visa.vfsglobal.com/one-pager/italy/bangladesh/english/pdf/TURISM_updated.pdf';
+                $embassyChecklistUrl = 'https://ambdhaka.esteri.it/wp-content/uploads/2026/01/TOURISM_updated.pdf';
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => $embassyChecklistUrl],
+                    [
+                        'source_type' => 'official',
+                        'source_name' => 'Embassy of Italy in Dhaka — Check-list for Tourism Visa',
+                        'source_url' => $embassyChecklistUrl,
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => 'Official Embassy-hosted copy of the Bangladesh tourism checklist. Cross-checked against the VFS Global Bangladesh PDF; both expose the same 12 numbered requirements, including civil-status apostilles, minor-specific apostilles and the residence-permit requirement for non-Bangladeshi applicants.',
+                    ]
+                );
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => 'https://visa.vfsglobal.com/one-pager/italy/bangladesh/english/index.html'],
+                    [
+                        'source_type' => 'provider',
+                        'source_name' => 'VFS Global — Italy Bangladesh Visa Information',
+                        'source_url' => 'https://visa.vfsglobal.com/one-pager/italy/bangladesh/english/index.html',
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => 'VFS Bangladesh tourism category page identifies the Italy tourism route, links to the downloadable checklist and states appointment/submission guidance. The downloadable checklist PDF is the document-level checklist source.',
+                    ]
+                );
                 $apostilleUrl = 'https://ambdhaka.esteri.it/en/servizi-consolari-e-visti/';
                 VisaRequirementSource::updateOrCreate(
                     ['visa_requirement_id' => $requirement->id, 'source_url' => $apostilleUrl],
