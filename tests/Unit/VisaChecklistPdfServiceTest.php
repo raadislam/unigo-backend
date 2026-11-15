@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Country;
 use App\Models\VisaRequirement;
 use App\Services\VisaChecklistPdfService;
+use InvalidArgumentException;
 use setasign\Fpdi\Tcpdf\Fpdi;
 use Tests\TestCase;
 
