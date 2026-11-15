@@ -36,7 +36,38 @@ for code in ("LT", "RO"):
         raise SystemExit(f"Unverified country status missing: {code}")
 
 if "if ($iso2 === 'IT')" not in source:
-    raise SystemExit("Italy-specific apostille condition is missing")
+    raise SystemExit("Italy-specific checklist condition is missing")
+
+italy_requirements = [
+    "40 × 35 mm",
+    "Two recent and identical photographs",
+    "who will pay travel and stay costs",
+    "City Corporation-issued trade licence",
+    "RJSC-issued certificate of incorporation",
+    "Personal bank statement issued by any bank operating in Bangladesh for the last 6 months",
+    "Fidejussione Bancaria",
+    "Passenger Registration Number or Reservation Number",
+    "accommodation for the entire period of stay in all Schengen Member States",
+    "hospitalisation and repatriation for at least EUR 30,000",
+    "marriage certificate",
+    "divorce certificate",
+    "spouse death certificate",
+    "original consent of both parents or custodian",
+    "photocopies of both parents’ passports",
+    "proof of financial means of both parents or legal guardian",
+    "original birth certificate issued by the relevant authority",
+    "competent Bangladeshi courts proving legal-guardian status",
+    "only one apostille for each submitted document is accepted",
+    "valid Bangladeshi residence permit",
+    "https://visa.vfsglobal.com/one-pager/italy/bangladesh/english/pdf/TURISM_updated.pdf",
+    "https://ambdhaka.esteri.it/wp-content/uploads/2026/01/TOURISM_updated.pdf",
+]
+for requirement in italy_requirements:
+    if requirement.lower() not in source.lower():
+        raise SystemExit(f"Italy VFS checklist detail or source missing: {requirement}")
+
+if "The VFS English passport-validity wording says three months beyond visa validity" not in source:
+    raise SystemExit("Italy passport-validity language discrepancy must be disclosed")
 
 if "if ($iso2 === 'HR')" not in source:
     raise SystemExit("Croatia conditional apostille condition is missing")
