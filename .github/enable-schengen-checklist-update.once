@@ -1,1 +1,0 @@
-This one-time marker authorizes the Schengen Bangladesh checklist seeder to run after the backend deployment from the reviewed pull request completes successfully. The workflow removes this file after verified production readback.
