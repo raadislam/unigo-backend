@@ -217,7 +217,7 @@ jobs:
           $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
           $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
           $countryCount = \App\Models\Country::query()->count();
-          $records = \App\Models\VisaRequirement::query()->with('country:id,name,iso2')->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->get();
+          $records = \App\Models\VisaRequirement::query()->with(['country:id,name,iso2','sources'])->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->get();
           $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published)->count();
           $pending = $records->count() - $published;
           $duplicates = \Illuminate\Support\Facades\DB::table('visa_requirements')->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->select('country_id', 'passport_nationality_iso3', 'travel_purpose')->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')->havingRaw('COUNT(*) > 1')->count();
@@ -225,8 +225,21 @@ jobs:
           $zwCountry = \App\Models\Country::query()->where('iso2', 'ZW')->first();
           $ug = $records->filter(fn ($row) => $row->country?->iso2 === 'UG');
           $zw = $records->filter(fn ($row) => $row->country?->iso2 === 'ZW');
-          $result = ['country_count'=>$countryCount,'requirement_count'=>$records->count(),'source_count'=>\Illuminate\Support\Facades\DB::table('visa_requirement_sources')->count(),'published_count'=>$published,'pending_count'=>$pending,'duplicate_keys'=>$duplicates,'UG_country_present'=>(bool)$ugCountry,'ZW_country_present'=>(bool)$zwCountry,'UG_requirement_count'=>$ug->count(),'ZW_requirement_count'=>$zw->count()];
-          if ($countryCount !== 250 || $records->count() !== 133 || $published !== 130 || $pending !== 3 || $duplicates !== 0 || ! $ugCountry || ! $zwCountry || $ug->count() !== 0 || $zw->count() !== 0) { fwrite(STDERR,json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL); exit(1); }
+          $ugRow = $ug->first();
+          $zwRow = $zw->first();
+          $initialState = $records->count() === 133 && $published === 130 && $pending === 3 && $ug->count() === 0 && $zw->count() === 0;
+          $hasPrimary = fn ($row, $url) => $row && $row->sources->contains(fn ($source) => $source->source_type === 'official' && (bool) $source->is_primary && $source->source_url === $url);
+          $retryState = $records->count() === 135 && $published === 130 && $pending === 5 && $ug->count() === 1 && $zw->count() === 1
+              && $ugRow->verification_status === 'pending_review' && ! (bool) $ugRow->is_published
+              && $zwRow->verification_status === 'pending_review' && ! (bool) $zwRow->is_published
+              && $ugRow->visa_required && $ugRow->evisa_available && ! $ugRow->visa_free_available && ! $ugRow->visa_on_arrival_available
+              && $zwRow->visa_required && $zwRow->evisa_available && ! $zwRow->visa_free_available && ! $zwRow->visa_on_arrival_available
+              && $hasPrimary($ugRow, 'https://www.immigration.go.ug/services/tourist-visa')
+              && $hasPrimary($zwRow, 'https://www.zimimmigration.gov.zw/?p=7196')
+              && $ugRow->sources->where('source_type', 'official')->count() >= 7
+              && $zwRow->sources->where('source_type', 'official')->count() >= 6;
+          $result = ['country_count'=>$countryCount,'requirement_count'=>$records->count(),'source_count'=>\Illuminate\Support\Facades\DB::table('visa_requirement_sources')->count(),'published_count'=>$published,'pending_count'=>$pending,'duplicate_keys'=>$duplicates,'UG_country_present'=>(bool)$ugCountry,'ZW_country_present'=>(bool)$zwCountry,'UG_requirement_count'=>$ug->count(),'ZW_requirement_count'=>$zw->count(),'preflight_state'=>$retryState ? 'exact_batch_41_retry' : ($initialState ? 'clean_initial' : 'rejected')];
+          if ($countryCount !== 250 || $duplicates !== 0 || ! $ugCountry || ! $zwCountry || ! ($initialState || $retryState)) { fwrite(STDERR,json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL); exit(1); }
           echo json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES);
           PHP
           php -l /tmp/batch41-preflight.php >/dev/null
