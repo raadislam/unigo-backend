@@ -30,6 +30,7 @@ class VisaChecklistPdfService
         };
 
         $pdf->letterheadPath = resource_path('pdf/unigo-letterhead.svg');
+        $pdf->SetCompression(false);
         $pdf->SetCreator('UniGo');
         $pdf->SetAuthor('UniGo Tours & Travels');
         $pdf->SetTitle(($requirement->country?->name ?? 'Destination').' visa checklist');
