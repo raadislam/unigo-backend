@@ -72,7 +72,8 @@ for marker in (
     if marker not in notes:
         raise SystemExit(f"Batch 46 notes are missing the required safety statement: {marker}")
 
-if "scanned JPEG photo" not in row.get("photo_summary", "") or "no fixed dimensions" not in row.get("photo_summary", ""):
+photo_summary = row.get("photo_summary", "").lower()
+if "scanned jpeg photo" not in photo_summary or "no fixed dimensions" not in photo_summary:
     raise SystemExit("Batch 46 photo summary is incomplete or overstates a printed-photo rule.")
 
 if "GBP 500000" not in row.get("checklist_summary", "") or "Bangladesh-specific applicability remains unconfirmed" not in row.get("checklist_summary", ""):
