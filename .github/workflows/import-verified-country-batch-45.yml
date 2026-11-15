@@ -38,6 +38,7 @@ jobs:
           php -l database/seeders/TristanDaCunhaCountryBackfillSeeder.php
           php -l database/seeders/ImportMajorVisaRequirementsSeeder.php
           php -l scripts/batch45_readback.php
+          php -l scripts/batch45_repair_source.php
           php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
       - name: Validate workflow syntax and create immutable allowlist artifact
         run: |
@@ -47,6 +48,7 @@ jobs:
           cp database/data/new_country_visa_batch_45.csv verified-batch-45/verified_seed_batch_45.csv
           cp database/data/visa_full_audit_batch_45.csv verified-batch-45/verified_full_audit_batch_45.csv
           cp scripts/batch45_readback.php verified-batch-45/
+          cp scripts/batch45_repair_source.php verified-batch-45/
           python3 - <<'PY'
           import csv
           import hashlib
@@ -55,8 +57,8 @@ jobs:
 
           root = Path("verified-batch-45")
           files = sorted(path for path in root.iterdir() if path.is_file())
-          if len(files) != 4:
-              raise SystemExit("Batch 45 artifact must contain exactly four reviewed files.")
+          if len(files) != 5:
+              raise SystemExit("Batch 45 artifact must contain exactly five reviewed files.")
           for name in ("verified_seed_batch_45.csv", "verified_full_audit_batch_45.csv"):
               with (root / name).open(encoding="utf-8-sig", newline="") as handle:
                   rows = list(csv.DictReader(handle))
@@ -100,7 +102,7 @@ jobs:
               actual = hashlib.sha256((Path("verified-batch-45") / name).read_bytes()).hexdigest()
               if actual != expected:
                   raise SystemExit(f"Batch 45 artifact checksum mismatch: {name}")
-          if set(manifest) != {"TristanDaCunhaCountryBackfillSeeder.php", "verified_seed_batch_45.csv", "verified_full_audit_batch_45.csv", "batch45_readback.php"}:
+          if set(manifest) != {"TristanDaCunhaCountryBackfillSeeder.php", "verified_seed_batch_45.csv", "verified_full_audit_batch_45.csv", "batch45_readback.php", "batch45_repair_source.php"}:
               raise SystemExit("Batch 45 artifact file allowlist changed.")
           print("BATCH45_ARTIFACT_CHECKSUMS_VERIFIED")
           PY
@@ -160,7 +162,14 @@ jobs:
               ->select('country_id', 'passport_nationality_iso3', 'travel_purpose')
               ->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')->havingRaw('COUNT(*) > 1')->count();
           $taCountry = \App\Models\Country::query()->where('iso2', 'TA')->exists();
-          $taRecords = $records->filter(fn ($row) => $row->country?->iso2 === 'TA')->count();
+          $taRows = $records->filter(fn ($row) => $row->country?->iso2 === 'TA');
+          $taRecords = $taRows->count();
+          $taRecord = $taRows->first();
+          $taPending = $taRecord && $taRecord->verification_status === 'pending_review' && ! (bool) $taRecord->is_published;
+          $clean = $countryCount === 250 && $records->count() === 135 && $published === 133 && $pending === 2 && ! $taCountry && $taRecords === 0;
+          $countryOnly = $countryCount === 251 && $records->count() === 135 && $published === 133 && $pending === 2 && $taCountry && $taRecords === 0;
+          $requirementPending = $countryCount === 251 && $records->count() === 136 && $published === 133 && $pending === 3 && $taCountry && $taRecords === 1 && $taPending;
+          $preflightState = $clean ? 'clean' : ($countryOnly ? 'country_only' : ($requirementPending ? 'requirement_pending' : 'blocked'));
           $result = [
               'country_count' => $countryCount,
               'requirement_count' => $records->count(),
@@ -170,8 +179,10 @@ jobs:
               'duplicate_keys' => $duplicates,
               'TA_country_exists' => $taCountry,
               'TA_requirement_count' => $taRecords,
+              'preflight_state' => $preflightState,
+              'TA_partial_recovery_allowed' => true,
           ];
-          if ($countryCount !== 250 || $records->count() !== 135 || $published !== 133 || $pending !== 2 || $duplicates !== 0 || $taCountry || $taRecords !== 0) {
+          if ($duplicates !== 0 || (! $clean && ! $countryOnly && ! $requirementPending)) {
               fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
               exit(1);
           }
@@ -331,6 +342,15 @@ jobs:
           cp verified-batch-45/verified_full_audit_batch_45.csv storage/app/imports/verified_full_audit_batch_45.csv
           php artisan db:seed --class=TristanDaCunhaCountryBackfillSeeder --force > staging-country-seeder.log
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > staging-requirement-seeder.log
+          APP_ROOT="$PWD" php scripts/batch45_repair_source.php > staging-source-repair.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("staging-source-repair.json").read_text())
+          if data.get("result") != "TRISTAN_CROSS_CHECK_SOURCE_REPAIRED" or data.get("source_type") != "official" or data.get("source_url") != "https://www.tristandc.com/visitsadmin.php":
+              raise SystemExit("The official TA cross-check source repair failed: " + json.dumps(data))
+          print("STAGING_OFFICIAL_CROSS_CHECK_SOURCE_CONFIRMED", json.dumps(data))
+          PY
           php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $ta=$rows->filter(fn($r)=>$r->country?->iso2==="TA"); if(\App\Models\Country::count()!==251 || $rows->count()!==136 || $published!==133 || $pending!==3 || $ta->count()!==1 || $ta->first()->verification_status!=="pending_review" || (bool)$ta->first()->is_published) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA"=>$ta->count()])); exit(1); } echo "STAGING_SEED_READBACK countries=251 requirements=136 published=133 pending=3 TA=1".PHP_EOL;'
           nohup php artisan serve --host=127.0.0.1 --port=8000 > staging-server.log 2>&1 &
           for attempt in $(seq 1 60); do
@@ -371,6 +391,7 @@ jobs:
           scp -P "$VPS_PORT" verified-batch-45/verified_seed_batch_45.csv "$VPS_USER@$VPS_HOST:/tmp/verified_seed_batch_45.csv"
           scp -P "$VPS_PORT" verified-batch-45/verified_full_audit_batch_45.csv "$VPS_USER@$VPS_HOST:/tmp/verified_full_audit_batch_45.csv"
           scp -P "$VPS_PORT" verified-batch-45/batch45_readback.php "$VPS_USER@$VPS_HOST:/tmp/batch45-readback.php"
+          scp -P "$VPS_PORT" verified-batch-45/batch45_repair_source.php "$VPS_USER@$VPS_HOST:/tmp/batch45-repair-source.php"
       - name: Execute allowlisted production import and immediate database/API readback
         id: production
         env:
@@ -388,13 +409,22 @@ jobs:
             echo "Pending production migrations detected after backup; refusing import."
             exit 1
           fi
-          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $taCountry=\App\Models\Country::where("iso2","TA")->exists(); if(\App\Models\Country::count()!==250 || $rows->count()!==135 || $published!==133 || $pending!==2 || $taCountry) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA_country_exists"=>$taCountry])); exit(1); } echo "PRODUCTION_PREWRITE_COUNTS_RECONFIRMED".PHP_EOL;'
+          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $taCountry=\App\Models\Country::where("iso2","TA")->exists(); $taRows=$rows->filter(fn($r)=>$r->country?->iso2==="TA"); $taRecord=$taRows->first(); $taPending=$taRecord && $taRecord->verification_status==="pending_review" && !(bool)$taRecord->is_published; $clean=\App\Models\Country::count()===250 && $rows->count()===135 && $published===133 && $pending===2 && !$taCountry && $taRows->count()===0; $countryOnly=\App\Models\Country::count()===251 && $rows->count()===135 && $published===133 && $pending===2 && $taCountry && $taRows->count()===0; $requirementPending=\App\Models\Country::count()===251 && $rows->count()===136 && $published===133 && $pending===3 && $taCountry && $taRows->count()===1 && $taPending; if(!$clean && !$countryOnly && !$requirementPending) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA_country_exists"=>$taCountry,"TA_requirement_count"=>$taRows->count()])); exit(1); } echo "PRODUCTION_PREWRITE_COUNTS_RECONFIRMED TA_PARTIAL_RECOVERY_ALLOWED".PHP_EOL;'
           install -m 0644 /tmp/TristanDaCunhaCountryBackfillSeeder.php database/seeders/TristanDaCunhaCountryBackfillSeeder.php
           install -m 0644 /tmp/verified_seed_batch_45.csv storage/app/imports/unigo_visa_requirements_research_template.csv
           install -m 0644 /tmp/verified_full_audit_batch_45.csv storage/app/imports/verified_full_audit_batch_45.csv
           php artisan optimize:clear >/dev/null
           php artisan db:seed --class=TristanDaCunhaCountryBackfillSeeder --force > /tmp/batch45-country-seeder.log
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > /tmp/batch45-requirement-seeder.log
+          APP_ROOT="$APP" php /tmp/batch45-repair-source.php > /tmp/batch45-source-repair.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("/tmp/batch45-source-repair.json").read_text())
+          if data.get("result") != "TRISTAN_CROSS_CHECK_SOURCE_REPAIRED" or data.get("source_type") != "official" or data.get("source_url") != "https://www.tristandc.com/visitsadmin.php":
+              raise SystemExit("The production TA cross-check source repair failed: " + json.dumps(data))
+          print("PRODUCTION_OFFICIAL_CROSS_CHECK_SOURCE_CONFIRMED", json.dumps(data))
+          PY
           touch /tmp/batch45-import-started.marker
           php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_45.csv > /tmp/batch45-import-result.json
           php -r '$j=json_decode(file_get_contents("/tmp/batch45-import-result.json"),true); if(!is_array($j)||($j["rows"]??0)!==1||($j["read_back"]??0)!==1||($j["reverified"]??0)!==1||($j["republished"]??0)!==1||!empty($j["failures"])) { fwrite(STDERR,"BATCH45_IMPORT_RESULT_MISMATCH ".json_encode($j).PHP_EOL); exit(1); }'
@@ -403,11 +433,13 @@ jobs:
           python3 -m json.tool /tmp/batch45-readback.json > /dev/null
           mkdir -p /var/www/unigo/backend/shared/imports
           cp /tmp/batch45-import-result.json /var/www/unigo/backend/shared/imports/batch45-import-result.json
+          cp /tmp/batch45-source-repair.json /var/www/unigo/backend/shared/imports/batch45-source-repair.json
           cp /tmp/batch45-readback.json /var/www/unigo/backend/shared/imports/batch45-readback.json
           cp /tmp/batch45-audit-after.json /var/www/unigo/backend/shared/imports/batch45-post-import-audit.json
           cat /tmp/batch45-readback.json
           REMOTE
           python3 -m json.tool batch45-production-result.json > /dev/null
+          scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/tmp/batch45-source-repair.json" batch45-source-repair.json
           cat batch45-production-result.json
       - name: Withhold batch 45 if production import or readback fails
         if: failure() && steps.production.outcome == 'failure'
@@ -438,6 +470,12 @@ jobs:
               raise SystemExit("Batch 45 unpublish-only safety readback failed: " + json.dumps(data))
           print("BATCH45_FAILED_RECORD_WITHHELD", json.dumps(data))
           PY
+          BATCH_HASH="$(sha256sum /tmp/verified_full_audit_batch_45.csv | awk '{print $1}')"
+          MARKER="storage/logs/visa-imports-${BATCH_HASH}.json"
+          if [ -f "$MARKER" ]; then
+            rm "$MARKER"
+            echo "BATCH45_REIMPORT_MARKER_CLEARED"
+          fi
           REMOTE
       - name: Upload non-sensitive audit and verification artifacts
         if: always()
@@ -452,7 +490,9 @@ jobs:
             staging-requirement-seeder.log
             staging-dry-run.json
             staging-import-result.json
+            staging-source-repair.json
             staging-audit.json
+            batch45-source-repair.json
             staging-readback.json
             batch45-production-result.json
           if-no-files-found: warn
