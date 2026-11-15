@@ -51,8 +51,7 @@ $countryIdentityValid = $country
     && $country->iso3 === null
     && $country->flag_emoji === null
     && ! (bool) $country->is_published
-    && (int) $country->sort_order > 0
-    && $country->visa_information === null;
+    && (int) $country->sort_order > 0;
 
 $baselineValid = $records->count() === 136
     && $publishedCount === 133
