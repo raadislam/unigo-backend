@@ -8,6 +8,7 @@ on:
       - 'database/data/vfs_bangladesh_destination_coverage.csv'
       - 'database/data/vfs_fee_processing_snapshot_20261114.csv'
       - 'database/data/country_discovery_ledger.csv'
+      - 'database/data/destination_discovery_batch_*.csv'
       - 'database/seeders/KosovoCountryBackfillSeeder.php'
       - 'database/data/new_country_visa_batch_*.csv'
       - 'database/data/visa_full_audit_batch_*.csv'
