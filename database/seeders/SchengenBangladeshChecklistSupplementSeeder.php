@@ -396,12 +396,12 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                 $notes = $unverified[$iso2];
             } else {
                 $details = $data[$iso2];
-                $photo = array_merge($details['photo'], ['checked_at' => '2026-11-15']);
+                $photo = array_merge($details['photo'], ['representation' => $details['representation'], 'checked_at' => '2026-11-15']);
                 $documents = array_merge($baseDocuments, $details['documents'] ?? []);
                 $sourceName = $details['source_name'];
                 $sourceUrl = $details['source_url'];
                 $sourceType = $details['source_type'];
-                $notes = $details['notes'];
+                $notes = $details['representation'] . '. ' . $details['notes'];
             }
 
             $countryBaseDocuments = $baseDocuments;
