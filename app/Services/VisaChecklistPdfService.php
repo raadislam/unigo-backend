@@ -44,6 +44,21 @@ class VisaChecklistPdfService
         $pdf->SetFont('helvetica', '', 11);
         $pdf->AddPage();
 
+        $html = $this->buildHtml($requirement, $options);
+
+        $pdf->writeHTML($html, true, false, true, false, '');
+        $slug = $requirement->country?->slug ?? '';
+        $url = 'https://unigo-bd.com/visa-services/'.$slug.'/';
+        $pdf->Ln(2);
+        $pdf->SetFont('helvetica', '', 9);
+        $pdf->Cell(0, 6, 'Scan for the latest UniGo destination guide', 0, 1, 'L');
+        $pdf->write2DBarcode($url, 'QRCODE,H', '', '', 24, 24, ['border' => 0, 'padding' => 1], 'N');
+
+        return $pdf->Output('', 'S');
+    }
+
+    public function buildHtml(VisaRequirement $requirement, array $options = []): string
+    {
         $country = $requirement->country?->name ?? 'Destination';
         $html = '<h1 style="color:#082b4c;font-size:17pt;">'.$this->escape($country).' Visa Checklist</h1>';
         $html .= '<p style="font-size:10pt;color:#526579;">Bangladeshi ordinary passport | '.ucfirst($this->escape((string) $requirement->travel_purpose)).'</p>';
@@ -126,15 +141,7 @@ class VisaChecklistPdfService
         }
         $html .= '<p style="font-size:9pt;color:#526579;">Conditional and if-applicable documents must be prepared only when the stated circumstances apply. Requirements, fees and processing times can change. Confirm the latest instructions with the responsible authority before applying.</p>';
 
-        $pdf->writeHTML($html, true, false, true, false, '');
-        $slug = $requirement->country?->slug ?? '';
-        $url = 'https://unigo-bd.com/visa-services/'.$slug.'/';
-        $pdf->Ln(2);
-        $pdf->SetFont('helvetica', '', 9);
-        $pdf->Cell(0, 6, 'Scan for the latest UniGo destination guide', 0, 1, 'L');
-        $pdf->write2DBarcode($url, 'QRCODE,H', '', '', 24, 24, ['border' => 0, 'padding' => 1], 'N');
-
-        return $pdf->Output('', 'S');
+        return $html;
     }
 
     private function section(string $title, array $values): string
