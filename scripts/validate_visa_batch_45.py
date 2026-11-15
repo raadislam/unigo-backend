@@ -1,5 +1,6 @@
 import csv
 import json
+import re
 import subprocess
 import textwrap
 from pathlib import Path
@@ -102,16 +103,11 @@ for required in ("mysqldump", "gzip -t", "docker run", "--dry-run", "--unpublish
         raise SystemExit(f"Batch 45 workflow is missing a required safety stage: {required}")
 
 for stage in ("preflight", "backup"):
-    start_marker = f"cat > /tmp/batch45-{stage}.php <<'PHP'\\n"
-    end_marker = "\\n          PHP\\n"
-    start = workflow.find(start_marker)
-    if start < 0:
+    pattern = rf"(?ms)^\\s*cat > /tmp/batch45-{stage}\\.php <<'PHP'\\n(.*?)^\\s*PHP$"
+    match = re.search(pattern, workflow)
+    if not match:
         raise SystemExit(f"Batch 45 workflow is missing the embedded {stage} PHP script.")
-    start += len(start_marker)
-    end = workflow.find(end_marker, start)
-    if end < 0:
-        raise SystemExit(f"Batch 45 workflow has an unterminated {stage} PHP heredoc.")
-    source = textwrap.dedent(workflow[start:end]) + "\\n"
+    source = textwrap.dedent(match.group(1)) + "\\n"
     target = Path(f"/tmp/unigo-batch45-{stage}.php")
     target.write_text(source, encoding="utf-8")
     subprocess.run(["php", "-l", str(target)], check=True)
