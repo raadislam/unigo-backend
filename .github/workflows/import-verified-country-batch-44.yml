@@ -33,8 +33,8 @@ jobs:
           from pathlib import Path
 
           today = date.today().isoformat()
-          seed_path = "database/data/new_country_visa_batch_38.csv"
-          audit_path = "database/data/visa_full_audit_batch_38.csv"
+          seed_path = "database/data/new_country_visa_batch_44.csv"
+          audit_path = "database/data/visa_full_audit_batch_44.csv"
 
           def read_rows(path):
               with open(path, newline="", encoding="utf-8-sig") as handle:
@@ -111,8 +111,8 @@ jobs:
           out = Path("verified-batch-44")
           out.mkdir(exist_ok=True)
           for filename, headers, rows in (
-              ("verified_seed_batch_38.csv", seed_headers, seed_rows),
-              ("verified_full_audit_batch_38.csv", audit_headers, audit_rows),
+              ("verified_seed_batch_44.csv", seed_headers, seed_rows),
+              ("verified_full_audit_batch_44.csv", audit_headers, audit_rows),
           ):
               with open(out / filename, "w", newline="", encoding="utf-8") as handle:
                   writer = csv.DictWriter(handle, fieldnames=headers, extrasaction="ignore")
@@ -394,8 +394,8 @@ jobs:
             exit 1
           fi
           mkdir -p storage/app/imports
-          cp verified-batch-44/verified_seed_batch_38.csv storage/app/imports/unigo_visa_requirements_research_template.csv
-          cp verified-batch-44/verified_full_audit_batch_38.csv storage/app/imports/verified_full_audit_batch_38.csv
+          cp verified-batch-44/verified_seed_batch_44.csv storage/app/imports/unigo_visa_requirements_research_template.csv
+          cp verified-batch-44/verified_full_audit_batch_44.csv storage/app/imports/verified_full_audit_batch_44.csv
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > staging-seeder.log
           php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $bs=$rows->filter(fn($r)=>$r->country?->iso2==="BS")->count(); if($rows->count()!==135 || $bs!==1) { fwrite(STDERR,json_encode(["total"=>$rows->count(),"BS"=>$bs])); exit(1); } echo "STAGING_SEED_READBACK total=135 BS=1".PHP_EOL;'
           nohup php artisan serve --host=127.0.0.1 --port=8000 > staging-server.log 2>&1 &
@@ -406,7 +406,7 @@ jobs:
             sleep 2
           done
           curl -fsS http://127.0.0.1:8000/up >/dev/null
-          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_38.csv --base-url=http://127.0.0.1:8000 --dry-run > staging-dry-run.json
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_44.csv --base-url=http://127.0.0.1:8000 --dry-run > staging-dry-run.json
           python3 -m json.tool staging-dry-run.json > /dev/null
           python3 - <<'PY'
           import json
@@ -424,8 +424,8 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          scp -P "$VPS_PORT" verified-batch-44/verified_seed_batch_38.csv "$VPS_USER@$VPS_HOST:/tmp/verified_seed_batch_38.csv"
-          scp -P "$VPS_PORT" verified-batch-44/verified_full_audit_batch_38.csv "$VPS_USER@$VPS_HOST:/tmp/verified_full_audit_batch_38.csv"
+          scp -P "$VPS_PORT" verified-batch-44/verified_seed_batch_44.csv "$VPS_USER@$VPS_HOST:/tmp/verified_seed_batch_44.csv"
+          scp -P "$VPS_PORT" verified-batch-44/verified_full_audit_batch_44.csv "$VPS_USER@$VPS_HOST:/tmp/verified_full_audit_batch_44.csv"
           scp -P "$VPS_PORT" app/Console/Commands/VisaRequirementResearchCsvImportCommand.php "$VPS_USER@$VPS_HOST:/tmp/VisaRequirementResearchCsvImportCommand.php"
 
       - name: Execute allowlisted production import and readback
@@ -445,13 +445,13 @@ jobs:
           install -m 0644 /tmp/VisaRequirementResearchCsvImportCommand.php app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
           rm -f /tmp/VisaRequirementResearchCsvImportCommand.php
           php artisan optimize:clear >/dev/null
-          install -m 0644 /tmp/verified_seed_batch_38.csv storage/app/imports/unigo_visa_requirements_research_template.csv
-          install -m 0644 /tmp/verified_full_audit_batch_38.csv storage/app/imports/verified_full_audit_batch_38.csv
+          install -m 0644 /tmp/verified_seed_batch_44.csv storage/app/imports/unigo_visa_requirements_research_template.csv
+          install -m 0644 /tmp/verified_full_audit_batch_44.csv storage/app/imports/verified_full_audit_batch_44.csv
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > /tmp/batch44-seeder.log
           rm -f /tmp/batch44-import-started.marker /tmp/batch44-import-result.json /tmp/batch44-readback.json
           touch /tmp/batch44-import-started.marker
           set +e
-          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_38.csv > /tmp/batch44-import-result.json
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_44.csv > /tmp/batch44-import-result.json
           IMPORT_EXIT=$?
           set -e
           mkdir -p /var/www/unigo/backend/shared/imports
@@ -585,7 +585,7 @@ jobs:
             echo "BATCH44_IMPORT_NOT_STARTED; no rollback needed"
             exit 0
           fi
-          if [ ! -f /tmp/verified_full_audit_batch_38.csv ]; then
+          if [ ! -f /tmp/verified_full_audit_batch_44.csv ]; then
             echo "NO_BATCH44_IMPORT_FILE_STAGED; no batch 44 production rows could have been imported"
             exit 0
           fi
@@ -598,8 +598,8 @@ jobs:
           if not codes:
               print("NO_BATCH44_RECORDS_TO_UNPUBLISH")
               raise SystemExit(0)
-          source=Path("/tmp/verified_full_audit_batch_38.csv")
-          target=Path("/tmp/verified_full_audit_batch_38_rollback.csv")
+          source=Path("/tmp/verified_full_audit_batch_44.csv")
+          target=Path("/tmp/verified_full_audit_batch_44_rollback.csv")
           with source.open(newline="",encoding="utf-8-sig") as f:
               reader=csv.DictReader(f)
               headers=reader.fieldnames
@@ -612,7 +612,7 @@ jobs:
               writer.writerows(rows)
           print("BATCH44_ROLLBACK_ALLOWLIST",",".join(sorted(codes)))
           PY
-          php artisan visa:requirements-import-research --file=/tmp/verified_full_audit_batch_38_rollback.csv --unpublish-only > /tmp/batch44-unpublish-result.json
+          php artisan visa:requirements-import-research --file=/tmp/verified_full_audit_batch_44_rollback.csv --unpublish-only > /tmp/batch44-unpublish-result.json
           mkdir -p /var/www/unigo/backend/shared/imports
           cp /tmp/batch44-unpublish-result.json /var/www/unigo/backend/shared/imports/batch44-unpublish-result.json
           python3 - <<'PY'
