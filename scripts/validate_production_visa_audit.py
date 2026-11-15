@@ -265,7 +265,12 @@ def main():
     if ledger_represented_codes != set(published_codes):
         fail("Discovery ledger represented codes do not match active verified BGD tourism records.")
     if ledger_pending_db_codes != pending_codes:
-        fail("Discovery ledger pending_db_record codes do not match pending, expired or unpublished BGD tourism records.")
+        missing_from_ledger = sorted(pending_codes - ledger_pending_db_codes)
+        stale_in_ledger = sorted(ledger_pending_db_codes - pending_codes)
+        fail(
+            "Discovery ledger pending_db_record codes do not match pending, expired or unpublished BGD tourism records. "
+            f"Missing from ledger: {missing_from_ledger}; stale in ledger: {stale_in_ledger}."
+        )
 
     all_bgd_codes = [
         str((row.get("country") or {}).get("iso2") or "").strip().upper()
