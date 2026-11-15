@@ -110,7 +110,7 @@ workflow = WORKFLOW.read_text(encoding="utf-8")
 for forbidden in ("migrate:fresh", "migrate:reset", "key:generate", "DROP TABLE", "TRUNCATE TABLE"):
     if forbidden.lower() in workflow.lower():
         raise SystemExit(f"Batch 45 workflow contains a forbidden destructive operation: {forbidden}")
-for required in ("mysqldump", "gzip -t", "docker run", "--dry-run", "--unpublish-only", "visa:requirements-audit", "batch45-readback.php", "batch45-repair-source.php", "TRISTAN_CROSS_CHECK_SOURCE_REPAIRED", "staging-source-repair.json", "TA_PARTIAL_RECOVERY_ALLOWED", "requirementPending", "BATCH45_REIMPORT_MARKER_CLEARED"):
+for required in ("mysqldump", "gzip -t", "docker run", "--dry-run", "--unpublish-only", "visa:requirements-audit", "batch45-readback.php", "batch45-repair-source.php", "TRISTAN_CROSS_CHECK_SOURCE_REPAIRED", "staging-source-repair.json", "TA_PARTIAL_RECOVERY_ALLOWED", "requirementPending", "BATCH45_REIMPORT_MARKER_CLEARED", "PRODUCTION_PREWRITE_COUNTS_RECONFIRMED", "file=sys.stderr", "fwrite(STDERR"):
     if required not in workflow:
         raise SystemExit(f"Batch 45 workflow is missing a required safety stage: {required}")
 
