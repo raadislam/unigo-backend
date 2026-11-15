@@ -15,7 +15,6 @@ on:
       - 'database/data/visa_full_audit_batch_55.csv'
       - 'scripts/validate_visa_batch_55.py'
       - 'scripts/batch55_readback.php'
-      - 'scripts/batch55_unpublish.php'
       - 'scripts/run-verified-country-import-batch-55.trigger'
   workflow_dispatch:
 
