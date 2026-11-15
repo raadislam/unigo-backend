@@ -34,6 +34,8 @@ on:
       - 'app/Console/Commands/VisaRequirementAuditCommand.php'
       - 'app/Http/Controllers/Api/Admin/VisaRequirementManagementController.php'
       - '.github/workflows/validate-visa-batches.yml'
+      - '.github/workflows/verify-verified-country-batch-*.yml'
+      - 'scripts/verify-verified-country-batch-*.trigger'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
       - 'docs/visa-discovery-batch-*.md'
       - 'docs/frontend-content-dispatch.trigger'
