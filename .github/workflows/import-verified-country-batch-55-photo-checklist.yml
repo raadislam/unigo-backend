@@ -1,0 +1,299 @@
+name: Import Malaysia photo and checklist review batch 55
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/run-verified-country-import-batch-55.trigger'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/import-verified-country-batch-55-photo-checklist.yml'
+      - '.github/workflows/deploy.yml'
+      - 'database/data/visa_full_audit_batch_55.csv'
+      - 'scripts/validate_visa_batch_55.py'
+      - 'scripts/batch55_readback.php'
+      - 'scripts/batch55_unpublish.php'
+      - 'scripts/run-verified-country-import-batch-55.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-backend-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: curl, fileinfo, intl, mbstring, pdo_mysql, xml, zip, bcmath
+          coverage: none
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate exact Malaysia allowlist and evidence payload
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/validate_visa_batch_55.py
+          python3 scripts/validate_visa_batch_55.py
+          php -l scripts/batch55_readback.php
+          php -l scripts/batch55_unpublish.php
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0), aliases: true); puts "Batch 55 workflow YAML syntax OK"' .github/workflows/import-verified-country-batch-55-photo-checklist.yml
+
+  guarded-import:
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+      - name: Set up PHP for isolated MySQL restore verification
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: curl, fileinfo, intl, mbstring, pdo_mysql, xml, zip, bcmath
+          coverage: none
+      - name: Set up Python for production audit validation
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Prepare authorized VPS connection
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+      - name: Trust configured VPS host
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Upload allowlisted batch and readback scripts
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          REMOTE_IMPORT_DIR=/var/www/unigo/backend/shared/imports
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$REMOTE_IMPORT_DIR'"
+          scp -P "$VPS_PORT" database/data/visa_full_audit_batch_55.csv "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/visa_full_audit_batch_55.csv"
+          scp -P "$VPS_PORT" scripts/batch55_readback.php "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/batch55_readback.php"
+          scp -P "$VPS_PORT" scripts/batch55_unpublish.php "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/batch55_unpublish.php"
+          scp -P "$VPS_PORT" scripts/validate_production_visa_audit.py "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/validate_production_visa_audit.py"
+          scp -P "$VPS_PORT" database/data/country_discovery_ledger.csv "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/country_discovery_ledger.csv"
+      - name: Fresh production preflight, dry-run and database backup
+        id: backup
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > backup-meta.json <<'REMOTE'
+          set -euo pipefail
+          umask 077
+          APP=/var/www/unigo/backend/current
+          SHARED=/var/www/unigo/backend/shared
+          IMPORT_DIR="$SHARED/imports"
+          cd "$APP"
+          php artisan migrate:status --no-ansi > /tmp/batch55-migrations-before.txt
+          if grep -q "Pending" /tmp/batch55-migrations-before.txt; then
+            echo "Pending production migrations detected; refusing batch 55."
+            exit 1
+          fi
+          APP_ROOT="$APP" php "$IMPORT_DIR/batch55_readback.php" preflight > /tmp/batch55-preflight.json
+          php artisan visa:requirements-import-research --file="$IMPORT_DIR/visa_full_audit_batch_55.csv" --dry-run > /tmp/batch55-dry-run.json
+          php -r '
+          $x=json_decode(file_get_contents("/tmp/batch55-dry-run.json"),true,512,JSON_THROW_ON_ERROR);
+          if (($x["mode"]??null)!=="dry_run" || ($x["rows"]??0)!==1 || ($x["failures"]??[])!==[]) {
+              fwrite(STDERR,"BATCH55_DRY_RUN_FAILED\n");
+              exit(1);
+          }
+          echo "BATCH55_DRY_RUN_PASSED rows=1\n";
+          '
+          mkdir -p "$SHARED/backups"
+          cat > /tmp/batch55-backup.php <<'PHP'
+          <?php
+          $root = '/var/www/unigo/backend/current';
+          chdir($root);
+          require $root . '/vendor/autoload.php';
+          $app = require $root . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $connection = config('database.connections.' . config('database.default'));
+          if (! is_array($connection) || ($connection['driver'] ?? '') !== 'mysql' || empty($connection['database']) || empty($connection['username'])) {
+              throw new RuntimeException('Configured production MySQL connection is incomplete.');
+          }
+          $quote = static fn ($value) => '"' . str_replace(["\\", '"'], ["\\\\", '\\"'], (string) $value) . '"';
+          $cnf = '/tmp/unigo-batch55-mysql.cnf';
+          $content = "[client]\n";
+          $content .= 'host=' . $quote($connection['host'] ?? '127.0.0.1') . "\n";
+          $content .= 'user=' . $quote($connection['username']) . "\n";
+          $content .= 'password=' . $quote($connection['password'] ?? '') . "\n";
+          $content .= 'port=' . $quote($connection['port'] ?? 3306) . "\n";
+          $content .= 'default-character-set=' . $quote($connection['charset'] ?? 'utf8mb4') . "\n";
+          if (! empty($connection['unix_socket'])) $content .= 'socket=' . $quote($connection['unix_socket']) . "\n";
+          if (file_put_contents($cnf, $content, LOCK_EX) === false) throw new RuntimeException('Unable to prepare protected MySQL client configuration.');
+          chmod($cnf, 0600);
+          $backupDir = '/var/www/unigo/backend/shared/backups';
+          $path = $backupDir . '/unigo-pre-photo-checklist-batch-55-' . gmdate('Ymd\THis\Z') . '.sql.gz';
+          $command = 'bash -o pipefail -c ' . escapeshellarg(
+              'mysqldump --defaults-extra-file=' . escapeshellarg($cnf) .
+              ' --single-transaction --routines --triggers --events --no-tablespaces --hex-blob --default-character-set=utf8mb4 ' .
+              escapeshellarg($connection['database']) . ' | gzip -1 > ' . escapeshellarg($path)
+          );
+          exec($command, $output, $status);
+          @unlink($cnf);
+          if ($status !== 0 || ! is_file($path) || filesize($path) < 1024) throw new RuntimeException('Production database backup creation failed.');
+          chmod($path, 0600);
+          exec('gzip -t ' . escapeshellarg($path), $gzipOutput, $gzipStatus);
+          if ($gzipStatus !== 0) throw new RuntimeException('Production backup gzip integrity check failed.');
+          $preflight = json_decode(file_get_contents('/tmp/batch55-preflight.json'), true);
+          if (! is_array($preflight) || ($preflight['mode'] ?? null) !== 'preflight') throw new RuntimeException('Batch 55 preflight did not pass.');
+          echo json_encode([
+              'preflight' => $preflight,
+              'backup_path' => $path,
+              'sha256' => hash_file('sha256', $path),
+              'size_bytes' => filesize($path),
+              'database_name' => $connection['database'],
+              'created_at_utc' => gmdate(DATE_ATOM),
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          PHP
+          php -l /tmp/batch55-backup.php >/dev/null
+          php /tmp/batch55-backup.php
+          REMOTE
+          python3 -m json.tool backup-meta.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("backup-meta.json").read_text())
+          preflight = data["preflight"]
+          if preflight.get("mode") != "preflight" or preflight.get("country_count") != 252 or preflight.get("requirement_count") != 136 or preflight.get("published_count") != 134 or preflight.get("pending_count") != 2 or preflight.get("source_count") != 916 or preflight.get("duplicate_keys") != 0:
+              raise SystemExit("BATCH55 production preflight changed; refusing production write.")
+          Path("backup-meta-summary.txt").write_text(data["backup_path"] + "\n" + data["sha256"] + "\n" + data["database_name"] + "\n")
+          print("PRODUCTION_BACKUP_CREATED", data["backup_path"])
+          print("PRODUCTION_BACKUP_SHA256", data["sha256"])
+          print("PRODUCTION_BACKUP_SIZE_BYTES", data["size_bytes"])
+          print("PRODUCTION_PREFLIGHT", json.dumps(preflight, sort_keys=True))
+          PY
+          BACKUP_PATH="$(sed -n '1p' backup-meta-summary.txt)"
+          BACKUP_SHA="$(sed -n '2p' backup-meta-summary.txt)"
+          scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" production-backup.sql.gz
+          echo "$BACKUP_SHA  production-backup.sql.gz" | sha256sum -c -
+          gzip -t production-backup.sql.gz
+          echo "backup_path=$BACKUP_PATH" >> "$GITHUB_OUTPUT"
+          echo "backup_sha256=$BACKUP_SHA" >> "$GITHUB_OUTPUT"
+          echo "database_name=$(sed -n '3p' backup-meta-summary.txt)" >> "$GITHUB_OUTPUT"
+      - name: Restore-test backup in isolated MySQL 8
+        env:
+          DB_NAME: ${{ steps.backup.outputs.database_name }}
+        run: |
+          set -euo pipefail
+          RESTORE_DB_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$RESTORE_DB_PASSWORD"
+          docker rm -f unigo-batch55-restore >/dev/null 2>&1 || true
+          docker run -d --name unigo-batch55-restore -e MYSQL_ROOT_PASSWORD="$RESTORE_DB_PASSWORD" -e MYSQL_DATABASE="$DB_NAME" -p 3307:3306 mysql:8.0
+          AUTH_READY=false
+          for attempt in $(seq 1 90); do
+            if docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch55-restore mysql -uroot -N -B -e "SELECT 1" >/dev/null 2>&1; then
+              AUTH_READY=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$AUTH_READY" != "true" ]; then
+            docker logs --tail 80 unigo-batch55-restore || true
+            echo "Isolated MySQL did not become ready for authenticated queries."
+            exit 1
+          fi
+          gzip -dc production-backup.sql.gz | docker exec -i -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch55-restore mysql -uroot "$DB_NAME"
+          RESTORE_COUNTS="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch55-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT (SELECT COUNT(*) FROM countries),(SELECT COUNT(*) FROM visa_requirements),(SELECT COUNT(*) FROM visa_requirement_sources),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND verification_status='verified' AND is_published=1),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND NOT (verification_status='verified' AND is_published=1)),(SELECT COUNT(*) FROM (SELECT country_id,passport_nationality_iso3,travel_purpose FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' GROUP BY country_id,passport_nationality_iso3,travel_purpose HAVING COUNT(*)>1) d);")"
+          echo "$RESTORE_COUNTS" > restore-test-counts.txt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          actual = list(map(int, Path("restore-test-counts.txt").read_text().split()))
+          expected = json.loads(Path("backup-meta.json").read_text())["preflight"]
+          keys = ("country_count", "requirement_count", "source_count", "published_count", "pending_count", "duplicate_keys")
+          for index, key in enumerate(keys):
+              if actual[index] != expected[key]:
+                  raise SystemExit(f"Restore mismatch for {key}: expected {expected[key]}, got {actual[index]}")
+          print("ISOLATED_MYSQL_RESTORE_COUNTS_MATCH_PRODUCTION_PREFLIGHT", json.dumps(dict(zip(keys, actual))))
+          PY
+          echo "RESTORE_TEST_PASSED=true" >> "$GITHUB_ENV"
+          docker rm -f unigo-batch55-restore >/dev/null 2>&1 || true
+      - name: Withhold conflicting Malaysia record and import researched fields
+        if: env.RESTORE_TEST_PASSED == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          BACKUP_PATH: ${{ steps.backup.outputs.backup_path }}
+          BACKUP_SHA256: ${{ steps.backup.outputs.backup_sha256 }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          SHARED=/var/www/unigo/backend/shared
+          IMPORT_DIR="$SHARED/imports"
+          cd "$APP"
+          APP_ROOT="$APP" php "$IMPORT_DIR/batch55_unpublish.php"
+          php artisan visa:requirements-import-research --file="$IMPORT_DIR/visa_full_audit_batch_55.csv" > "$IMPORT_DIR/batch55-import-result.json"
+          php -r '
+          $x=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);
+          if (($x["mode"]??null)!=="import" || ($x["rows"]??0)!==1 || ($x["failures"]??[])!==[] || ($x["read_back"]??0)!==1) {
+              fwrite(STDERR,"BATCH55_IMPORT_FAILED\n");
+              exit(1);
+          }
+          echo "BATCH55_IMPORT_RESULT ".json_encode($x,JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)."\n";
+          ' "$IMPORT_DIR/batch55-import-result.json"
+          APP_ROOT="$APP" php "$IMPORT_DIR/batch55_readback.php" verify > "$IMPORT_DIR/batch55-readback.json"
+          cat "$IMPORT_DIR/batch55-readback.json"
+          php artisan visa:requirements-audit > "$IMPORT_DIR/batch55-production-audit.json"
+          python3 "$IMPORT_DIR/validate_production_visa_audit.py" --audit-file "$IMPORT_DIR/batch55-production-audit.json" --ledger-file "$IMPORT_DIR/country_discovery_ledger.csv"
+          php -r '
+          $x=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);
+          $rows=$x["records"]??[];
+          $my=null;
+          foreach($rows as $row){if(strtoupper((string)($row["country"]["iso2"]??""))==="MY" && ($row["passport_nationality_iso3"]??null)==="BGD" && ($row["travel_purpose"]??null)==="tourism"){$my=$row;break;}}
+          if(!is_array($my) || ($my["verification_status"]??null)!=="pending_review" || ($my["is_published"]??true)!==false || (($my["photo_specifications"]["status"]??null)!=="partially_specified") || count($my["applicant_checklists"]??[])!==4){
+              fwrite(STDERR,"BATCH55_AUDIT_READBACK_FAILED\n");
+              exit(1);
+          }
+          $published=(int)($x["published_count"]??-1);
+          $total=(int)($x["total"]??-1);
+          $countries=(int)($x["country_table_count"]??-1);
+          $directory=(int)($x["public_country_directory_count"]??-1);
+          if($published!==133 || $total!==136 || $countries!==252 || $directory!==133){
+              fwrite(STDERR,"BATCH55_AUDIT_COUNTS_FAILED\n");
+              exit(1);
+          }
+          echo "BATCH55_FINAL_AUDIT_READBACK_OK ".json_encode(["total"=>$total,"published"=>$published,"pending"=>$total-$published,"country_rows"=>$countries,"public_directory"=>$directory,"MY_status"=>$my["verification_status"],"MY_published"=>$my["is_published"],"MY_photo_status"=>$my["photo_specifications"]["status"],"MY_checklist_profiles"=>count($my["applicant_checklists"])],JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE)."\n";
+          ' "$IMPORT_DIR/batch55-production-audit.json"
+          REMOTE
+          {
+            echo "## Batch 55 production result"
+            echo "- Production backup: $BACKUP_PATH"
+            echo "- SHA-256: $BACKUP_SHA256"
+            echo "- Isolated MySQL restore test: passed"
+            echo "- Malaysia (MY / BGD / tourism): pending_review and unpublished pending written source clarification"
+            echo "- Structured photo specification: partially_specified, 35 × 50 mm, no invented pixel/file-size values"
+            echo "- Applicant checklists: four applicant profiles with official source metadata"
+            echo "- Public directory/API expected count: 133"
+          } >> "$GITHUB_STEP_SUMMARY"
