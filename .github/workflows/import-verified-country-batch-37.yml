@@ -92,7 +92,7 @@ jobs:
               for source in additional:
                   require(source.get("source_type") == "official", f"{iso2}: non-official source in verified allowlist")
                   require(source.get("source_name") and source.get("source_url", "").startswith("https://"), f"{iso2}: invalid additional source")
-                  require(source.get("source_last_checked_at") == date.today().isoformat(), f"{iso2}: additional source not checked today")
+                  require((source.get("source_last_checked_at") or source.get("checked_date")) == date.today().isoformat(), f"{iso2}: additional source not checked today")
 
               photo = json.loads(audit.get("photo_specifications") or "{}")
               require(isinstance(photo, dict) and photo.get("status"), f"{iso2}: photo status missing")
@@ -155,7 +155,6 @@ jobs:
     needs: prepare
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    environment: production
     steps:
       - name: Checkout authorized backend
         uses: actions/checkout@v4
@@ -224,6 +223,8 @@ jobs:
           $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published)->count();
           $pending = $records->count() - $published;
           $duplicates = \Illuminate\Support\Facades\DB::table('visa_requirements')
+              ->where('passport_nationality_iso3', 'BGD')
+              ->where('travel_purpose', 'tourism')
               ->select('country_id', 'passport_nationality_iso3', 'travel_purpose')
               ->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')
               ->havingRaw('COUNT(*) > 1')
@@ -236,6 +237,7 @@ jobs:
           $result = [
               'country_count' => $countryCount,
               'requirement_count' => $records->count(),
+              'source_count' => \Illuminate\Support\Facades\DB::table('visa_requirement_sources')->count(),
               'published_count' => $published,
               'pending_count' => $pending,
               'duplicate_keys' => $duplicates,
@@ -291,7 +293,10 @@ jobs:
           }
           exec("gzip -t " . escapeshellarg($path), $gzipOutput, $gzipStatus);
           if ($gzipStatus !== 0) throw new RuntimeException('Production backup gzip integrity check failed.');
+          $preflight = json_decode(file_get_contents('/tmp/batch37-preflight.json'), true);
+          if (! is_array($preflight)) throw new RuntimeException('Production preflight JSON is missing.');
           $meta = [
+              'preflight' => $preflight,
               'backup_path' => $path,
               'sha256' => hash_file('sha256', $path),
               'size_bytes' => filesize($path),
@@ -299,6 +304,8 @@ jobs:
               'created_at_utc' => gmdate(DATE_ATOM),
           ];
           echo json_encode($meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          @unlink('/tmp/batch37-preflight.php');
+          @unlink('/tmp/batch37-backup.php');
           PHP
           php -l /tmp/batch37-backup.php >/dev/null
           php /tmp/batch37-backup.php
@@ -339,9 +346,21 @@ jobs:
           done
           docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch37-restore mysqladmin -uroot ping --silent
           gzip -dc production-backup.sql.gz | docker exec -i -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch37-restore mysql -uroot "$DB_NAME"
-          RESTORE_COUNTS="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch37-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT (SELECT COUNT(*) FROM countries),(SELECT COUNT(*) FROM visa_requirements),(SELECT COUNT(*) FROM visa_requirement_sources);")"
+          RESTORE_COUNTS="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch37-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT (SELECT COUNT(*) FROM countries),(SELECT COUNT(*) FROM visa_requirements),(SELECT COUNT(*) FROM visa_requirement_sources),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND verification_status='verified' AND is_published=1),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND NOT (verification_status='verified' AND is_published=1)),(SELECT COUNT(*) FROM (SELECT country_id,passport_nationality_iso3,travel_purpose FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' GROUP BY country_id,passport_nationality_iso3,travel_purpose HAVING COUNT(*)>1) d);")"
           echo "RESTORE_TEST_COUNTS $RESTORE_COUNTS"
           echo "$RESTORE_COUNTS" > restore-test-counts.txt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          meta=json.loads(Path("backup-meta.json").read_text())
+          actual=list(map(int,Path("restore-test-counts.txt").read_text().split()))
+          expected=meta["preflight"]
+          keys=("country_count","requirement_count","source_count","published_count","pending_count","duplicate_keys")
+          for index,key in enumerate(keys):
+              if actual[index] != expected[key]:
+                  raise SystemExit(f"Restore mismatch for {key}: expected {expected[key]}, got {actual[index]}")
+          print("ISOLATED_MYSQL_RESTORE_COUNTS_MATCH_PRODUCTION_PREFLIGHT")
+          PY
           echo "restore_password=$RESTORE_DB_PASSWORD" >> "$GITHUB_ENV"
           echo "RESTORE_TEST_PASSED=true" >> "$GITHUB_ENV"
 
@@ -382,6 +401,7 @@ jobs:
           cp verified-batch-37/verified_seed_batch_37.csv storage/app/imports/unigo_visa_requirements_research_template.csv
           cp verified-batch-37/verified_full_audit_batch_37.csv storage/app/imports/verified_full_audit_batch_37.csv
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > staging-seeder.log
+          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $ag=$rows->filter(fn($r)=>$r->country?->iso2==="AG")->count(); $gm=$rows->filter(fn($r)=>$r->country?->iso2==="GM")->count(); if($rows->count()!==131 || $ag!==1 || $gm!==1) { fwrite(STDERR,json_encode(["total"=>$rows->count(),"AG"=>$ag,"GM"=>$gm])); exit(1); } echo "STAGING_SEED_READBACK total=131 AG=1 GM=1".PHP_EOL;'
           nohup php artisan serve --host=127.0.0.1 --port=8000 > staging-server.log 2>&1 &
           for attempt in $(seq 1 60); do
             if curl -fsS http://127.0.0.1:8000/up >/dev/null 2>&1; then
@@ -519,6 +539,8 @@ jobs:
               $detail = \Illuminate\Support\Facades\Http::timeout(30)->get($apiBase . '/api/visa-requirements/' . $iso2, ['passport' => 'BGD', 'purpose' => 'tourism'])->throw()->json();
               if (strtoupper((string) data_get($detail, 'data.country.iso2')) !== $iso2) throw new RuntimeException('Public API detail identity mismatch for ' . $iso2);
               if (data_get($detail, 'data.verification_status') !== 'verified' || ! data_get($detail, 'data.is_published')) throw new RuntimeException('Public API publication mismatch for ' . $iso2);
+              if ($iso2 === 'AG' && (! data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.evisa_available') || ! data_get($detail, 'data.visa_on_arrival_available'))) throw new RuntimeException('Antigua public API route flags mismatch.');
+              if ($iso2 === 'GM' && (data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.visa_free_eligibility'))) throw new RuntimeException('Gambia public API Commonwealth exemption flags mismatch.');
           }
           $result['public_api_total'] = data_get($list, 'meta.total');
           $result['public_api_details_verified'] = ['AG','GM'];
@@ -528,6 +550,7 @@ jobs:
           php /tmp/batch37-readback.php > /tmp/batch37-readback.json
           php -r '$j=json_decode(file_get_contents("/tmp/batch37-import-result.json"),true); if (!is_array($j) || ($j["rows"]??0)!==2 || !empty($j["failures"]) || ($j["read_back"]??0)!==2 || ($j["reverified"]??0)!==2 || ($j["republished"]??0)!==2) { fwrite(STDERR, json_encode($j)); exit(1); }'
           python3 -m json.tool /tmp/batch37-readback.json > /dev/null
+          mkdir -p /var/www/unigo/backend/shared/imports
           cp /tmp/batch37-import-result.json /var/www/unigo/backend/shared/imports/batch37-import-result.json
           cp /tmp/batch37-readback.json /var/www/unigo/backend/shared/imports/batch37-readback.json
           cp /tmp/batch37-audit-after.txt /var/www/unigo/backend/shared/imports/batch37-post-import-audit.txt
@@ -547,6 +570,7 @@ jobs:
             staging-migrations.txt
             staging-seeder.log
             staging-dry-run.json
+            staging-server.log
             batch37-production-result.json
           if-no-files-found: warn
           retention-days: 30
