@@ -349,7 +349,7 @@ jobs:
         run: |
           set -euo pipefail
           cat > .env <<EOF
-          APP_NAME=UniGoBatch37Staging
+          APP_NAME=UniGoBatch38Staging
           APP_ENV=testing
           APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
           APP_DEBUG=false
@@ -377,8 +377,8 @@ jobs:
             exit 1
           fi
           mkdir -p storage/app/imports
-          cp verified-batch-38/verified_seed_batch_37.csv storage/app/imports/unigo_visa_requirements_research_template.csv
-          cp verified-batch-38/verified_full_audit_batch_37.csv storage/app/imports/verified_full_audit_batch_37.csv
+          cp verified-batch-38/verified_seed_batch_38.csv storage/app/imports/unigo_visa_requirements_research_template.csv
+          cp verified-batch-38/verified_full_audit_batch_38.csv storage/app/imports/verified_full_audit_batch_38.csv
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > staging-seeder.log
           php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $ar=$rows->filter(fn($r)=>$r->country?->iso2==="AR")->count(); $bs=$rows->filter(fn($r)=>$r->country?->iso2==="BS")->count(); if($rows->count()!==133 || $ar!==1 || $bs!==1) { fwrite(STDERR,json_encode(["total"=>$rows->count(),"AR"=>$ar,"BS"=>$bs])); exit(1); } echo "STAGING_SEED_READBACK total=133 AR=1 BS=1".PHP_EOL;'
           nohup php artisan serve --host=127.0.0.1 --port=8000 > staging-server.log 2>&1 &
@@ -389,7 +389,7 @@ jobs:
             sleep 2
           done
           curl -fsS http://127.0.0.1:8000/up >/dev/null
-          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_37.csv --base-url=http://127.0.0.1:8000 --dry-run > staging-dry-run.json
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_38.csv --base-url=http://127.0.0.1:8000 --dry-run > staging-dry-run.json
           python3 -m json.tool staging-dry-run.json > /dev/null
           python3 - <<'PY'
           import json
@@ -407,8 +407,8 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          scp -P "$VPS_PORT" verified-batch-38/verified_seed_batch_37.csv "$VPS_USER@$VPS_HOST:/tmp/verified_seed_batch_37.csv"
-          scp -P "$VPS_PORT" verified-batch-38/verified_full_audit_batch_37.csv "$VPS_USER@$VPS_HOST:/tmp/verified_full_audit_batch_37.csv"
+          scp -P "$VPS_PORT" verified-batch-38/verified_seed_batch_38.csv "$VPS_USER@$VPS_HOST:/tmp/verified_seed_batch_38.csv"
+          scp -P "$VPS_PORT" verified-batch-38/verified_full_audit_batch_38.csv "$VPS_USER@$VPS_HOST:/tmp/verified_full_audit_batch_38.csv"
           scp -P "$VPS_PORT" app/Console/Commands/VisaRequirementResearchCsvImportCommand.php "$VPS_USER@$VPS_HOST:/tmp/VisaRequirementResearchCsvImportCommand.php"
 
       - name: Execute allowlisted production import and readback
@@ -428,10 +428,10 @@ jobs:
           install -m 0644 /tmp/VisaRequirementResearchCsvImportCommand.php app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
           rm -f /tmp/VisaRequirementResearchCsvImportCommand.php
           php artisan optimize:clear >/dev/null
-          install -m 0644 /tmp/verified_seed_batch_37.csv storage/app/imports/unigo_visa_requirements_research_template.csv
-          install -m 0644 /tmp/verified_full_audit_batch_37.csv storage/app/imports/verified_full_audit_batch_37.csv
+          install -m 0644 /tmp/verified_seed_batch_38.csv storage/app/imports/unigo_visa_requirements_research_template.csv
+          install -m 0644 /tmp/verified_full_audit_batch_38.csv storage/app/imports/verified_full_audit_batch_38.csv
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > /tmp/batch38-seeder.log
-          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_37.csv > /tmp/batch38-import-result.json
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_38.csv > /tmp/batch38-import-result.json
           python3 -m json.tool /tmp/batch38-import-result.json > /dev/null
           php artisan visa:requirements-audit > /tmp/batch38-audit-after.txt
           cat > /tmp/batch38-readback.php <<'PHP'
