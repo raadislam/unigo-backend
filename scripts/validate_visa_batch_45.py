@@ -9,7 +9,15 @@ SEEDER = ROOT / "database/seeders/TristanDaCunhaCountryBackfillSeeder.php"
 
 def read_one(path):
     with path.open(encoding="utf-8-sig", newline="") as handle:
-        rows = list(csv.DictReader(handle))
+        reader = csv.DictReader(handle)
+        headers = reader.fieldnames or []
+        if len(headers) != len(set(headers)):
+            raise SystemExit(f"{path.name}: duplicate CSV headers are not permitted")
+        required = {"destination_name", "destination_iso2", "passport_nationality", "passport_iso3", "travel_purpose", "visa_requirement_type", "visa_required", "visa_free_eligibility", "visa_on_arrival_available", "evisa_available", "maximum_permitted_stay", "entry_count", "application_fee", "processing_time", "required_documents", "official_source_url", "official_immigration_source_name", "official_source_last_checked", "cross_check_source_url", "cross_check_source_name", "cross_check_source_last_checked", "verification_status"}
+        missing = required - set(headers)
+        if missing:
+            raise SystemExit(f"{path.name}: missing required columns {sorted(missing)}")
+        rows = list(reader)
     if len(rows) != 1:
         raise SystemExit(f"{path.name}: expected exactly one allowlisted row, found {len(rows)}")
     return rows[0]
