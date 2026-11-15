@@ -334,7 +334,7 @@ jobs:
                   'DK' => ['applyvisa', 'printed receipt for online payment', 'vu2 online invitation form', 'real-estate ownership', 'not purchase a flight ticket before visa approval'],
                   'NL' => ['unique code', '35 × 45 mm', 'caregiver evidence', 'passenger registration number', 'court permission for the minor to travel'],
                   'SE' => ['form 119031', 'last 6 months', 'passenger registration number', 'company address, telephone and fax', 'valid at least 3 months beyond intended departure from schengen'],
-                  'HR' => ['last 3 months', 'last 3 years', 'salary certificates for the last 3 months', 'notarised consent', 'apostille'],
+                  'HR' => ['last 3 months', 'last 3 years', 'salary certificates for the last 3 months', 'notarised guardian consent', 'apostille'],
               ];
               if (isset($countryChecklistAssertions[$iso2])) {
                   foreach ($countryChecklistAssertions[$iso2] as $fragment) {
