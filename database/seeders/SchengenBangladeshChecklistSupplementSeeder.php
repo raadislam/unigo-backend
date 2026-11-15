@@ -355,6 +355,108 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
             ],
         ];
 
+        $groupChecklistSupplements = [
+            'DE' => [
+                ['name' => 'Original personal bank statements for at least the last 6 months and evidence of other assets such as DPS, FDR or holding-tax receipts; do not substitute property purchase/sale deeds', 'status' => 'required'],
+                ['name' => 'Latest personal tax-return certificate with annual tax-payment confirmation and, where applicable, acknowledgement showing the amount of income tax paid', 'status' => 'required'],
+                ['name' => 'For employees: employer letter showing company name, postal address and telephone, applicant position, employment start date, salary, leave period, expected date of resuming duties and travel purpose', 'status' => 'if_applicable'],
+                ['name' => 'For self-employed applicants: City Corporation or Union Parishad trade licence and RJSC certificate of incorporation with the Memorandum and Articles of Association pages naming the directors', 'status' => 'if_applicable'],
+                ['name' => 'For self-employed applicants: original company bank statements for the previous 6 months, including the overdraft limit where applicable', 'status' => 'if_applicable'],
+                ['name' => 'For students: Bangladesh educational-enrolment proof and leave-of-absence certificate showing institution address, telephone, permission, and authoriser name/function', 'status' => 'if_applicable'],
+                ['name' => 'Civil-status documents where applicable: marriage certificate/Nikah Nama in Bangla and English, divorce/Talak Nama, spouse death certificate and children birth certificates; translate documents into English or German', 'status' => 'if_applicable'],
+                ['name' => 'For minors: birth/adoption/custody/death evidence with English or German translation; where the legal guardian is absent from the appointment, notarised guardian consent and guardian passport copy', 'status' => 'if_applicable'],
+                ['name' => 'For non-Bangladeshi applicants: valid Bangladesh residence permit/visa meeting the German Embassy validity requirement', 'status' => 'if_applicable'],
+                ['name' => 'Copies of previous Schengen, United States, Canada or United Kingdom visas, where applicable', 'status' => 'if_applicable'],
+                ['name' => 'All photocopies on A4 paper; documents not in English or German accompanied by English or German translation', 'status' => 'required'],
+                ['name' => 'Credit-card travel insurance is not accepted by the German Embassy; submit a separate qualifying policy', 'status' => 'required'],
+            ],
+            'DK' => [
+                ['name' => 'Printed and signed Schengen Visa Application Cover Letter generated through ApplyVisa', 'status' => 'required'],
+                ['name' => 'Printed receipt for online payment of the visa fee', 'status' => 'required'],
+                ['name' => 'Completed and signed VU2 online invitation form or personal explanatory invitation letter, when relevant', 'status' => 'if_applicable'],
+                ['name' => 'All previous passports, including photocopies of biodata pages and previous Schengen, United Kingdom, Australian or United States visas', 'status' => 'required'],
+                ['name' => 'Original personal bank statement for the last 6 months; self-employed applicants also submit the company statement, with original and photocopy', 'status' => 'required'],
+                ['name' => 'Evidence of establishment and ties in Bangladesh, such as financial documents, business partnerships, real-estate ownership, marriage certificate or children birth certificates', 'status' => 'required'],
+                ['name' => 'Original and photocopy of Schengen health and travel insurance valid for the duration of the stay', 'status' => 'required'],
+                ['name' => 'Accommodation or hotel reservations for all destinations and travel reservations for the entire journey, including flight, train or boat where relevant', 'status' => 'required'],
+                ['name' => 'Travel programme or draft tour programme where appropriate', 'status' => 'if_applicable'],
+                ['name' => 'For visits to family or friends: evidence of family/other ties with the host and a copy of the host identity document, passport, ID card or residence card', 'status' => 'if_applicable'],
+                ['name' => 'Do not purchase a flight ticket before visa approval; the Danish mission recommends reservations only', 'status' => 'conditional'],
+            ],
+            'NL' => [
+                ['name' => 'Online completed and signed Schengen application form with its unique code; handwritten forms are not accepted', 'status' => 'required'],
+                ['name' => 'Original travel document for inspection and colour photocopies of all submitted supporting documents; passport must be no older than 10 years and have at least 2 empty visa pages', 'status' => 'required'],
+                ['name' => 'Dutch-compliant colour photograph, 35 × 45 mm, white or light background, no older than 6 months; printed photograph is not required when the live photograph is taken at the VAC', 'status' => 'required'],
+                ['name' => 'Proof of legal residence in Bangladesh or the country where the application is lodged; residence permit must remain valid for at least 3 months after leaving Schengen', 'status' => 'required'],
+                ['name' => 'Evidence of social/economic ties in country of residence, such as employer/company introduction, business purpose and duration, financial cover, company profile, trade licence or Memorandum of Association', 'status' => 'required'],
+                ['name' => 'Additional ties where relevant: caregiver evidence, home or other immovable property evidence, and evidence that children attend school in the country of residence', 'status' => 'if_applicable'],
+                ['name' => 'For self-employed applicants: City Corporation trade licence, RJSC incorporation certificate where applicable, income-tax return and company bank statement for 6 months', 'status' => 'if_applicable'],
+                ['name' => 'For students: educational-enrolment proof, leave certificate with institution address, telephone, permission and authoriser details; school-trip letter stating purpose, duration and destination', 'status' => 'if_applicable'],
+                ['name' => 'Civil-status document applicable to the applicant: marriage certificate, divorce/Talak Nama or spouse death certificate', 'status' => 'if_applicable'],
+                ['name' => 'Proof of financial means, including personal bank statements, credit-card statements or balance evidence covering the last 6 months and other solvency evidence', 'status' => 'required'],
+                ['name' => 'Round-trip airline reservation with Passenger Registration Number or reservation number, travel itinerary and onward-destination entry permits where relevant', 'status' => 'required'],
+                ['name' => 'Travel medical insurance in the applicant name covering all Schengen countries for the full stay and at least EUR 30,000, including hospital treatment and repatriation', 'status' => 'required'],
+                ['name' => 'For a minor travelling without one or both parents/guardians: recent birth-certificate extract, consent signed by non-travelling parent/guardian, their valid travel-document copy and proof of their financial means', 'status' => 'if_applicable'],
+                ['name' => 'For a minor: where a parent/guardian has died, death-certificate copy; where a guardian is appointed, official guardianship proof; where a court order exists, court permission for the minor to travel', 'status' => 'if_applicable'],
+                ['name' => 'Original hotel confirmation or voucher for the whole stay, or other accommodation evidence', 'status' => 'required'],
+            ],
+            'SE' => [
+                ['name' => 'Completed, signed and dated Swedish Schengen application form 119031; all supporting documents must be printed on A4 paper', 'status' => 'required'],
+                ['name' => 'All previous passports and colour copies of the recent passport biodata page and all Schengen visas', 'status' => 'required'],
+                ['name' => 'Applicant cover letter addressed to the Embassy of Sweden explaining the detailed purpose of visit', 'status' => 'required'],
+                ['name' => 'Personal bank statements, credit-card statements or balance covering the last 6 months, together with other proof of financial solvency', 'status' => 'required'],
+                ['name' => 'Round-trip airline reservation showing Passenger Registration Number or reservation number, travel itinerary and onward-destination entry permits where relevant', 'status' => 'required'],
+                ['name' => 'For visits to family or friends: invitation letter, proof of sponsorship and evidence of family/ties with the sponsor', 'status' => 'if_applicable'],
+                ['name' => 'Hotel confirmation or voucher for the whole stay, or other accommodation evidence', 'status' => 'required'],
+                ['name' => 'For employees: employer certificate showing company address, telephone and fax, countersigning officer name/position, applicant name/position, salary and years of service', 'status' => 'if_applicable'],
+                ['name' => 'For self-employed applicants: City Corporation trade licence, RJSC incorporation certificate where applicable, TIN certificate and company bank statement for 6 months', 'status' => 'if_applicable'],
+                ['name' => 'For students: Bangladesh enrolment proof and leave certificate with institution address, telephone, permission and authoriser name/function; school-trip letter with purpose, duration and destination where relevant', 'status' => 'if_applicable'],
+                ['name' => 'For applicants travelling with spouse and/or children: marriage certificate issued by a responsible authority', 'status' => 'if_applicable'],
+                ['name' => 'For minors not travelling with both parents: parental/custodian consent, parent or guardian passport copy, parent/guardian financial evidence and original birth certificate', 'status' => 'if_applicable'],
+                ['name' => 'For non-Bangladeshi applicants: Bangladesh residence permit valid at least 3 months beyond intended departure from Schengen, onward-journey reservation and evidence of activity on return to Bangladesh', 'status' => 'if_applicable'],
+            ],
+            'HR' => [
+                ['name' => 'For sufficient funds: original bank statements for savings/current accounts covering the last 3 months, signed and stamped by an authorised bank official', 'status' => 'required'],
+                ['name' => 'Financial support evidence where relevant: personal/company income-tax returns for the last 3 years, international credit-card copy and 3-month statement, and passport foreign-exchange endorsement or purchase receipt', 'status' => 'if_applicable'],
+                ['name' => 'For employees: employer letter on official letterhead confirming position, service duration and approved leave, plus salary certificates for the last 3 months', 'status' => 'if_applicable'],
+                ['name' => 'For business/self-employed applicants: visa request letter on official company letterhead with company registration papers', 'status' => 'if_applicable'],
+                ['name' => 'For students: school/university leave approval and valid student identity-card copy', 'status' => 'if_applicable'],
+                ['name' => 'For pensioners or scholarship recipients: pension slip or proof of scholarship/income, where relevant', 'status' => 'if_applicable'],
+                ['name' => 'Accommodation evidence may include hotel booking, private accommodation, property title/lease or boat ownership/lease; guarantor accommodation may be used when stated in the guarantee/invitation', 'status' => 'required'],
+                ['name' => 'For minors/persons lacking legal capacity: birth certificate and decision of the competent authority appointing the legal guardian; notarised guardian consent with identity, purpose and travel dates when travelling without the guardian', 'status' => 'if_applicable'],
+                ['name' => 'Only flight-ticket and hotel reservations are required; confirmed bookings are not required', 'status' => 'required'],
+                ['name' => 'Reason letter explaining non-use of a previous Croatian visa or a previous refusal by another country, where applicable', 'status' => 'if_applicable'],
+            ],
+        ];
+
+        foreach ($groupChecklistSupplements as $groupCode => $supplementDocuments) {
+            $groups[$groupCode]['documents'] = array_merge($groups[$groupCode]['documents'] ?? [], $supplementDocuments);
+        }
+
+        $groups['DK']['source_url'] = 'https://visa.vfsglobal.com/one-pager/denmark/Bangladesh/english/pdf/visiting_family_or_friends_tourism.pdf';
+        $groups['DK']['source_name'] = 'VFS Global — Embassy of Denmark Bangladesh, Visiting Family/Friends/Tourism checklist';
+        $groups['SE']['source_url'] = 'https://visa.vfsglobal.com/one-pager/sweden/bangladesh/english/pdf/Tourist-Visa-Checklist-1.pdf';
+        $groups['SE']['source_name'] = 'VFS Global — Sweden Bangladesh Tourist Visa checklist';
+
+        $groups['DK']['extra_sources'] = [
+            ['source_name' => 'VFS Global — Denmark Bangladesh visa information and Norway representation', 'source_url' => 'https://visa.vfsglobal.com/one-pager/denmark/Bangladesh/english/', 'source_type' => 'provider', 'verification_notes' => 'Confirms the Bangladesh application route, Denmark representation of Norway and tourism checklist link.'],
+        ];
+        $groups['SE']['extra_sources'] = [
+            ['source_name' => 'VFS Global — Sweden Bangladesh visa information and represented countries', 'source_url' => 'https://visa.vfsglobal.com/one-pager/sweden/bangladesh/english/index.html', 'source_type' => 'provider', 'verification_notes' => 'Confirms the Bangladesh application route and representation of Finland, Iceland, Latvia, Luxembourg and Slovenia; links the tourism checklist.'],
+        ];
+        $groups['DE']['extra_sources'] = [
+            ['source_name' => 'German Embassy Dhaka — Estonia application restrictions, 22 October 2026', 'source_url' => 'https://dhaka.diplo.de/bd-en/service/2682922-2682922', 'source_type' => 'official', 'verification_notes' => 'Estonia applications through the German Embassy are restricted to specified applicant groups; do not imply ordinary unrestricted access.'],
+        ];
+        $groups['HR']['extra_sources'] = [
+            ['source_name' => 'Croatian Ministry of Foreign Affairs — Bangladesh applicants and competent mission', 'source_url' => 'https://mvep.gov.hr/services-consular-portal/consular-information-22802/visas-22807/visa-requirements-overview-22879/22879?country=159', 'source_type' => 'official', 'verification_notes' => 'Confirms the competent Croatian mission and Bangladesh submission route; VFS page includes tourist checklist and conditional apostille/translation language.'],
+        ];
+
+        $groups['NL']['extra_sources'] = [
+            ['source_name' => 'VFS Global — Netherlands Bangladesh visa information and tourism checklist link', 'source_url' => 'https://visa.vfsglobal.com/one-pager/netherlands/bangladesh/english/', 'source_type' => 'provider', 'verification_notes' => 'VFS Bangladesh directs tourism applicants to the official NetherlandsWorldwide Bangladesh tourism checklist and confirms live photograph/biometric capture at the VAC.'],
+        ];
+        $groups['FR']['extra_sources'] = [
+            ['source_name' => 'VFS Global — France Bangladesh visa information', 'source_url' => 'https://visa.vfsglobal.com/bgd/en/fra', 'source_type' => 'provider', 'verification_notes' => 'Confirms the Bangladesh application channel; France-Visas generates the personalised Type C supporting-document checklist for France and represented Austria, Czechia and Portugal.'],
+        ];
         $unverified = [
             'LT' => 'No Bangladesh-specific VFS or competent-mission tourism checklist was located in this review. Do not infer photo dimensions or apostille requirements. Check the competent Lithuanian mission before advising applicants.',
             'RO' => 'No Bangladesh-specific VFS or competent-mission tourism checklist was located in this review. Do not infer photo dimensions or apostille requirements. Check the competent Romanian mission before advising applicants.',
@@ -512,6 +614,20 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     'verification_notes' => $notes,
                 ]
             );
+
+            foreach (($details['extra_sources'] ?? []) as $extraSource) {
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => $extraSource['source_url']],
+                    [
+                        'source_type' => $extraSource['source_type'],
+                        'source_name' => $extraSource['source_name'],
+                        'source_url' => $extraSource['source_url'],
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => $extraSource['verification_notes'],
+                    ]
+                );
+            }
 
             VisaRequirementSource::updateOrCreate(
                 ['visa_requirement_id' => $requirement->id, 'source_url' => $sourceDirectory],

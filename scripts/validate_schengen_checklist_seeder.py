@@ -90,4 +90,55 @@ if "VFS Global — Bulgaria Visa Application Centre Bangladesh" not in source or
 if "captured_at_vac" not in source or "The accessible Bangladesh portal does not state the printed-photo size or count" not in source:
     raise SystemExit("Bulgaria live-photo capture limitation is not documented")
 
+vfs_group_requirements = {
+    "DE": [
+        "Original personal bank statements for at least the last 6 months",
+        "Memorandum and Articles of Association",
+        "annual tax-payment confirmation",
+        "Nikah Nama in Bangla and English",
+        "All photocopies on A4 paper",
+    ],
+    "DK": [
+        "ApplyVisa",
+        "printed receipt for online payment",
+        "VU2 online invitation form",
+        "real-estate ownership",
+        "not purchase a flight ticket before visa approval",
+    ],
+    "NL": [
+        "unique code",
+        "35 × 45 mm",
+        "caregiver evidence",
+        "Passenger Registration Number",
+        "court permission for the minor to travel",
+    ],
+    "SE": [
+        "form 119031",
+        "last 6 months",
+        "Passenger Registration Number",
+        "company address, telephone and fax",
+        "valid at least 3 months beyond intended departure from Schengen",
+    ],
+    "HR": [
+        "last 3 months",
+        "last 3 years",
+        "salary certificates for the last 3 months",
+        "notarised guardian consent",
+        "apostille",
+    ],
+}
+for country, fragments in vfs_group_requirements.items():
+    for fragment in fragments:
+        if fragment.lower() not in source.lower():
+            raise SystemExit(f"VFS checklist content missing for {country}: {fragment}")
+
+for source_url in (
+    "https://visa.vfsglobal.com/one-pager/denmark/Bangladesh/english/pdf/visiting_family_or_friends_tourism.pdf",
+    "https://visa.vfsglobal.com/one-pager/sweden/bangladesh/english/pdf/Tourist-Visa-Checklist-1.pdf",
+    "https://visa.vfsglobal.com/one-pager/netherlands/bangladesh/english/",
+    "https://visa.vfsglobal.com/bgd/en/fra",
+):
+    if source_url.lower() not in source.lower():
+        raise SystemExit(f"VFS source URL missing: {source_url}")
+
 print("SCHENGEN_CHECKLIST_COVERAGE_OK countries=29 verified_routes=27 unverified_routes=2 profiles=4 apostille=country_specific")

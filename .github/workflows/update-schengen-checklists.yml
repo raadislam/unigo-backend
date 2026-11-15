@@ -39,7 +39,7 @@ jobs:
         run: |
           set -euo pipefail
           test -f scripts/run-schengen-checklist-update.trigger
-          grep -qx 'APPLY_ITALY_VFS_CHECKLIST_2026-11-15' scripts/run-schengen-checklist-update.trigger
+          grep -qx 'APPLY_SCHENGEN_NON_ITALY_VFS_CHECKLISTS_2026-11-15' scripts/run-schengen-checklist-update.trigger
 
       - name: Prepare SSH
         env:
@@ -251,6 +251,7 @@ jobs:
           cd /var/www/unigo/backend/current
           install -m 0644 /tmp/SchengenBangladeshChecklistSupplementSeeder.php database/seeders/SchengenBangladeshChecklistSupplementSeeder.php
           rm -f /tmp/SchengenBangladeshChecklistSupplementSeeder.php
+          php -l database/seeders/SchengenBangladeshChecklistSupplementSeeder.php
           php artisan db:seed --class='Database\Seeders\SchengenBangladeshChecklistSupplementSeeder' --force
           php <<'PHP'
           <?php
@@ -327,6 +328,32 @@ jobs:
                   if (! $record->sources()->where('source_url', $embassyChecklistUrl)->where('source_type', 'official')->exists()) {
                       throw new RuntimeException('Italy Embassy Dhaka mirrored tourism checklist source record missing.');
                   }
+              }
+              $countryChecklistAssertions = [
+                  'DE' => ['original personal bank statements for at least the last 6 months', 'memorandum and articles of association', 'annual tax-payment confirmation', 'nikah nama in bangla and english', 'all photocopies on a4 paper'],
+                  'DK' => ['applyvisa', 'printed receipt for online payment', 'vu2 online invitation form', 'real-estate ownership', 'not purchase a flight ticket before visa approval'],
+                  'NL' => ['unique code', '35 × 45 mm', 'caregiver evidence', 'passenger registration number', 'court permission for the minor to travel'],
+                  'SE' => ['form 119031', 'last 6 months', 'passenger registration number', 'company address, telephone and fax', 'valid at least 3 months beyond intended departure from schengen'],
+                  'HR' => ['last 3 months', 'last 3 years', 'salary certificates for the last 3 months', 'notarised guardian consent', 'apostille'],
+              ];
+              if (isset($countryChecklistAssertions[$iso2])) {
+                  foreach ($countryChecklistAssertions[$iso2] as $fragment) {
+                      if (! str_contains(strtolower($allDocs), strtolower($fragment))) {
+                          throw new RuntimeException('Country-specific VFS checklist item missing for ' . $iso2 . ': ' . $fragment);
+                      }
+                  }
+              }
+              if ($iso2 === 'DK' && ! $record->sources()->where('source_url', 'https://visa.vfsglobal.com/one-pager/denmark/Bangladesh/english/pdf/visiting_family_or_friends_tourism.pdf')->exists()) {
+                  throw new RuntimeException('Denmark VFS tourism PDF source record missing.');
+              }
+              if ($iso2 === 'SE' && ! $record->sources()->where('source_url', 'https://visa.vfsglobal.com/one-pager/sweden/bangladesh/english/pdf/Tourist-Visa-Checklist-1.pdf')->exists()) {
+                  throw new RuntimeException('Sweden VFS tourism PDF source record missing.');
+              }
+              if ($iso2 === 'NL' && ! $record->sources()->where('source_url', 'https://visa.vfsglobal.com/one-pager/netherlands/bangladesh/english/')->exists()) {
+                  throw new RuntimeException('Netherlands VFS portal source record missing.');
+              }
+              if ($iso2 === 'FR' && ! $record->sources()->where('source_url', 'https://visa.vfsglobal.com/bgd/en/fra')->exists()) {
+                  throw new RuntimeException('France VFS Bangladesh portal source record missing.');
               }
               if ($iso2 === 'HR' && ! str_contains(strtolower($allDocs), 'apostill')) {
                   throw new RuntimeException('Croatia conditional apostille checklist item missing.');
