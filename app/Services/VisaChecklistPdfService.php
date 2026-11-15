@@ -51,6 +51,9 @@ class VisaChecklistPdfService
         $slug = $requirement->country?->slug ?? '';
         $url = 'https://unigo-bd.com/visa-services/'.$slug.'/';
         $pdf->Ln(2);
+        if ($pdf->GetY() > 238) {
+            $pdf->AddPage();
+        }
         $pdf->SetFont('helvetica', '', 9);
         $pdf->Cell(0, 6, 'Scan for the latest UniGo destination guide', 0, 1, 'L');
         $pdf->write2DBarcode($url, 'QRCODE,H', '', '', 24, 24, ['border' => 0, 'padding' => 1], 'N');
