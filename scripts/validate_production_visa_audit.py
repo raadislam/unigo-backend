@@ -247,6 +247,7 @@ def main():
     photo_not_specified_codes = []
     photo_unclassified_codes = []
     photo_verified_codes = []
+    photo_partially_specified_codes = []
     photo_vac_capture_codes = []
     for row in published_bgd:
         country = row.get("country") or {}
@@ -260,6 +261,9 @@ def main():
         if photo_status == "verified":
             photo_status_counts["structured_verified"] += 1
             photo_verified_codes.append(iso2)
+        elif photo_status == "partially_specified":
+            photo_status_counts["partially_specified"] += 1
+            photo_partially_specified_codes.append(iso2)
         elif photo_status == "no_fixed_size_published":
             photo_status_counts["no_fixed_size_published"] += 1
             photo_no_fixed_size_codes.append(iso2)
@@ -311,6 +315,7 @@ def main():
         f"- Duplicate BGD tourism requirement keys including unpublished records: **0**",
         f"- Published BGD tourism photo status counts: **{dict(photo_status_counts)}**",
         f"- Structured verified photo specifications: **{len(photo_verified_codes)} / {len(published_bgd)}**",
+        f"- Partially specified photo requirements: **{len(photo_partially_specified_codes)}**",
         f"- Officially confirmed no fixed-size photo rule: **{len(photo_no_fixed_size_codes)}**" + (f" ({', '.join(sorted(photo_no_fixed_size_codes))})" if photo_no_fixed_size_codes else ""),
         f"- Biometric/VAC photo capture confirmed: **{len(photo_vac_capture_codes)}**" + (f" ({', '.join(sorted(photo_vac_capture_codes))})" if photo_vac_capture_codes else ""),
         f"- Missing/unresearched photo specifications: **{len(photo_missing_codes)}**" + (f" ({', '.join(sorted(photo_missing_codes))})" if photo_missing_codes else ""),
