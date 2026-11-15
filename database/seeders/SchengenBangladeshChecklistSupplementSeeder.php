@@ -518,6 +518,62 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     ]
                 );
             }
+
+            if ($iso2 === 'EE') {
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => 'https://dhaka.diplo.de/bd-en/service/2682922-2682922'],
+                    [
+                        'source_type' => 'official',
+                        'source_name' => 'German Embassy Dhaka — Estonia application restrictions, 22 October 2026',
+                        'source_url' => 'https://dhaka.diplo.de/bd-en/service/2682922-2682922',
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => 'The German Embassy limits Estonia applications through Dhaka to specified applicant groups. Applicants outside those groups must verify the competent route before booking.',
+                    ]
+                );
+            }
+
+            if (in_array($iso2, ['FR', 'AT', 'CZ', 'PT'], true)) {
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => 'https://visa.vfsglobal.com/bgd/en/fra'],
+                    [
+                        'source_type' => 'provider',
+                        'source_name' => 'VFS Global — France Visa Application Centre Bangladesh',
+                        'source_url' => 'https://visa.vfsglobal.com/bgd/en/fra',
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => 'VFS Global is the exclusive administrative service provider for the Embassy of France in Bangladesh. The France-Visas portal generates the applicant-specific checklist.',
+                    ]
+                );
+            }
+
+            if (in_array($iso2, ['SE', 'FI', 'IS', 'LV', 'LU', 'SI'], true)) {
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => 'https://www.swedenabroad.se/en/about-sweden-non-swedish-citizens/bangladesh/going-to-sweden/visiting-sweden/how-to-apply/'],
+                    [
+                        'source_type' => 'official',
+                        'source_name' => 'Sweden Abroad — Schengen applications and representation in Bangladesh',
+                        'source_url' => 'https://www.swedenabroad.se/en/about-sweden-non-swedish-citizens/bangladesh/going-to-sweden/visiting-sweden/how-to-apply/',
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => 'Confirms VFS Dhaka submission and Swedish representation for Finland, Iceland, Latvia, Luxembourg and Slovenia; decisions have been made by the Swedish Migration Agency since 15 October 2026.',
+                    ]
+                );
+            }
+
+            if ($iso2 === 'ES') {
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => 'https://bgd.blsspainvisa.com/'],
+                    [
+                        'source_type' => 'provider',
+                        'source_name' => 'BLS International — Spain Visa Application Centre Bangladesh',
+                        'source_url' => 'https://bgd.blsspainvisa.com/',
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => 'Spain applications in Bangladesh are handled by BLS International, not VFS Global.',
+                    ]
+                );
+            }
         }
             DB::commit();
         } catch (\Throwable $exception) {
