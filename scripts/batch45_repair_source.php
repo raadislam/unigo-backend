@@ -3,7 +3,6 @@
 use App\Models\VisaRequirement;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 $root = getenv('APP_ROOT') ?: dirname(__DIR__);
 require $root . '/vendor/autoload.php';
