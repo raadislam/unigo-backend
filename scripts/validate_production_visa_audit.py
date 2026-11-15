@@ -169,6 +169,26 @@ def main():
     if len(public_codes) != len(set(public_codes)):
         fail("Production public country directory contains duplicate ISO2 codes.")
     if set(public_codes) != expected_public_codes:
+        missing_from_directory = sorted(expected_public_codes - set(public_codes))
+        unexpected_in_directory = sorted(set(public_codes) - expected_public_codes)
+        country_flag_codes = sorted(
+            str(row.get("iso2") or "").strip().upper()
+            for row in countries
+            if row.get("is_published") is True
+        )
+        print("PUBLIC_DIRECTORY_PARITY_DIAGNOSTIC " + json.dumps({
+            "public_directory_count": len(public_codes),
+            "expected_public_count": len(expected_public_codes),
+            "missing_from_directory": missing_from_directory,
+            "unexpected_in_directory": unexpected_in_directory,
+            "country_flag_published_codes": country_flag_codes,
+            "active_published_requirement_codes": sorted(published_codes),
+            "published_requirements_with_empty_effective_dates": sorted(
+                str((row.get("country") or {}).get("iso2") or "").upper()
+                for row in published_bgd
+                if not (row.get("effective_from") or "").strip() or not (row.get("effective_until") or "").strip()
+            ),
+        }, ensure_ascii=False))
         fail("Production public directory does not match published country flags and active verified BGD tourism requirements.")
 
     ledger_public_codes = {
