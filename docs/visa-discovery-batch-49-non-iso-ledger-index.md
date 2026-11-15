@@ -20,4 +20,4 @@ Parent country records remain authoritative for country-level visa rules. This l
 5. A candidate can move to production only after Bangladesh ordinary-passport applicability and all material route conditions are supported by current authoritative sources, the child-destination schema is approved, and the normal backup/restore/dry-run/readback gates pass.
 6. On each run, compare this sidecar with the ISO country master and mark a candidate as represented only when its parent/child relationship is explicit. Do not count a sub-destination as a new sovereign country.
 
-This sidecar currently contains **3 research-only candidates**. Neither is counted in the ISO country universe or public directory.
+This sidecar currently contains **3 research-only candidates**. None are counted in the ISO country universe or public directory.
