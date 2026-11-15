@@ -137,7 +137,7 @@ for path in files:
                 errors.append(f"{path.name}:{line}: batch 38 rows must be verified, published and have no unmapped notes")
             if row.get("destination_iso2") == "AR" and (row.get("visa_required") != "true" or row.get("visa_free_eligibility") != "false" or row.get("visa_on_arrival_available") != "false" or row.get("evisa_available") != "false" or "90 days" not in row.get("maximum_permitted_stay", "").lower() or "migraciones.gob.ar" not in row.get("official_source_url", "")):
                 errors.append(f"{path.name}:{line}: Argentina route flags or source are inconsistent")
-            if row.get("destination_iso2") == "BS" and (row.get("visa_required") != "false" or row.get("visa_free_eligibility") != "true" or row.get("visa_on_arrival_available") != "false" or row.get("evisa_available") != "false" or "3 months" not in row.get("maximum_permitted_stay", "").lower() or "cdn.bahamas.gov.bs" not in row.get("official_source_url", "")):
+            if row.get("destination_iso2") == "BS" and (row.get("visa_required") != "false" or row.get("visa_free_eligibility") != "true" or row.get("visa_on_arrival_available") != "false" or row.get("evisa_available") != "false" or ("3 months" not in row.get("maximum_permitted_stay", "").lower() and "three months" not in row.get("maximum_permitted_stay", "").lower()) or "cdn.bahamas.gov.bs" not in row.get("official_source_url", "")):
                 errors.append(f"{path.name}:{line}: Bahamas route flags or source are inconsistent")
         checklist_raw = (row.get("applicant_checklists", "") or "").strip()
         photo_raw = (row.get("photo_specifications", "") or "").strip()
