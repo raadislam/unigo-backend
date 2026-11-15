@@ -24,6 +24,7 @@ files = [
     root / "database/data/visa_full_audit_batch_29.csv",
     root / "database/data/visa_full_audit_batch_33.csv",
     root / "database/data/visa_full_audit_batch_36.csv",
+    root / "database/data/visa_full_audit_batch_38.csv",
 ]
 seed_files = [
     root / "database/data/new_country_visa_batch_06_07.csv",
@@ -43,6 +44,7 @@ seed_files = [
     root / "database/data/new_country_visa_batch_29.csv",
     root / "database/data/new_country_visa_batch_33.csv",
     root / "database/data/new_country_visa_batch_36.csv",
+    root / "database/data/new_country_visa_batch_38.csv",
 ]
 required = {
     "passport_iso3", "passport_nationality", "destination_iso2", "destination_name",
@@ -91,6 +93,10 @@ for path in files:
         rows = list(reader)
     if not rows:
         errors.append(f"{path.name}: no rows")
+    if path.name == "visa_full_audit_batch_38.csv":
+        codes = {row.get("destination_iso2") for row in rows}
+        if len(rows) != 2 or codes != {"AR", "BS"}:
+            errors.append(f"{path.name}: batch 38 must contain exactly AR and BS")
     for line, row in enumerate(rows, 2):
         key = (row.get("passport_iso3"), row.get("destination_iso2"), row.get("travel_purpose"))
         if key in seen:
@@ -114,7 +120,7 @@ for path in files:
         for field, limit in limits.items():
             if len(row.get(field, "") or "") > limit:
                 errors.append(f"{path.name}:{line}: {field} exceeds {limit} characters")
-        if path.name in {"visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv"}:
+        if path.name in {"visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"}:
             schema_limits = {"visa_requirement_type": 50, "maximum_permitted_stay": 120, "entry_count": 40, "application_channel": 180, "application_fee": 120, "processing_time": 120}
             for field, limit in schema_limits.items():
                 if len(row.get(field, "") or "") > limit:
@@ -126,9 +132,16 @@ for path in files:
                 errors.append(f"{path.name}:{line}: mandatory entry permit must not be misclassified as a visa or visa-free")
         if len(row.get("review_notes", "") or "") > 5000:
             errors.append(f"{path.name}:{line}: review_notes exceeds 5000 characters")
+        if path.name == "visa_full_audit_batch_38.csv":
+            if row.get("notes", "").strip() or row.get("verification_status") != "verified" or row.get("publish_status") != "published":
+                errors.append(f"{path.name}:{line}: batch 38 rows must be verified, published and have no unmapped notes")
+            if row.get("destination_iso2") == "AR" and (row.get("visa_required") != "true" or row.get("visa_free_eligibility") != "false" or row.get("visa_on_arrival_available") != "false" or row.get("evisa_available") != "false" or "90 days" not in row.get("maximum_permitted_stay", "").lower() or "migraciones.gob.ar" not in row.get("official_source_url", "")):
+                errors.append(f"{path.name}:{line}: Argentina route flags or source are inconsistent")
+            if row.get("destination_iso2") == "BS" and (row.get("visa_required") != "false" or row.get("visa_free_eligibility") != "true" or row.get("visa_on_arrival_available") != "false" or row.get("evisa_available") != "false" or ("3 months" not in row.get("maximum_permitted_stay", "").lower() and "three months" not in row.get("maximum_permitted_stay", "").lower()) or "cdn.bahamas.gov.bs" not in row.get("official_source_url", "")):
+                errors.append(f"{path.name}:{line}: Bahamas route flags or source are inconsistent")
         checklist_raw = (row.get("applicant_checklists", "") or "").strip()
         photo_raw = (row.get("photo_specifications", "") or "").strip()
-        if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv"} and not checklist_raw:
+        if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} and not checklist_raw:
             errors.append(f"{path.name}:{line}: applicant_checklists is required for the new publishable batch")
         if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv"} and not photo_raw:
             errors.append(f"{path.name}:{line}: photo_specifications is required for the new publishable batch")
@@ -162,7 +175,7 @@ for path in files:
                         notes = document.get("notes")
                         if notes is not None and (not isinstance(notes, str) or len(notes) > 1000):
                             raise ValueError("checklist document notes exceed 1000 characters")
-                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv"}:
+                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"}:
                     expected_applicant_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
                     if applicant_types != expected_applicant_types:
                         raise ValueError(f"expected four applicant types, got {sorted(applicant_types)}")
@@ -176,7 +189,7 @@ for path in files:
                 photo = json.loads(photo_raw)
                 if not isinstance(photo, dict) or not photo.get("status"):
                     raise ValueError("photo specification needs a status")
-                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv"}:
+                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"}:
                     if not photo.get("source_name") or not (photo.get("source_url") or "").startswith("https://"):
                         raise ValueError("new batch photo specification needs an official source name and HTTPS URL")
                     date.fromisoformat(str(photo.get("checked_at", ""))[:10])
@@ -190,6 +203,13 @@ for path in files:
                         raise ValueError("Antigua photo specification must contain the verified 45x35mm dimensions")
                     if row.get("destination_iso2") == "ET" and (photo.get("status") != "partially_specified" or photo.get("dimensions_mm") or not photo.get("file_size") or not photo.get("file_format")):
                         raise ValueError("Ethiopia photo specification must be partially specified without invented dimensions")
+                if path.name == "visa_full_audit_batch_38.csv":
+                    if not photo.get("source_name") or photo.get("checked_at") != "2026-11-15":
+                        raise ValueError("batch 38 photo source metadata is incomplete")
+                    if row.get("destination_iso2") == "AR" and (photo.get("status") != "verified" or photo.get("dimensions_mm") != {"width": 40, "height": 40, "unit": "mm"}):
+                        raise ValueError("Argentina photo specification must contain verified 40x40mm dimensions")
+                    if row.get("destination_iso2") == "BS" and (photo.get("status") != "not_applicable" or photo.get("dimensions_mm") or photo.get("digital_dimensions_px")):
+                        raise ValueError("Bahamas photo status must be not_applicable for visa-free entry")
             except Exception as exc:
                 errors.append(f"{path.name}:{line}: invalid photo_specifications: {exc}")
         for field in ("official_source_url", "cross_check_source_url"):
@@ -234,6 +254,9 @@ for path in files:
                 if path.name == "visa_full_audit_batch_36.csv":
                     if source.get("source_type") != "official" or not (notes or "").strip() or source.get("source_last_checked_at") != "2026-11-15":
                         raise ValueError("batch 36 additional sources must be official, dated 2026-11-15 and have verification notes")
+                if path.name == "visa_full_audit_batch_38.csv":
+                    if source.get("source_type") != "official" or not (notes or "").strip() or source.get("source_last_checked_at") != "2026-11-15":
+                        raise ValueError("batch 38 additional sources must be official, dated 2026-11-15 and have verification notes")
         except Exception as exc:
             errors.append(f"{path.name}:{line}: invalid additional_sources: {exc}")
 
