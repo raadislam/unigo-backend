@@ -1,6 +1,11 @@
 name: Update Schengen Bangladesh Checklists
 
 on:
+  workflow_run:
+    workflows:
+      - Deploy UniGo Backend
+    types:
+      - completed
   workflow_dispatch:
     inputs:
       confirm:
@@ -12,7 +17,7 @@ on:
           - apply
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: unigo-schengen-checklist-production
@@ -20,13 +25,31 @@ concurrency:
 
 jobs:
   update:
-    if: inputs.confirm == 'apply'
+    if: (github.event_name == 'workflow_dispatch' && inputs.confirm == 'apply') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout backend
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Check one-time production update trigger
+        id: gate
+        if: github.event_name == 'workflow_run'
+        run: |
+          if test -f .github/enable-schengen-checklist-update.once; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Confirm manual production update
+        id: manual
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "run=true" >> "$GITHUB_OUTPUT"
 
       - name: Prepare SSH
+        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -52,6 +75,7 @@ jobs:
           exit 1
 
       - name: Verify deployed seeder and take a production database backup
+        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
@@ -122,6 +146,7 @@ jobs:
           REMOTE
 
       - name: Apply Schengen checklist and photo supplements with production readback
+        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
@@ -184,6 +209,7 @@ jobs:
           REMOTE
 
       - name: Verify public API checklist and photo data for all 29 Schengen countries
+        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
         run: |
           python3 - <<'PY'
           import json
@@ -208,3 +234,16 @@ jobs:
               print(f"PUBLIC_SCHENGEN_CHECKLIST_OK {iso2}")
           print("PUBLIC_SCHENGEN_CHECKLISTS_OK countries=29")
           PY
+
+      - name: Consume one-time update trigger
+        if: steps.gate.outputs.run == 'true' && steps.manual.outputs.run != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if test -f .github/enable-schengen-checklist-update.once; then
+            git rm .github/enable-schengen-checklist-update.once
+            git commit -m "Consume one-time Schengen checklist update trigger"
+            git push origin HEAD:main
+          fi
