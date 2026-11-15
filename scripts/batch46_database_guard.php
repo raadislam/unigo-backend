@@ -116,6 +116,7 @@ $result = [
     'AC_slug_conflict' => (bool) $slugConflict,
     'baseline_valid' => (bool) $baselineValid,
     'AC_BGD_tourism_requirement_count' => $ascensionRequirementCount,
+    'AC_has_no_BGD_tourism_requirement' => $ascensionRequirementCount === 0,
     'readback_passed' => $finalValid,
 ];
 
