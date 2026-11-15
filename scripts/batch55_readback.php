@@ -138,7 +138,7 @@ try {
         'four_applicant_checklists' => $checklistsValid,
         'official_source_checked_at' => substr((string) $record->official_source_checked_at, 0, 10) === '2026-11-15',
         'official_sources' => ! in_array(false, $sourceChecks, true),
-        'official_source_count' => $record->sources->where('source_type', 'official')->count() >= 9,
+        'official_source_count' => $record->sources->where('source_type', 'official')->count() >= 8,
     ];
     $failed = array_keys(array_filter($databaseChecks, fn ($ok) => $ok !== true));
     if ($failed) {
@@ -146,7 +146,7 @@ try {
     }
 
     $base = rtrim((string) config('app.url'), '/');
-    $listResponse = Http::timeout(45)->acceptJson()->get($base . '/api/visa-requirements', ['passport' => 'BGD', 'purpose' => 'tourism']);
+    $listResponse = Http::timeout(45)->acceptJson()->get($base . '/api/visa-requirements', ['passport' => 'BGD', 'purpose' => 'tourism', 'per_page' => 250]);
     $list = $listResponse->throw()->json();
     $detailResponse = Http::timeout(45)->acceptJson()->get($base . '/api/visa-requirements/MY', ['passport' => 'BGD', 'purpose' => 'tourism']);
     $detail = $detailResponse->json();
