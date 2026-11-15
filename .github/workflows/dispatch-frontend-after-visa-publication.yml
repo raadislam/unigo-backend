@@ -25,6 +25,7 @@ on:
       - Import verified tourism correction batch 40
       - Import verified country batches 19 and 20
       - Import verified country backlog batches 21, 22 and 23
+      - Update Schengen Bangladesh Checklists
     types:
       - completed
   workflow_dispatch:
