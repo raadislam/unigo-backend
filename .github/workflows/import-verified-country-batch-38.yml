@@ -577,7 +577,7 @@ jobs:
           $result['public_api_total'] = data_get($list, 'meta.total');
           $result['public_api_details_verified'] = ['AR','BS'];
           echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
-          } catch (\\Throwable $exception) {
+          } catch (\Throwable $exception) {
               fwrite(STDERR, 'BATCH38_READBACK_ERROR ' . get_class($exception) . ': ' . $exception->getMessage() . PHP_EOL);
               exit(1);
           }
