@@ -87,7 +87,7 @@ for marker in (
     "Bangladesh ordinary-passport eligibility remains unconfirmed",
     "live nationality selector",
     "multi-entry UK visa",
-    "No Bangladesh tourism requirement is created",
+    "No Bangladesh tourism visa requirement is created by this batch",
     "The FAQ says not to send photographs other than the required scanned photograph",
     "fingerprints and a facial photograph may be requested",
     "https://www.ascension-visas.com/faq",
