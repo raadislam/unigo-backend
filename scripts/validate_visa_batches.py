@@ -25,6 +25,8 @@ files = [
     root / "database/data/visa_full_audit_batch_33.csv",
     root / "database/data/visa_full_audit_batch_36.csv",
     root / "database/data/visa_full_audit_batch_38.csv",
+    root / "database/data/visa_full_audit_batch_44.csv",
+    root / "database/data/visa_full_audit_batch_45.csv",
 ]
 seed_files = [
     root / "database/data/new_country_visa_batch_06_07.csv",
@@ -45,6 +47,8 @@ seed_files = [
     root / "database/data/new_country_visa_batch_33.csv",
     root / "database/data/new_country_visa_batch_36.csv",
     root / "database/data/new_country_visa_batch_38.csv",
+    root / "database/data/new_country_visa_batch_44.csv",
+    root / "database/data/new_country_visa_batch_45.csv",
 ]
 required = {
     "passport_iso3", "passport_nationality", "destination_iso2", "destination_name",
@@ -141,7 +145,7 @@ for path in files:
         for field, limit in limits.items():
             if len(row.get(field, "") or "") > limit:
                 errors.append(f"{path.name}:{line}: {field} exceeds {limit} characters")
-        if path.name in {"visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"}:
+        if path.name in {"visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv", "visa_full_audit_batch_44.csv", "visa_full_audit_batch_45.csv"}:
             schema_limits = {"visa_requirement_type": 50, "maximum_permitted_stay": 120, "entry_count": 40, "application_channel": 180, "application_fee": 120, "processing_time": 120}
             for field, limit in schema_limits.items():
                 if len(row.get(field, "") or "") > limit:
@@ -153,6 +157,19 @@ for path in files:
                 errors.append(f"{path.name}:{line}: mandatory entry permit must not be misclassified as a visa or visa-free")
         if len(row.get("review_notes", "") or "") > 5000:
             errors.append(f"{path.name}:{line}: review_notes exceeds 5000 characters")
+        if path.name == "visa_full_audit_batch_45.csv":
+            require(len(rows) == 2 and {r["destination_iso2"] for r in rows} == {"AC", "TA"}, f"{path.name}: expected exactly AC and TA")
+            by_code = {r["destination_iso2"]: r for r in rows}
+            ac = by_code["AC"]
+            require(ac["visa_required"].lower() == "true" and ac["visa_free_eligibility"].lower() == "false" and ac["visa_on_arrival_available"].lower() == "false" and ac["evisa_available"].lower() == "true", "AC eVisa flags are incorrect")
+            require("GBP40" in ac["application_fee"] and "GBP60" in ac["application_fee"] and "GBP10" in ac["application_fee"], "AC fee schedule is incomplete")
+            require("21 days" in ac["processing_time"] and "6 weeks" in ac["processing_time"], "AC processing estimates are incomplete")
+            require("multiple-entry UK visa" in ac["transit_rule"] and "Bangladesh" in ac["transit_rule"], "AC discretionary UK condition is missing")
+            ta = by_code["TA"]
+            require(ta["visa_required"].lower() == "false" and ta["visa_free_eligibility"].lower() == "false" and ta["visa_on_arrival_available"].lower() == "false" and ta["evisa_available"].lower() == "false", "TA prior-permission flags are incorrect")
+            require("not a visa" in ta["visa_requirement_type"].lower(), "TA must not be labelled visa-free")
+            require("GBP30" in ta["application_fee"] and "GBP15" in ta["application_fee"] and "GBP25" in ta["application_fee"], "TA landing-charge caveat is incomplete")
+            require("No universal maximum" in ta["maximum_permitted_stay"] and "No published SLA" in ta["processing_time"], "TA unpublished stay/processing terms must be explicit")
         if path.name == "visa_full_audit_batch_38.csv":
             if row.get("notes", "").strip() or row.get("verification_status") != "verified" or row.get("publish_status") != "published":
                 errors.append(f"{path.name}:{line}: batch 38 rows must be verified, published and have no unmapped notes")
@@ -162,7 +179,7 @@ for path in files:
                 errors.append(f"{path.name}:{line}: Bahamas route flags or source are inconsistent")
         checklist_raw = (row.get("applicant_checklists", "") or "").strip()
         photo_raw = (row.get("photo_specifications", "") or "").strip()
-        if row.get("verification_status") == "verified" and row.get("publish_status") == "published" and (path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not checklist_raw:
+        if row.get("verification_status") == "verified" and row.get("publish_status") == "published" and (path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv", "visa_full_audit_batch_44.csv", "visa_full_audit_batch_45.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not checklist_raw:
             errors.append(f"{path.name}:{line}: applicant_checklists is required for the new publishable batch")
         if row.get("verification_status") == "verified" and row.get("publish_status") == "published" and (path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not photo_raw:
             errors.append(f"{path.name}:{line}: photo_specifications is required for the new publishable batch")
@@ -179,7 +196,7 @@ for path in files:
                     if not applicant_type:
                         raise ValueError("applicant_type is required")
                     applicant_types.add(applicant_type)
-                    if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_38.csv"}:
+                    if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_38.csv", "visa_full_audit_batch_44.csv", "visa_full_audit_batch_45.csv"}:
                         if not checklist.get("source_name") or not (checklist.get("source_url") or "").startswith("https://") or checklist.get("checked_at") != "2026-11-15":
                             raise ValueError("batch 38 applicant checklist needs an official source name, HTTPS URL and checked date")
                     if path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}:
@@ -202,7 +219,7 @@ for path in files:
                         notes = document.get("notes")
                         if notes is not None and (not isinstance(notes, str) or len(notes) > 1000):
                             raise ValueError("checklist document notes exceed 1000 characters")
-                if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}):
+                if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv", "visa_full_audit_batch_44.csv", "visa_full_audit_batch_45.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}):
                     expected_applicant_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
                     if applicant_types != expected_applicant_types:
                         raise ValueError(f"expected four applicant types, got {sorted(applicant_types)}")
@@ -216,7 +233,7 @@ for path in files:
                 photo = json.loads(photo_raw)
                 if not isinstance(photo, dict) or not photo.get("status"):
                     raise ValueError("photo specification needs a status")
-                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"}:
+                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv", "visa_full_audit_batch_44.csv", "visa_full_audit_batch_45.csv"}:
                     if not photo.get("source_name") or not (photo.get("source_url") or "").startswith("https://"):
                         raise ValueError("new batch photo specification needs an official source name and HTTPS URL")
                     date.fromisoformat(str(photo.get("checked_at", ""))[:10])
