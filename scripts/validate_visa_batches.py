@@ -189,7 +189,7 @@ for path in files:
                 photo = json.loads(photo_raw)
                 if not isinstance(photo, dict) or not photo.get("status"):
                     raise ValueError("photo specification needs a status")
-                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv"}:
+                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"}:
                     if not photo.get("source_name") or not (photo.get("source_url") or "").startswith("https://"):
                         raise ValueError("new batch photo specification needs an official source name and HTTPS URL")
                     date.fromisoformat(str(photo.get("checked_at", ""))[:10])
