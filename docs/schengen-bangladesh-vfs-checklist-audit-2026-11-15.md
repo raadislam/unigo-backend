@@ -72,6 +72,7 @@ Bangladesh's Apostille Convention status: the Convention entered into force for 
 ## Primary sources
 
 - EU Council — Schengen area and 29-country membership: https://www.consilium.europa.eu/en/policies/schengen-area/
+- European Union — Visa Code, Regulation (EC) No 810/2009: https://eur-lex.europa.eu/eli/reg/2009/810/oj/eng
 - EEAS Bangladesh — visa-issuing embassies and representation arrangements: https://www.eeas.europa.eu/bangladesh/travel-study_en
 - German Embassy Dhaka — January 2026 tourism information sheet: https://visa.vfsglobal.com/one-pager/germany/bangladesh/english/pdf/VFS_Requirements_for_Tourist_visa_.pdf
 - German Embassy Dhaka — Estonia application restrictions, 22 October 2026: https://dhaka.diplo.de/bd-en/service/2682922-2682922
