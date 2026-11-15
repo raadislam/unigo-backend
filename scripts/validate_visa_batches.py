@@ -97,6 +97,23 @@ for path in files:
         codes = {row.get("destination_iso2") for row in rows}
         if len(rows) != 2 or codes != {"AR", "BS"}:
             errors.append(f"{path.name}: batch 38 must contain exactly AR and BS")
+    if path.name == "visa_full_audit_batch_12.csv":
+        for batch41_row in rows:
+            iso2 = batch41_row.get("destination_iso2")
+            if iso2 not in {"UG", "ZW"}:
+                continue
+            if batch41_row.get("verification_status") != "verified" or batch41_row.get("publish_status") != "published" or (batch41_row.get("notes") or "").strip():
+                errors.append(f"{path.name}: batch 41 {iso2} must be verified, publish-approved and have no unmapped notes")
+            schema_limits = {"visa_requirement_type": 50, "maximum_permitted_stay": 120, "entry_count": 40, "application_channel": 180, "application_fee": 120, "processing_time": 120}
+            for field, limit in schema_limits.items():
+                if len(batch41_row.get(field, "") or "") > limit:
+                    errors.append(f"{path.name}: batch 41 {iso2} {field} exceeds schema limit {limit}")
+            if batch41_row.get("official_source_last_checked") != "2026-11-15" or batch41_row.get("cross_check_source_last_checked") != "2026-11-15":
+                errors.append(f"{path.name}: batch 41 {iso2} source dates must be 2026-11-15")
+            if iso2 == "UG" and (batch41_row.get("visa_required") != "true" or batch41_row.get("visa_free_eligibility") != "false" or batch41_row.get("visa_on_arrival_available") != "false" or batch41_row.get("evisa_available") != "true" or "3 months" not in batch41_row.get("maximum_permitted_stay", "").lower() or "usd 50" not in batch41_row.get("application_fee", "").lower()):
+                errors.append("Batch 41 Uganda route or fee fields do not match official NCIC guidance")
+            if iso2 == "ZW" and (batch41_row.get("visa_required") != "true" or batch41_row.get("visa_free_eligibility") != "false" or batch41_row.get("visa_on_arrival_available") != "false" or batch41_row.get("evisa_available") != "true" or "3 months" not in batch41_row.get("maximum_permitted_stay", "").lower() or "usd 30" not in batch41_row.get("application_fee", "").lower()):
+                errors.append("Batch 41 Zimbabwe route or fee fields do not match official Category C and fee guidance")
     for line, row in enumerate(rows, 2):
         key = (row.get("passport_iso3"), row.get("destination_iso2"), row.get("travel_purpose"))
         if key in seen:
@@ -141,9 +158,9 @@ for path in files:
                 errors.append(f"{path.name}:{line}: Bahamas route flags or source are inconsistent")
         checklist_raw = (row.get("applicant_checklists", "") or "").strip()
         photo_raw = (row.get("photo_specifications", "") or "").strip()
-        if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} and not checklist_raw:
+        if (path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not checklist_raw:
             errors.append(f"{path.name}:{line}: applicant_checklists is required for the new publishable batch")
-        if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} and not photo_raw:
+        if (path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not photo_raw:
             errors.append(f"{path.name}:{line}: photo_specifications is required for the new publishable batch")
         if checklist_raw:
             try:
@@ -161,6 +178,9 @@ for path in files:
                     if path.name == "visa_full_audit_batch_38.csv":
                         if not checklist.get("source_name") or not (checklist.get("source_url") or "").startswith("https://") or checklist.get("checked_at") != "2026-11-15":
                             raise ValueError("batch 38 applicant checklist needs an official source name, HTTPS URL and checked date")
+                    if path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}:
+                        if not checklist.get("source_name") or not (checklist.get("source_url") or "").startswith("https://") or checklist.get("checked_at") != "2026-11-15":
+                            raise ValueError("batch 41 applicant checklist needs official source metadata and checked date")
                     checklist_notes = checklist.get("notes")
                     if checklist_notes is not None and (not isinstance(checklist_notes, str) or len(checklist_notes) > 1000):
                         raise ValueError("applicant checklist notes exceed 1000 characters")
@@ -178,7 +198,7 @@ for path in files:
                         notes = document.get("notes")
                         if notes is not None and (not isinstance(notes, str) or len(notes) > 1000):
                             raise ValueError("checklist document notes exceed 1000 characters")
-                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"}:
+                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}):
                     expected_applicant_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
                     if applicant_types != expected_applicant_types:
                         raise ValueError(f"expected four applicant types, got {sorted(applicant_types)}")
@@ -196,6 +216,11 @@ for path in files:
                     if not photo.get("source_name") or not (photo.get("source_url") or "").startswith("https://"):
                         raise ValueError("new batch photo specification needs an official source name and HTTPS URL")
                     date.fromisoformat(str(photo.get("checked_at", ""))[:10])
+                if path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}:
+                    if photo.get("status") != "partially_specified" or photo.get("dimensions_mm") or photo.get("digital_dimensions_px"):
+                        raise ValueError("batch 41 photo must remain partially specified without invented dimensions")
+                    if not photo.get("source_name") or not (photo.get("source_url") or "").startswith("https://") or photo.get("checked_at") != "2026-11-15":
+                        raise ValueError("batch 41 photo source metadata is incomplete")
                 if path.name == "visa_full_audit_batch_33.csv":
                     if photo.get("status") != "not_specified" or photo.get("dimensions_mm") or photo.get("digital_dimensions_px"):
                         raise ValueError("South Georgia photo status must be not_specified without invented dimensions")
@@ -260,6 +285,9 @@ for path in files:
                 if path.name == "visa_full_audit_batch_38.csv":
                     if source.get("source_type") != "official" or not (notes or "").strip() or source.get("source_last_checked_at") != "2026-11-15":
                         raise ValueError("batch 38 additional sources must be official, dated 2026-11-15 and have verification notes")
+                if path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}:
+                    if source.get("source_type") != "official" or not (notes or "").strip() or source.get("source_last_checked_at") != "2026-11-15":
+                        raise ValueError("batch 41 additional sources must be official, dated 2026-11-15 and have verification notes")
         except Exception as exc:
             errors.append(f"{path.name}:{line}: invalid additional_sources: {exc}")
 
