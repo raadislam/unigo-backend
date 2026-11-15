@@ -24,6 +24,8 @@ expected = {
     "production_status": "candidate_not_imported",
     "visa_record_status": "pending_live_BGD_nationality_selector_confirmation",
     "last_checked": "2026-11-15",
+    "photo_status": "official_route_photo_guidance_verified_BGD_eligibility_pending",
+    "checklist_status": "official_generic_visitor_checklist_reviewed_BGD_applicability_pending",
 }
 
 for key, value in expected.items():
@@ -63,9 +65,18 @@ for marker in (
     "live nationality selector",
     "multi-entry uk visa",
     "no visa record is created",
+    "bangladesh ordinary-passport eligibility remains unconfirmed",
+    "no standard printed photo",
+    "no fixed dimensions",
 ):
     if marker not in notes:
         raise SystemExit(f"Batch 46 notes are missing the required safety statement: {marker}")
+
+if "scanned JPEG photo" not in row.get("photo_summary", "") or "no fixed dimensions" not in row.get("photo_summary", ""):
+    raise SystemExit("Batch 46 photo summary is incomplete or overstates a printed-photo rule.")
+
+if "GBP 500000" not in row.get("checklist_summary", "") or "Bangladesh-specific applicability remains unconfirmed" not in row.get("checklist_summary", ""):
+    raise SystemExit("Batch 46 applicant checklist summary is incomplete or not route-qualified.")
 
 if not research_path.is_file():
     raise SystemExit("Batch 46 research note is missing.")
@@ -76,6 +87,8 @@ for marker in (
     "live nationality selector",
     "multi-entry UK visa",
     "No Bangladesh tourism requirement is created",
+    "The FAQ says not to send photographs other than the required scanned photograph",
+    "fingerprints and a facial photograph may be requested",
     "https://www.ascension-visas.com/faq",
     "https://www.ascension.gov.ac/travel-and-shipping/immigration",
 ):
