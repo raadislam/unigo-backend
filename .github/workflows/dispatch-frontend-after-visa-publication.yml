@@ -19,6 +19,9 @@ on:
       - Import verified tourism visa batch 29
       - Import verified tourism visa batch 30
       - Import verified tourism visa batch 31
+      - Import verified tourism updates batch 37
+      - Import verified tourism updates batch 38
+      - Import verified tourism correction batch 40
       - Import verified country batches 19 and 20
       - Import verified country backlog batches 21, 22 and 23
     types:
