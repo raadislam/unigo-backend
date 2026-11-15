@@ -33,8 +33,8 @@ jobs:
           from pathlib import Path
 
           today = date.today().isoformat()
-          seed_path = "database/data/new_country_visa_batch_41.csv"
-          audit_path = "database/data/visa_full_audit_batch_41.csv"
+          seed_path = "database/data/new_country_visa_batch_12.csv"
+          audit_path = "database/data/visa_full_audit_batch_12.csv"
 
           def read_rows(path):
               with open(path, newline="", encoding="utf-8-sig") as handle:
@@ -115,7 +115,8 @@ jobs:
                   require("3 months" in audit.get("maximum_permitted_stay", "").lower(), "ZW three-month single-entry validity must be stated separately from stay")
                   require("usd 30" in audit.get("application_fee", "").lower(), "ZW ordinary single-entry USD30 fee missing")
                   require(audit.get("official_source_url") == "https://www.zimimmigration.gov.zw/?p=7196", "ZW Category C primary source missing")
-                  require(photo.get("status") == "partially_specified" and not photo.get("dimensions_mm") and not photo.get("digital_dimensions_px"), "ZW photo must remain partially specified without invented dimensions")              for key in ("cross_check_source_url", "cross_check_source_name", "cross_check_source_last_checked"):
+                  require(photo.get("status") == "partially_specified" and not photo.get("dimensions_mm") and not photo.get("digital_dimensions_px"), "ZW photo must remain partially specified without invented dimensions")
+              for key in ("cross_check_source_url", "cross_check_source_name", "cross_check_source_last_checked"):
                   seed[key] = ""
               seed_rows.append(seed)
               audit_rows.append(audit)
@@ -463,6 +464,7 @@ jobs:
           if($result['country_count']!==250 || $result['requirement_count']!==135 || $published!==133 || $pending!==2 || $duplicates!==0){fwrite(STDERR,json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL);exit(1);}
           foreach(['UG','ZW'] as $iso2){$row=$find($iso2);if(!$row || $row->verification_status!=='verified' || !$row->is_published){fwrite(STDERR,json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL);exit(1);}}
           foreach(['UG','ZW'] as $iso2){$row=$result[$iso2];if(!$row['visa_required'] || $row['visa_free_available'] || $row['visa_on_arrival_available'] || !$row['evisa_available'] || !$row['primary_source_verified'] || $row['photo_status']!=='partially_specified' || $row['photo_dimensions_mm'] || !$row['four_checklists']){fwrite(STDERR,json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL);exit(1);}}
+          if (!str_contains(strtolower($result['UG']['application_fee']), 'usd 50') || !str_contains(strtolower($result['ZW']['application_fee']), 'usd 30') || !str_contains(strtolower($result['UG']['maximum_permitted_stay']), '3 months') || !str_contains(strtolower($result['ZW']['maximum_permitted_stay']), '3 months') || !str_contains(strtolower($result['UG']['processing_time']), '2–3 days') || !str_contains(strtolower($result['ZW']['processing_time']), '7 working days')) { fwrite(STDERR,json_encode($result,JSON_PRETTY_PRINT|JSON_UNESCAPED_SLASHES).PHP_EOL); exit(1); }
           $apiBase=rtrim(config('app.url'),'/');
           $list=\Illuminate\Support\Facades\Http::timeout(30)->get($apiBase.'/api/visa-requirements',['passport'=>'BGD','purpose'=>'tourism'])->throw()->json();
           if(data_get($list,'meta.total')!==133)throw new RuntimeException('Public API list total is not 133.');
