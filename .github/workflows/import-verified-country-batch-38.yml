@@ -216,19 +216,31 @@ jobs:
           $bsCountry = \App\Models\Country::query()->where('iso2', 'BS')->first();
           $ar = $records->filter(fn ($row) => $row->country?->iso2 === 'AR');
           $bs = $records->filter(fn ($row) => $row->country?->iso2 === 'BS');
+          $arRecord = $ar->first();
+          $bsRecord = $bs->first();
+          $arStateOkay = $ar->count() === 0 || ($ar->count() === 1 && $arRecord->verification_status === 'pending_review' && ! (bool) $arRecord->is_published);
+          $bsStateOkay = $bs->count() === 0 || ($bs->count() === 1 && $bsRecord->verification_status === 'pending_review' && ! (bool) $bsRecord->is_published);
+          $expectedRequirementCount = 131 + $ar->count() + $bs->count();
+          $expectedPendingCount = 2 + $ar->count() + $bs->count();
           $result = [
               'country_count' => $countryCount,
               'requirement_count' => $records->count(),
+              'expected_requirement_count' => $expectedRequirementCount,
               'source_count' => \Illuminate\Support\Facades\DB::table('visa_requirement_sources')->count(),
               'published_count' => $published,
               'pending_count' => $pending,
+              'expected_pending_count' => $expectedPendingCount,
               'duplicate_keys' => $duplicates,
               'ar_country_present' => (bool) $arCountry,
               'bs_country_present' => (bool) $bsCountry,
               'ar_requirement_count' => $ar->count(),
               'bs_requirement_count' => $bs->count(),
+              'ar_status' => $arRecord?->verification_status,
+              'bs_status' => $bsRecord?->verification_status,
+              'ar_is_published' => (bool) ($arRecord?->is_published ?? false),
+              'bs_is_published' => (bool) ($bsRecord?->is_published ?? false),
           ];
-          if ($countryCount !== 250 || $records->count() !== 131 || $published !== 129 || $pending !== 2 || $duplicates !== 0 || ! $arCountry || ! $bsCountry || $ar->count() !== 0 || $bs->count() !== 0) {
+          if ($countryCount !== 250 || $records->count() !== $expectedRequirementCount || $published !== 129 || $pending !== $expectedPendingCount || $duplicates !== 0 || ! $arCountry || ! $bsCountry || $ar->count() > 1 || $bs->count() > 1 || ! $arStateOkay || ! $bsStateOkay) {
               fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
               exit(1);
           }
@@ -441,7 +453,18 @@ jobs:
           install -m 0644 /tmp/verified_seed_batch_38.csv storage/app/imports/unigo_visa_requirements_research_template.csv
           install -m 0644 /tmp/verified_full_audit_batch_38.csv storage/app/imports/verified_full_audit_batch_38.csv
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > /tmp/batch38-seeder.log
+          rm -f /tmp/batch38-import-started.marker /tmp/batch38-import-result.json /tmp/batch38-readback.json
+          touch /tmp/batch38-import-started.marker
+          set +e
           php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_38.csv > /tmp/batch38-import-result.json
+          IMPORT_EXIT=$?
+          set -e
+          mkdir -p /var/www/unigo/backend/shared/imports
+          cp /tmp/batch38-import-result.json /var/www/unigo/backend/shared/imports/batch38-import-result.json
+          if [ "$IMPORT_EXIT" -ne 0 ]; then
+            python3 -m json.tool /tmp/batch38-import-result.json || true
+            exit "$IMPORT_EXIT"
+          fi
           python3 -m json.tool /tmp/batch38-import-result.json > /dev/null
           php artisan visa:requirements-audit > /tmp/batch38-audit-after.txt
           cat > /tmp/batch38-readback.php <<'PHP'
@@ -449,6 +472,7 @@ jobs:
           require '/var/www/unigo/backend/current/vendor/autoload.php';
           $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
           $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          try {
           $records = \App\Models\VisaRequirement::query()->with(['country:id,name,slug,iso2', 'sources'])
               ->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->get();
           $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published)->count();
@@ -531,7 +555,7 @@ jobs:
               if (data_get($detail, 'data.verification_status') !== 'verified' || ! data_get($detail, 'data.is_published')) throw new RuntimeException('Public API publication mismatch for ' . $iso2);
               $apiSources = data_get($detail, 'data.sources', []);
               $expectedPrimary = $iso2 === 'AR' ? 'https://www.migraciones.gob.ar/accesible/indexdnm.php?visas=' : 'https://cdn.bahamas.gov.bs/tenant/tenanttgotb/documents/Visa-Requirements-for-Visitors-Travelling-to-TheBahamas1-20240216054224-20250528004922.pdf';
-              $apiPrimary = collect($apiSources)->contains(fn ($source) => data_get($source, 'is_primary') && data_get($source, 'source_type') === 'official' && data_get($source, 'source_url') === $expectedPrimary && data_get($source, 'source_last_checked_at') === '2026-11-15');
+              $apiPrimary = collect($apiSources)->contains(fn ($source) => data_get($source, 'is_primary') && data_get($source, 'source_type') === 'official' && data_get($source, 'source_url') === $expectedPrimary && substr((string) data_get($source, 'source_last_checked_at'), 0, 10) === '2026-11-15');
               if (! $apiPrimary) throw new RuntimeException('Public API primary official source mismatch for ' . $iso2);
               $apiPhoto = data_get($detail, 'data.photo_specifications');
               if (! data_get($apiPhoto, 'source_name') || ! str_starts_with((string) data_get($apiPhoto, 'source_url'), 'https://') || data_get($apiPhoto, 'checked_at') !== '2026-11-15') throw new RuntimeException('Public API photo source metadata mismatch for ' . $iso2);
@@ -553,6 +577,10 @@ jobs:
           $result['public_api_total'] = data_get($list, 'meta.total');
           $result['public_api_details_verified'] = ['AR','BS'];
           echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          } catch (\\Throwable $exception) {
+              fwrite(STDERR, 'BATCH38_READBACK_ERROR ' . get_class($exception) . ': ' . $exception->getMessage() . PHP_EOL);
+              exit(1);
+          }
           PHP
           php -l /tmp/batch38-readback.php >/dev/null
           php /tmp/batch38-readback.php > /tmp/batch38-readback.json
@@ -579,6 +607,10 @@ jobs:
           set -euo pipefail
           APP=/var/www/unigo/backend/current
           cd "$APP"
+          if [ ! -f /tmp/batch38-import-started.marker ]; then
+            echo "BATCH38_IMPORT_NOT_STARTED; no rollback needed"
+            exit 0
+          fi
           if [ ! -f /tmp/verified_full_audit_batch_38.csv ]; then
             echo "NO_BATCH38_IMPORT_FILE_STAGED; no batch 38 production rows could have been imported"
             exit 0
@@ -607,6 +639,8 @@ jobs:
           print("BATCH38_ROLLBACK_ALLOWLIST",",".join(sorted(codes)))
           PY
           php artisan visa:requirements-import-research --file=/tmp/verified_full_audit_batch_38_rollback.csv --unpublish-only > /tmp/batch38-unpublish-result.json
+          mkdir -p /var/www/unigo/backend/shared/imports
+          cp /tmp/batch38-unpublish-result.json /var/www/unigo/backend/shared/imports/batch38-unpublish-result.json
           python3 - <<'PY'
           import json
           from pathlib import Path
