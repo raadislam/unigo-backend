@@ -113,19 +113,17 @@ class VisaChecklistPdfService
             throw new InvalidArgumentException('A sponsor-only checklist cannot be generated until verified sponsor-specific requirements are recorded.');
         }
 
-        {
-            foreach ($requirement->required_documents ?? [] as $document) {
+        foreach ($requirement->required_documents ?? [] as $document) {
                 $this->appendRequiredDocument($documents, $document);
+        }
+
+        foreach ($requirement->applicant_checklists ?? [] as $profile) {
+            if (! is_array($profile) || ! $this->matchesOccupation($profile['applicant_type'] ?? '', $applicantOccupation)) {
+                continue;
             }
 
-            foreach ($requirement->applicant_checklists ?? [] as $profile) {
-                if (! is_array($profile) || ! $this->matchesOccupation($profile['applicant_type'] ?? '', $applicantOccupation)) {
-                    continue;
-                }
-
-                foreach ($profile['documents'] ?? [] as $document) {
-                    $this->appendRequiredDocument($documents, $document);
-                }
+            foreach ($profile['documents'] ?? [] as $document) {
+                $this->appendRequiredDocument($documents, $document);
             }
         }
 
