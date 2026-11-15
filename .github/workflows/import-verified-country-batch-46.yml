@@ -1,0 +1,399 @@
+name: Import discovered country master batch 46
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/run-verified-country-import-batch-46.trigger'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/import-verified-country-batch-46.yml'
+      - 'database/seeders/AscensionIslandCountryBackfillSeeder.php'
+      - 'database/data/destination_discovery_batch_46.csv'
+      - 'scripts/batch46_database_guard.php'
+      - 'scripts/validate_discovery_candidate_batch_46.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-country-master-batch-46
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: curl, fileinfo, intl, mbstring, pdo_mysql, xml, zip, bcmath
+          coverage: none
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate the single research-only AC candidate
+        run: |
+          python3 -m py_compile scripts/validate_discovery_candidate_batch_46.py
+          python3 scripts/validate_discovery_candidate_batch_46.py
+          php -l database/seeders/AscensionIslandCountryBackfillSeeder.php
+          php -l scripts/batch46_database_guard.php
+          ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0), aliases: true); puts "Batch 46 workflow YAML syntax OK"' .github/workflows/import-verified-country-batch-46.yml
+
+  import-unpublished-master-row:
+    needs: validate
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+      - name: Set up PHP for isolated restore and staging
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: curl, fileinfo, intl, mbstring, pdo_mysql, xml, zip, bcmath
+          coverage: none
+      - name: Install dependencies for isolated staging only
+        run: composer install --no-interaction --prefer-dist --no-dev --no-scripts --optimize-autoloader
+      - name: Prepare authorized VPS connection
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+      - name: Trust configured VPS host
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Fresh production preflight and database backup
+        id: backup
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > backup-meta.json <<'REMOTE'
+          set -euo pipefail
+          umask 077
+          APP=/var/www/unigo/backend/current
+          SHARED=/var/www/unigo/backend/shared
+          cd "$APP"
+          php artisan migrate:status --no-ansi > /tmp/batch46-migrations-before.txt
+          if grep -q "Pending" /tmp/batch46-migrations-before.txt; then
+            echo "Pending production migrations detected; refusing batch 46."
+            exit 1
+          fi
+          php > /tmp/batch46-preflight.json <<'PHP'
+          <?php
+          require '/var/www/unigo/backend/current/vendor/autoload.php';
+          $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $countryCount = \App\Models\Country::query()->count();
+          $records = \App\Models\VisaRequirement::query()->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->get();
+          $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published)->count();
+          $pending = $records->count() - $published;
+          $sources = \Illuminate\Support\Facades\DB::table('visa_requirement_sources')->count();
+          $duplicates = \Illuminate\Support\Facades\DB::table('visa_requirements')->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->select('country_id', 'passport_nationality_iso3', 'travel_purpose')->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')->havingRaw('COUNT(*) > 1')->count();
+          $country = \App\Models\Country::query()->where('iso2', 'AC')->first();
+          $slugConflict = \App\Models\Country::query()->where('slug', 'ascension-island')->where('iso2', '!=', 'AC')->exists();
+          $acRequirements = $country ? \App\Models\VisaRequirement::query()->where('country_id', $country->id)->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->count() : 0;
+          $identityValid = $country && $country->name === 'Ascension Island' && $country->slug === 'ascension-island' && $country->iso2 === 'AC' && $country->iso3 === null && $country->flag_emoji === null && ! (bool) $country->is_published && (int) $country->sort_order > 0 && $country->visa_information === null;
+          $countryStateValid = ($countryCount === 251 && ! $country) || ($countryCount === 252 && $identityValid);
+          $valid = ($records->count() === 136) && ($published === 134) && ($pending === 2) && ($sources === 916) && ($duplicates === 0) && ! $slugConflict && ($acRequirements === 0) && $countryStateValid;
+          $result = ['country_count' => $countryCount, 'requirement_count' => $records->count(), 'source_count' => $sources, 'published_count' => $published, 'pending_count' => $pending, 'duplicate_keys' => $duplicates, 'AC_exists' => (bool) $country, 'AC_identity_valid' => (bool) $identityValid, 'AC_BGD_tourism_requirement_count' => $acRequirements, 'can_proceed' => $valid];
+          if (! $valid) { fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL); exit(1); }
+          echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL;
+          PHP
+          mkdir -p "$SHARED/backups"
+          cat > /tmp/batch46-backup.php <<'PHP'
+          <?php
+          $root = '/var/www/unigo/backend/current';
+          chdir($root);
+          require $root . '/vendor/autoload.php';
+          $app = require $root . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $connection = config('database.connections.' . config('database.default'));
+          if (! is_array($connection) || ($connection['driver'] ?? '') !== 'mysql' || empty($connection['database']) || empty($connection['username'])) {
+              throw new RuntimeException('Configured production MySQL connection is incomplete.');
+          }
+          $quote = static fn ($value) => '"' . str_replace(["\\", '"'], ["\\\\", '\\"'], (string) $value) . '"';
+          $cnf = '/tmp/unigo-batch46-mysql.cnf';
+          $content = "[client]\n";
+          $content .= 'host=' . $quote($connection['host'] ?? '127.0.0.1') . "\n";
+          $content .= 'user=' . $quote($connection['username']) . "\n";
+          $content .= 'password=' . $quote($connection['password'] ?? '') . "\n";
+          $content .= 'port=' . $quote($connection['port'] ?? 3306) . "\n";
+          $content .= 'default-character-set=' . $quote($connection['charset'] ?? 'utf8mb4') . "\n";
+          if (! empty($connection['unix_socket'])) $content .= 'socket=' . $quote($connection['unix_socket']) . "\n";
+          if (file_put_contents($cnf, $content, LOCK_EX) === false) throw new RuntimeException('Unable to prepare protected MySQL client configuration.');
+          chmod($cnf, 0600);
+          $backupDir = '/var/www/unigo/backend/shared/backups';
+          $path = $backupDir . '/unigo-pre-country-master-batch-46-' . gmdate('Ymd\THis\Z') . '.sql.gz';
+          $command = 'bash -o pipefail -c ' . escapeshellarg(
+              'mysqldump --defaults-extra-file=' . escapeshellarg($cnf) .
+              ' --single-transaction --routines --triggers --events --no-tablespaces --hex-blob --default-character-set=utf8mb4 ' .
+              escapeshellarg($connection['database']) . ' | gzip -1 > ' . escapeshellarg($path)
+          );
+          exec($command, $output, $status);
+          @unlink($cnf);
+          if ($status !== 0 || ! is_file($path) || filesize($path) < 1024) throw new RuntimeException('Production database backup creation failed.');
+          chmod($path, 0600);
+          exec('gzip -t ' . escapeshellarg($path), $gzipOutput, $gzipStatus);
+          if ($gzipStatus !== 0) throw new RuntimeException('Production backup gzip integrity check failed.');
+          $preflight = json_decode(file_get_contents('/tmp/batch46-preflight.json'), true);
+          if (! is_array($preflight) || ($preflight['can_proceed'] ?? false) !== true) throw new RuntimeException('Batch 46 preflight did not pass.');
+          echo json_encode([
+              'preflight' => $preflight,
+              'backup_path' => $path,
+              'sha256' => hash_file('sha256', $path),
+              'size_bytes' => filesize($path),
+              'database_name' => $connection['database'],
+              'created_at_utc' => gmdate(DATE_ATOM),
+          ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          PHP
+          php -l /tmp/batch46-backup.php >/dev/null
+          php /tmp/batch46-backup.php
+          REMOTE
+          python3 -m json.tool backup-meta.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("backup-meta.json").read_text())
+          Path("backup-meta-summary.txt").write_text(data["backup_path"] + "\n" + data["sha256"] + "\n" + data["database_name"] + "\n")
+          print("PRODUCTION_BACKUP_CREATED", data["backup_path"])
+          print("PRODUCTION_BACKUP_SHA256", data["sha256"])
+          print("PRODUCTION_BACKUP_SIZE_BYTES", data["size_bytes"])
+          print("PRODUCTION_PREFLIGHT", json.dumps(data["preflight"], sort_keys=True))
+          PY
+          BACKUP_PATH="$(sed -n '1p' backup-meta-summary.txt)"
+          BACKUP_SHA="$(sed -n '2p' backup-meta-summary.txt)"
+          scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" production-backup.sql.gz
+          echo "$BACKUP_SHA  production-backup.sql.gz" | sha256sum -c -
+          gzip -t production-backup.sql.gz
+          echo "backup_path=$BACKUP_PATH" >> "$GITHUB_OUTPUT"
+          echo "backup_sha256=$BACKUP_SHA" >> "$GITHUB_OUTPUT"
+          echo "database_name=$(sed -n '3p' backup-meta-summary.txt)" >> "$GITHUB_OUTPUT"
+      - name: Restore-test the production backup in isolated MySQL 8
+        env:
+          DB_NAME: ${{ steps.backup.outputs.database_name }}
+        run: |
+          set -euo pipefail
+          RESTORE_DB_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$RESTORE_DB_PASSWORD"
+          docker rm -f unigo-batch46-restore >/dev/null 2>&1 || true
+          docker run -d --name unigo-batch46-restore -e MYSQL_ROOT_PASSWORD="$RESTORE_DB_PASSWORD" -e MYSQL_DATABASE="$DB_NAME" -p 3307:3306 mysql:8.0
+          AUTH_READY=false
+          for attempt in $(seq 1 90); do
+            if docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch46-restore mysql -uroot -N -B -e "SELECT 1" >/dev/null 2>&1; then
+              AUTH_READY=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$AUTH_READY" != "true" ]; then
+            docker logs --tail 80 unigo-batch46-restore || true
+            echo "Isolated MySQL did not become ready for authenticated queries."
+            exit 1
+          fi
+          gzip -dc production-backup.sql.gz | docker exec -i -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch46-restore mysql -uroot "$DB_NAME"
+          RESTORE_COUNTS="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch46-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT (SELECT COUNT(*) FROM countries),(SELECT COUNT(*) FROM visa_requirements),(SELECT COUNT(*) FROM visa_requirement_sources),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND verification_status='verified' AND is_published=1),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND NOT (verification_status='verified' AND is_published=1)),(SELECT COUNT(*) FROM (SELECT country_id,passport_nationality_iso3,travel_purpose FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' GROUP BY country_id,passport_nationality_iso3,travel_purpose HAVING COUNT(*)>1) d);")"
+          echo "$RESTORE_COUNTS" > restore-test-counts.txt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          actual = list(map(int, Path("restore-test-counts.txt").read_text().split()))
+          expected = json.loads(Path("backup-meta.json").read_text())["preflight"]
+          keys = ("country_count", "requirement_count", "source_count", "published_count", "pending_count", "duplicate_keys")
+          for index, key in enumerate(keys):
+              if actual[index] != expected[key]:
+                  raise SystemExit(f"Restore mismatch for {key}: expected {expected[key]}, got {actual[index]}")
+          print("ISOLATED_MYSQL_RESTORE_COUNTS_MATCH_PRODUCTION_PREFLIGHT", json.dumps(dict(zip(keys, actual))))
+          PY
+          echo "restore_password=$RESTORE_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "RESTORE_TEST_PASSED=true" >> "$GITHUB_ENV"
+      - name: Seed and read back the unpublished country in isolated staging
+        env:
+          DB_NAME: ${{ steps.backup.outputs.database_name }}
+        run: |
+          set -euo pipefail
+          STAGING_APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+          STAGING_ADMIN_SECRET="$(openssl rand -hex 32)"
+          echo "::add-mask::$STAGING_APP_KEY"
+          echo "::add-mask::$STAGING_ADMIN_SECRET"
+          cat > .env <<EOF
+          APP_NAME=UniGoBatch46Staging
+          APP_ENV=testing
+          APP_KEY=$STAGING_APP_KEY
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1:8000
+          LOG_CHANNEL=stderr
+          LOG_LEVEL=error
+          CACHE_STORE=array
+          SESSION_DRIVER=array
+          QUEUE_CONNECTION=sync
+          FILESYSTEM_DISK=local
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3307
+          DB_DATABASE=$DB_NAME
+          DB_USERNAME=root
+          DB_PASSWORD=$restore_password
+          UNIGO_ADMIN_API_SECRET=$STAGING_ADMIN_SECRET
+          MAIL_MAILER=array
+          EOF
+          php artisan package:discover --ansi
+          php artisan config:clear
+          php artisan migrate:status --no-ansi > staging-migrations.txt
+          if grep -q "Pending" staging-migrations.txt; then
+            cat staging-migrations.txt
+            exit 1
+          fi
+          php artisan db:seed --class=AscensionIslandCountryBackfillSeeder --force > staging-country-seeder.log
+          php scripts/batch46_database_guard.php readback > staging-readback.json
+          php artisan visa:requirements-audit > staging-audit.json
+          nohup php artisan serve --host=127.0.0.1 --port=8000 > staging-server.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/up >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/up >/dev/null
+          curl -fsS http://127.0.0.1:8000/api/countries > staging-countries.json
+          curl -fsS 'http://127.0.0.1:8000/api/visa-requirements?passport=BGD&purpose=tourism' > staging-visa-requirements.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          readback = json.loads(Path("staging-readback.json").read_text())
+          if readback.get("readback_passed") is not True:
+              raise SystemExit("Staging database readback did not pass.")
+          countries = json.loads(Path("staging-countries.json").read_text())
+          requirements = json.loads(Path("staging-visa-requirements.json").read_text())
+          country_rows = countries.get("data")
+          requirement_rows = requirements.get("data")
+          if countries.get("success") is not True or not isinstance(country_rows, list):
+              raise SystemExit("Staging country directory API response is invalid.")
+          if requirements.get("success") is not True or not isinstance(requirement_rows, list):
+              raise SystemExit("Staging BGD tourism API response is invalid.")
+          if len(country_rows) != 134 or len(requirement_rows) != 134:
+              raise SystemExit("Staging public API totals changed during unpublished master-row import.")
+          if any((row.get("iso2") or "").upper() == "AC" or row.get("slug") == "ascension-island" for row in country_rows):
+              raise SystemExit("Unpublished Ascension Island leaked into the staging public country directory.")
+          if any(((row.get("country") or {}).get("iso2") or "").upper() == "AC" for row in requirement_rows):
+              raise SystemExit("An unsupported Ascension Island BGD tourism requirement was created.")
+          print("STAGING_DATABASE_AND_PUBLIC_API_READBACK_PASSED", json.dumps({"countries": len(country_rows), "requirements": len(requirement_rows), "AC_public": False}))
+          PY
+      - name: Upload guarded files to the VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          scp -P "$VPS_PORT" database/seeders/AscensionIslandCountryBackfillSeeder.php "$VPS_USER@$VPS_HOST:/tmp/AscensionIslandCountryBackfillSeeder.php"
+          scp -P "$VPS_PORT" scripts/batch46_database_guard.php "$VPS_USER@$VPS_HOST:/tmp/batch46_database_guard.php"
+      - name: Create only the unpublished production country master row and read it back
+        id: production
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > production-result.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          SHARED=/var/www/unigo/backend/shared
+          cd "$APP"
+          php artisan migrate:status --no-ansi > /tmp/batch46-migrations-final.txt
+          if grep -q "Pending" /tmp/batch46-migrations-final.txt; then
+            echo "Pending production migrations detected after backup; refusing batch 46."
+            exit 1
+          fi
+          install -m 0644 /tmp/AscensionIslandCountryBackfillSeeder.php database/seeders/AscensionIslandCountryBackfillSeeder.php
+          install -m 0644 /tmp/batch46_database_guard.php scripts/batch46_database_guard.php
+          composer dump-autoload --no-interaction --optimize --no-scripts
+          php scripts/batch46_database_guard.php preflight > /tmp/batch46-production-prewrite.json
+          php artisan db:seed --class=AscensionIslandCountryBackfillSeeder --force > /tmp/batch46-country-seeder.log
+          php scripts/batch46_database_guard.php readback > /tmp/batch46-production-readback.json
+          php artisan visa:requirements-audit > /tmp/batch46-post-import-audit.json
+          mkdir -p "$SHARED/imports"
+          cp /tmp/batch46-production-readback.json "$SHARED/imports/batch46-production-readback.json"
+          cp /tmp/batch46-post-import-audit.json "$SHARED/imports/batch46-post-import-audit.json"
+          cat /tmp/batch46-production-readback.json
+          REMOTE
+          python3 -m json.tool production-result.json > /dev/null
+          scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch46-production-readback.json" production-readback.json
+          scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch46-post-import-audit.json" production-post-import-audit.json
+          cat production-result.json
+      - name: Verify production public APIs still exclude the research-only destination
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from urllib.request import Request, urlopen
+
+          base = "https://api.unigo-bd.com/api"
+
+          def get(path):
+              request = Request(base + path, headers={"Accept": "application/json", "User-Agent": "UniGo-Batch46-Readback/1.0"})
+              with urlopen(request, timeout=45) as response:
+                  if response.status != 200:
+                      raise SystemExit(f"Public API returned HTTP {response.status}: {path}")
+                  return json.loads(response.read().decode("utf-8"))
+
+          countries = get("/countries")
+          requirements = get("/visa-requirements?passport=BGD&purpose=tourism")
+          country_rows = countries.get("data")
+          requirement_rows = requirements.get("data")
+          if countries.get("success") is not True or not isinstance(country_rows, list):
+              raise SystemExit("Production country directory API response is invalid.")
+          if requirements.get("success") is not True or not isinstance(requirement_rows, list):
+              raise SystemExit("Production BGD tourism API response is invalid.")
+          if len(country_rows) != 134 or len(requirement_rows) != 134:
+              raise SystemExit("Production public API totals changed during the research-only master import.")
+          if any((row.get("iso2") or "").upper() == "AC" or row.get("slug") == "ascension-island" for row in country_rows):
+              raise SystemExit("Research-only Ascension Island unexpectedly appeared in the public directory.")
+          if any(((row.get("country") or {}).get("iso2") or "").upper() == "AC" for row in requirement_rows):
+              raise SystemExit("An unsupported Ascension Island BGD tourism requirement appeared in the public API.")
+          Path("api-readback.json").write_text(json.dumps({"country_directory_count": len(country_rows), "bgd_tourism_requirement_count": len(requirement_rows), "ascension_public": False}, indent=2) + "\n")
+          print("PRODUCTION_PUBLIC_API_READBACK_PASSED", json.dumps({"countries": len(country_rows), "requirements": len(requirement_rows), "AC_public": False}))
+          PY
+      - name: Upload non-sensitive backup metadata and readback artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unigo-batch-46-ascension-master-audit
+          path: |
+            backup-meta.json
+            backup-meta-summary.txt
+            restore-test-counts.txt
+            staging-migrations.txt
+            staging-country-seeder.log
+            staging-readback.json
+            staging-audit.json
+            staging-countries.json
+            staging-visa-requirements.json
+            production-result.json
+            production-readback.json
+            production-post-import-audit.json
+            api-readback.json
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Clean up isolated MySQL restore container and temporary backup
+        if: always()
+        run: |
+          docker rm -f unigo-batch46-restore >/dev/null 2>&1 || true
+          rm -f production-backup.sql.gz
