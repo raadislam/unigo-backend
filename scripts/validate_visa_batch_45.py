@@ -1,5 +1,7 @@
 import csv
 import json
+import subprocess
+import textwrap
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -7,6 +9,7 @@ SEED = ROOT / "database/data/new_country_visa_batch_45.csv"
 AUDIT = ROOT / "database/data/visa_full_audit_batch_45.csv"
 SEEDER = ROOT / "database/seeders/TristanDaCunhaCountryBackfillSeeder.php"
 READBACK = ROOT / "scripts/batch45_readback.php"
+WORKFLOW = ROOT / ".github/workflows/import-verified-country-batch-45.yml"
 
 def read_one(path):
     with path.open(encoding="utf-8-sig", newline="") as handle:
@@ -89,6 +92,29 @@ if "APP_ROOT" not in readback or "/api/visa-requirements/TA" not in readback or 
     raise SystemExit("Batch 45 readback script is missing the scoped TA database/API checks.")
 if any(token in readback.lower() for token in ("truncate table", "drop table", "delete from visa_requirements")):
     raise SystemExit("Batch 45 readback script must remain read-only.")
+
+workflow = WORKFLOW.read_text(encoding="utf-8")
+for forbidden in ("migrate:fresh", "migrate:reset", "key:generate", "DROP TABLE", "TRUNCATE TABLE"):
+    if forbidden.lower() in workflow.lower():
+        raise SystemExit(f"Batch 45 workflow contains a forbidden destructive operation: {forbidden}")
+for required in ("mysqldump", "gzip -t", "docker run", "--dry-run", "--unpublish-only", "visa:requirements-audit", "batch45-readback.php"):
+    if required not in workflow:
+        raise SystemExit(f"Batch 45 workflow is missing a required safety stage: {required}")
+
+for stage in ("preflight", "backup"):
+    start_marker = f"cat > /tmp/batch45-{stage}.php <<'PHP'\\n"
+    end_marker = "\\n          PHP\\n"
+    start = workflow.find(start_marker)
+    if start < 0:
+        raise SystemExit(f"Batch 45 workflow is missing the embedded {stage} PHP script.")
+    start += len(start_marker)
+    end = workflow.find(end_marker, start)
+    if end < 0:
+        raise SystemExit(f"Batch 45 workflow has an unterminated {stage} PHP heredoc.")
+    source = textwrap.dedent(workflow[start:end]) + "\\n"
+    target = Path(f"/tmp/unigo-batch45-{stage}.php")
+    target.write_text(source, encoding="utf-8")
+    subprocess.run(["php", "-l", str(target)], check=True)
 
 print("BATCH45_ALLOWLIST_VALIDATED TA")
 print("BATCH45_ROWS 1")
