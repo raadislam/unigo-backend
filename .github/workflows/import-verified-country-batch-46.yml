@@ -324,7 +324,7 @@ jobs:
           fi
           install -m 0644 /tmp/AscensionIslandCountryBackfillSeeder.php database/seeders/AscensionIslandCountryBackfillSeeder.php
           install -m 0644 /tmp/batch46_database_guard.php scripts/batch46_database_guard.php
-          composer dump-autoload --no-interaction --optimize --no-scripts
+          composer dump-autoload --no-interaction --optimize --no-scripts > /tmp/batch46-composer.log 2>&1
           php scripts/batch46_database_guard.php preflight > /tmp/batch46-production-prewrite.json
           php artisan db:seed --class=AscensionIslandCountryBackfillSeeder --force > /tmp/batch46-country-seeder.log
           php scripts/batch46_database_guard.php readback > /tmp/batch46-production-readback.json
