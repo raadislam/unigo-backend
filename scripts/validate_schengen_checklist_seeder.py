@@ -123,7 +123,7 @@ vfs_group_requirements = {
         "last 3 months",
         "last 3 years",
         "salary certificates for the last 3 months",
-        "notarised consent",
+        "notarised guardian consent",
         "apostille",
     ],
 }
