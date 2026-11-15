@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 root = Path(__file__).resolve().parents[1]
 candidate_path = root / "database/data/destination_discovery_batch_46.csv"
 research_path = root / "docs/visa-discovery-batch-46-ascension-island-research.md"
+workflow_path = root / ".github/workflows/import-verified-country-batch-46.yml"
 
 with candidate_path.open(encoding="utf-8-sig", newline="") as handle:
     rows = list(csv.DictReader(handle))
@@ -78,6 +79,10 @@ if "scanned jpeg photo" not in photo_summary or "no fixed dimensions" not in pho
 
 if "GBP 500000" not in row.get("checklist_summary", "") or "Bangladesh-specific applicability remains unconfirmed" not in row.get("checklist_summary", ""):
     raise SystemExit("Batch 46 applicant checklist summary is incomplete or not route-qualified.")
+
+workflow = workflow_path.read_text(encoding="utf-8")
+if "tee production-result.json" not in workflow or "test -s production-result.json" not in workflow or "python3 -m json.tool production-result.json" not in workflow:
+    raise SystemExit("Batch 46 production readback must be streamed, non-empty and JSON-validated.")
 
 if not research_path.is_file():
     raise SystemExit("Batch 46 research note is missing.")
