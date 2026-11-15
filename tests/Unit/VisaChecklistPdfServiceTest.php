@@ -4,6 +4,7 @@ namespace Tests\Unit;
 
 use App\Models\Country;
 use App\Models\VisaRequirement;
+use App\Models\VisaRequirementSource;
 use App\Services\VisaChecklistPdfService;
 use Illuminate\Support\Collection;
 use Tests\TestCase;
@@ -31,7 +32,7 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement->setRelation('country', $country);
         $requirement->setRelation('sources', new Collection());
 
-        $source = new \\App\\Models\\VisaRequirementSource();
+        $source = new VisaRequirementSource();
         $source->source_type = 'official';
         $source->source_name = 'Test Government';
         $source->source_url = 'https://example.gov/visa';
@@ -49,7 +50,7 @@ class VisaChecklistPdfServiceTest extends TestCase
         $pdf = $service->generate($requirement, ['scope' => 'applicant']);
         $this->assertStringStartsWith('%PDF-', $pdf);
         $this->assertStringContainsString('%%EOF', $pdf);
-        preg_match_all('~/Type\\s*/Page\\b~', $pdf, $pages);
+        preg_match_all('~/Type\s*/Page\b~', $pdf, $pages);
         $this->assertGreaterThan(1, count($pages[0]));
     }
 }
