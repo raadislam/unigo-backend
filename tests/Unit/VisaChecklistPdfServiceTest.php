@@ -80,7 +80,7 @@ class VisaChecklistPdfServiceTest extends TestCase
 
     public function test_pdf_uses_the_original_uploaded_letterhead_page_size_and_contains_exactly_one_page(): void
     {
-        $letterhead = resource_path('pdf/2026_UniGo_pad(1).pdf');
+        $letterhead = resource_path('pdf/unigo-letterhead.pdf');
         $this->assertFileExists($letterhead);
 
         $country = new Country();
