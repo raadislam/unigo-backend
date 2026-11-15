@@ -229,7 +229,7 @@ try {
     $list = null;
     for ($attempt = 0; $attempt < 5; $attempt++) {
         try {
-            $list = \Illuminate\\Support\Facades\Http::timeout(45)
+            $list = \Illuminate\Support\Facades\Http::timeout(45)
                 ->acceptJson()
                 ->get($apiBase . '/api/visa-requirements', ['passport' => 'BGD', 'purpose' => 'tourism'])
                 ->throw()
@@ -252,7 +252,7 @@ try {
     $detail = null;
     for ($attempt = 0; $attempt < 5; $attempt++) {
         try {
-            $detail = \Illuminate\\Support\Facades\Http::timeout(45)
+            $detail = \Illuminate\Support\Facades\Http::timeout(45)
                 ->acceptJson()
                 ->get($apiBase . '/api/visa-requirements/IM', ['passport' => 'BGD', 'purpose' => 'tourism'])
                 ->throw()
