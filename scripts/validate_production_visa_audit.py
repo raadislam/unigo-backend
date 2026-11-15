@@ -189,6 +189,25 @@ def main():
                 if not (row.get("effective_from") or "").strip() or not (row.get("effective_until") or "").strip()
             ),
         }, ensure_ascii=False))
+        bahamas_records = [
+            row for row in records
+            if row.get("passport_nationality_iso3") == "BGD"
+            and row.get("travel_purpose") == "tourism"
+            and str((row.get("country") or {}).get("iso2") or "").upper() == "BS"
+        ]
+        print("BS_RECORD_DIAGNOSTIC " + json.dumps([
+            {
+                key: row.get(key)
+                for key in (
+                    "id", "country_id", "verification_status", "is_published",
+                    "effective_from", "effective_until", "visa_required",
+                    "visa_free_available", "visa_on_arrival_available", "evisa_available",
+                    "official_source_url", "official_source_last_checked",
+                    "created_at", "updated_at", "last_synced_at", "notes"
+                )
+            }
+            for row in bahamas_records
+        ], ensure_ascii=False))
         fail("Production public directory does not match published country flags and active verified BGD tourism requirements.")
 
     ledger_public_codes = {
