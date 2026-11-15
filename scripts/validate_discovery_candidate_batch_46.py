@@ -48,6 +48,7 @@ required_domains = {
     "www.ascension-visas.com",
     "www.gov.uk",
     "www.iso.org",
+    "www.digitalpolicy.gov.hk",
 }
 domains = {urlparse(value).netloc for value in urls}
 if not required_domains.issubset(domains):
