@@ -57,7 +57,7 @@ The Isle of Man Immigration Service currently publishes an estimate of **up to 1
 
 **Status:** officially confirmed no fixed universal size in the reviewed Bangladesh biometric route; photograph captured at the VFS UK VAC.
 
-GOV.UK states that the applicant's fingerprints and a photograph are taken at the visa application-centre appointment. The reviewed Bangladesh route does not publish a universal printed-photo size, digital pixel dimensions, file-size limit, file format, head-height measurement or number of printed copies for applicants who attend biometric enrolment. Do not invent these values.
+GOV.UK states that the applicant's fingerprints and a photograph are taken at the visa application-centre appointment. The accessible official UKVI and VFS Bangladesh route pages reviewed do not publish a universal printed-photo size, digital pixel dimensions, file-size limit, file format, head-height measurement or number of printed copies for applicants who attend biometric enrolment. Do not invent these values.
 
 A VAC photograph does not prove that a separate photo can never be required. Applicants exempt from biometric enrolment must follow the personalised UKVI/VFS instructions, which may request a recent photo. The public record therefore distinguishes captured_at_vac=true from no_fixed_size_published=true.
 
@@ -83,7 +83,7 @@ All sources checked 15 November 2026.
 
 ### Access limitation
 
-The Isle of Man Government's current rules page linked the Immigration Rules version effective 2 November 2026. Its linked PDF returned HTTP 403 in this research session. The publication decision does not claim to have independently read that PDF. The core visitor route is supported by the current IOM public guidance accepting a valid UKVI visa, the current UK visa-national list, and the Bangladesh-specific Home Office fee table. If an applicant does not hold a valid UKVI/Jersey/Guernsey visa and seeks IOM-specific entry clearance, direct confirmation from the Isle of Man Immigration Service is advised before travel.
+The Isle of Man Government's current rules page linked the Immigration Rules version effective 2 November 2026. Its linked PDF returned HTTP 403 in this research session. The VFS Bangladesh portal confirms the Dhaka and Sylhet centres, but its dynamic personalised 'what to bring' checklist was not independently retrievable; no minimum blank-page count or exempt-biometric photo specification is asserted. The publication decision does not claim to have independently read the current IOM rules PDF or personalised VFS checklist. The core visitor route is supported by the current IOM public guidance accepting a valid UKVI visa, the current UK visa-national list, the UKVI application guidance and the Bangladesh-specific Home Office fee table. If an applicant does not hold a valid UKVI/Jersey/Guernsey visa and seeks IOM-specific entry clearance, direct confirmation from the Isle of Man Immigration Service is advised before travel.
 
 ## Publication disposition
 
