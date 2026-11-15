@@ -1,0 +1,462 @@
+name: Import verified tourism entry batch 45
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/run-verified-country-import-batch-45.trigger'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-verified-country-batch-45
+  cancel-in-progress: false
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: curl, fileinfo, intl, mbstring, pdo_mysql, xml, zip, bcmath
+          coverage: none
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Validate exact TA allowlist, schema fields, source metadata and territory code
+        run: |
+          python3 -m py_compile scripts/validate_visa_batch_45.py
+          python3 scripts/validate_visa_batch_45.py
+          php -l database/seeders/TristanDaCunhaCountryBackfillSeeder.php
+          php -l scripts/batch45_readback.php
+          php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
+      - name: Validate workflow syntax and create immutable allowlist artifact
+        run: |
+          ruby -e 'require "yaml"; YAML.load_file(".github/workflows/import-verified-country-batch-45.yml", aliases: true); puts "Batch 45 workflow YAML syntax OK"'
+          mkdir -p verified-batch-45
+          cp database/seeders/TristanDaCunhaCountryBackfillSeeder.php verified-batch-45/
+          cp database/data/new_country_visa_batch_45.csv verified-batch-45/verified_seed_batch_45.csv
+          cp database/data/visa_full_audit_batch_45.csv verified-batch-45/verified_full_audit_batch_45.csv
+          cp scripts/batch45_readback.php verified-batch-45/
+          python3 - <<'PY'
+          import csv
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path("verified-batch-45")
+          files = sorted(path for path in root.iterdir() if path.is_file())
+          if len(files) != 4:
+              raise SystemExit("Batch 45 artifact must contain exactly four reviewed files.")
+          for name in ("verified_seed_batch_45.csv", "verified_full_audit_batch_45.csv"):
+              with (root / name).open(encoding="utf-8-sig", newline="") as handle:
+                  rows = list(csv.DictReader(handle))
+              if len(rows) != 1 or rows[0].get("destination_iso2") != "TA" or rows[0].get("passport_iso3") != "BGD" or rows[0].get("travel_purpose") != "tourism":
+                  raise SystemExit(f"{name} does not contain the single TA / BGD / tourism allowlist.")
+          manifest = {path.name: hashlib.sha256(path.read_bytes()).hexdigest() for path in files}
+          Path("verified-batch-45-manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          print("BATCH45_IMMUTABLE_ALLOWLIST", json.dumps(manifest, sort_keys=True))
+          PY
+      - name: Upload exact allowlisted files
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-batch-45-source-files
+          path: |
+            verified-batch-45/
+            verified-batch-45-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+  import:
+    needs: prepare
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+      - name: Download exact allowlisted files
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-batch-45-source-files
+          path: verified-batch-45
+      - name: Verify immutable batch files
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("verified-batch-45/verified-batch-45-manifest.json").read_text())
+          for name, expected in manifest.items():
+              actual = hashlib.sha256((Path("verified-batch-45") / name).read_bytes()).hexdigest()
+              if actual != expected:
+                  raise SystemExit(f"Batch 45 artifact checksum mismatch: {name}")
+          if set(manifest) != {"TristanDaCunhaCountryBackfillSeeder.php", "verified_seed_batch_45.csv", "verified_full_audit_batch_45.csv", "batch45_readback.php"}:
+              raise SystemExit("Batch 45 artifact file allowlist changed.")
+          print("BATCH45_ARTIFACT_CHECKSUMS_VERIFIED")
+          PY
+      - name: Set up PHP for isolated restore and staging
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.5"
+          extensions: curl, fileinfo, intl, mbstring, pdo_mysql, xml, zip, bcmath
+          coverage: none
+      - name: Install application dependencies for isolated staging only
+        run: composer install --no-interaction --prefer-dist --no-dev --no-scripts --optimize-autoloader
+      - name: Prepare authorized VPS connection
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+      - name: Trust configured VPS host
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          ssh-keyscan -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+      - name: Fresh production audit, migration check, exact preflight and backup
+        id: backup
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > backup-meta.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          cd "$APP"
+          php artisan migrate:status --no-ansi > /tmp/batch45-migrations-before.txt
+          if grep -q "Pending" /tmp/batch45-migrations-before.txt; then
+            echo "Pending production migrations detected; refusing batch 45."
+            exit 1
+          fi
+          php artisan visa:requirements-audit > /tmp/batch45-audit-before.json
+          cat > /tmp/batch45-preflight.php <<'PHP'
+          <?php
+          require '/var/www/unigo/backend/current/vendor/autoload.php';
+          $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $countryCount = \App\Models\Country::query()->count();
+          $records = \App\Models\VisaRequirement::query()->with('country:id,iso2')
+              ->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')->get();
+          $published = $records->filter(fn ($row) => $row->verification_status === 'verified' && (bool) $row->is_published)->count();
+          $pending = $records->count() - $published;
+          $duplicates = \Illuminate\Support\Facades\DB::table('visa_requirements')
+              ->where('passport_nationality_iso3', 'BGD')->where('travel_purpose', 'tourism')
+              ->select('country_id', 'passport_nationality_iso3', 'travel_purpose')
+              ->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')->havingRaw('COUNT(*) > 1')->count();
+          $taCountry = \App\Models\Country::query()->where('iso2', 'TA')->exists();
+          $taRecords = $records->filter(fn ($row) => $row->country?->iso2 === 'TA')->count();
+          $result = [
+              'country_count' => $countryCount,
+              'requirement_count' => $records->count(),
+              'source_count' => \Illuminate\Support\Facades\DB::table('visa_requirement_sources')->count(),
+              'published_count' => $published,
+              'pending_count' => $pending,
+              'duplicate_keys' => $duplicates,
+              'TA_country_exists' => $taCountry,
+              'TA_requirement_count' => $taRecords,
+          ];
+          if ($countryCount !== 250 || $records->count() !== 135 || $published !== 133 || $pending !== 2 || $duplicates !== 0 || $taCountry || $taRecords !== 0) {
+              fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
+              exit(1);
+          }
+          echo json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          PHP
+          php -l /tmp/batch45-preflight.php >/dev/null
+          php /tmp/batch45-preflight.php > /tmp/batch45-preflight.json
+          cat > /tmp/batch45-backup.php <<'PHP'
+          <?php
+          require '/var/www/unigo/backend/current/vendor/autoload.php';
+          $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $connectionName = config('database.default');
+          $db = config('database.connections.' . $connectionName);
+          if (! $db || empty($db['database']) || empty($db['username'])) {
+              throw new RuntimeException('Configured production database connection is incomplete.');
+          }
+          $quote = fn ($value) => '"' . str_replace(["\\", '"'], ["\\\\", '\\"'], (string) $value) . '"';
+          $cnf = "/tmp/unigo-batch45-mysql.cnf";
+          $content = "[client]\n";
+          $content .= "host=" . $quote($db['host'] ?? '127.0.0.1') . "\n";
+          $content .= "user=" . $quote($db['username']) . "\n";
+          $content .= "password=" . $quote($db['password'] ?? '') . "\n";
+          $content .= "port=" . $quote($db['port'] ?? 3306) . "\n";
+          if (! empty($db['unix_socket'])) $content .= "socket=" . $quote($db['unix_socket']) . "\n";
+          file_put_contents($cnf, $content, LOCK_EX);
+          chmod($cnf, 0600);
+          $directory = "/var/www/unigo/backend/shared/backups";
+          if (! is_dir($directory) && ! mkdir($directory, 0750, true) && ! is_dir($directory)) {
+              throw new RuntimeException('Unable to create the shared backup directory.');
+          }
+          $path = $directory . "/unigo-pre-verified-batch-45-" . gmdate("Ymd\\THis\\Z") . ".sql.gz";
+          $command = "bash -o pipefail -c " . escapeshellarg(
+              "mysqldump --defaults-extra-file=" . escapeshellarg($cnf) .
+              " --single-transaction --routines --triggers --no-tablespaces " .
+              escapeshellarg($db['database']) . " | gzip -c > " . escapeshellarg($path)
+          );
+          exec($command, $output, $status);
+          @unlink($cnf);
+          if ($status !== 0 || ! is_file($path) || filesize($path) < 1024) {
+              throw new RuntimeException('Production backup creation failed.');
+          }
+          exec("gzip -t " . escapeshellarg($path), $gzipOutput, $gzipStatus);
+          if ($gzipStatus !== 0) throw new RuntimeException('Production backup gzip integrity check failed.');
+          $preflight = json_decode(file_get_contents('/tmp/batch45-preflight.json'), true);
+          if (! is_array($preflight)) throw new RuntimeException('Production preflight JSON is missing.');
+          $meta = [
+              'preflight' => $preflight,
+              'backup_path' => $path,
+              'sha256' => hash_file('sha256', $path),
+              'size_bytes' => filesize($path),
+              'database_name' => $db['database'],
+              'created_at_utc' => gmdate(DATE_ATOM),
+          ];
+          echo json_encode($meta, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+          PHP
+          php -l /tmp/batch45-backup.php >/dev/null
+          php /tmp/batch45-backup.php
+          REMOTE
+          python3 -m json.tool backup-meta.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("backup-meta.json").read_text())
+          Path("backup-meta-summary.txt").write_text(data["backup_path"] + "\n" + data["sha256"] + "\n" + data["database_name"] + "\n")
+          print("PRODUCTION_BACKUP_CREATED", data["backup_path"])
+          print("PRODUCTION_BACKUP_SHA256", data["sha256"])
+          print("PRODUCTION_BACKUP_SIZE_BYTES", data["size_bytes"])
+          PY
+          BACKUP_PATH="$(sed -n '1p' backup-meta-summary.txt)"
+          BACKUP_SHA="$(sed -n '2p' backup-meta-summary.txt)"
+          scp -P "$VPS_PORT" "$VPS_USER@$VPS_HOST:$BACKUP_PATH" production-backup.sql.gz
+          echo "$BACKUP_SHA  production-backup.sql.gz" | sha256sum -c -
+          gzip -t production-backup.sql.gz
+          echo "backup_path=$BACKUP_PATH" >> "$GITHUB_OUTPUT"
+          echo "backup_sha256=$BACKUP_SHA" >> "$GITHUB_OUTPUT"
+          echo "database_name=$(sed -n '3p' backup-meta-summary.txt)" >> "$GITHUB_OUTPUT"
+      - name: Restore-test production backup in isolated MySQL 8
+        id: restore
+        env:
+          DB_NAME: ${{ steps.backup.outputs.database_name }}
+        run: |
+          set -euo pipefail
+          RESTORE_DB_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$RESTORE_DB_PASSWORD"
+          docker run -d --name unigo-batch45-restore -e MYSQL_ROOT_PASSWORD="$RESTORE_DB_PASSWORD" -e MYSQL_DATABASE="$DB_NAME" -p 3307:3306 mysql:8.0
+          AUTH_READY=false
+          for attempt in $(seq 1 90); do
+            if docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch45-restore mysql -uroot -N -B -e "SELECT 1" >/dev/null 2>&1; then
+              AUTH_READY=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$AUTH_READY" != "true" ]; then
+            docker logs --tail 80 unigo-batch45-restore || true
+            echo "Isolated MySQL did not become ready for authenticated queries."
+            exit 1
+          fi
+          docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch45-restore mysql -uroot -N -B -e "SELECT 1" | grep -qx "1"
+          echo "ISOLATED_MYSQL_AUTHENTICATED_READY"
+          gzip -dc production-backup.sql.gz | docker exec -i -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch45-restore mysql -uroot "$DB_NAME"
+          RESTORE_COUNTS="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch45-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT (SELECT COUNT(*) FROM countries),(SELECT COUNT(*) FROM visa_requirements),(SELECT COUNT(*) FROM visa_requirement_sources),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND verification_status='verified' AND is_published=1),(SELECT COUNT(*) FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' AND NOT (verification_status='verified' AND is_published=1)),(SELECT COUNT(*) FROM (SELECT country_id,passport_nationality_iso3,travel_purpose FROM visa_requirements WHERE passport_nationality_iso3='BGD' AND travel_purpose='tourism' GROUP BY country_id,passport_nationality_iso3,travel_purpose HAVING COUNT(*)>1) d);")"
+          echo "$RESTORE_COUNTS" > restore-test-counts.txt
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          actual = list(map(int, Path("restore-test-counts.txt").read_text().split()))
+          expected = json.loads(Path("backup-meta.json").read_text())["preflight"]
+          keys = ("country_count", "requirement_count", "source_count", "published_count", "pending_count", "duplicate_keys")
+          for index, key in enumerate(keys):
+              if actual[index] != expected[key]:
+                  raise SystemExit(f"Restore mismatch for {key}: expected {expected[key]}, got {actual[index]}")
+          print("ISOLATED_MYSQL_RESTORE_COUNTS_MATCH_PRODUCTION_PREFLIGHT", json.dumps(dict(zip(keys, actual))))
+          PY
+          echo "restore_password=$RESTORE_DB_PASSWORD" >> "$GITHUB_ENV"
+          echo "RESTORE_TEST_PASSED=true" >> "$GITHUB_ENV"
+      - name: Restore isolated database and run seed, dry-run and staging readback
+        env:
+          DB_NAME: ${{ steps.backup.outputs.database_name }}
+        run: |
+          set -euo pipefail
+          STAGING_APP_KEY="base64:$(php -r 'echo base64_encode(random_bytes(32));')"
+          STAGING_ADMIN_SECRET="$(openssl rand -hex 32)"
+          echo "::add-mask::$STAGING_APP_KEY"
+          echo "::add-mask::$STAGING_ADMIN_SECRET"
+          cat > .env <<EOF
+          APP_NAME=UniGoBatch45Staging
+          APP_ENV=testing
+          APP_KEY=$STAGING_APP_KEY
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1:8000
+          LOG_CHANNEL=stderr
+          LOG_LEVEL=error
+          CACHE_STORE=array
+          SESSION_DRIVER=array
+          QUEUE_CONNECTION=sync
+          FILESYSTEM_DISK=local
+          DB_CONNECTION=mysql
+          DB_HOST=127.0.0.1
+          DB_PORT=3307
+          DB_DATABASE=$DB_NAME
+          DB_USERNAME=root
+          DB_PASSWORD=$restore_password
+          UNIGO_ADMIN_API_SECRET=$STAGING_ADMIN_SECRET
+          MAIL_MAILER=array
+          EOF
+          php artisan package:discover --ansi
+          php artisan config:clear
+          php artisan migrate:status --no-ansi > staging-migrations.txt
+          if grep -q "Pending" staging-migrations.txt; then
+            cat staging-migrations.txt
+            exit 1
+          fi
+          mkdir -p storage/app/imports
+          cp verified-batch-45/verified_seed_batch_45.csv storage/app/imports/unigo_visa_requirements_research_template.csv
+          cp verified-batch-45/verified_full_audit_batch_45.csv storage/app/imports/verified_full_audit_batch_45.csv
+          php artisan db:seed --class=TristanDaCunhaCountryBackfillSeeder --force > staging-country-seeder.log
+          php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > staging-requirement-seeder.log
+          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $ta=$rows->filter(fn($r)=>$r->country?->iso2==="TA"); if(\App\Models\Country::count()!==251 || $rows->count()!==136 || $published!==133 || $pending!==3 || $ta->count()!==1 || $ta->first()->verification_status!=="pending_review" || (bool)$ta->first()->is_published) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA"=>$ta->count()])); exit(1); } echo "STAGING_SEED_READBACK countries=251 requirements=136 published=133 pending=3 TA=1".PHP_EOL;'
+          nohup php artisan serve --host=127.0.0.1 --port=8000 > staging-server.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8000/up >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          curl -fsS http://127.0.0.1:8000/up >/dev/null
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_45.csv --base-url=http://127.0.0.1:8000 --dry-run > staging-dry-run.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("staging-dry-run.json").read_text())
+          if data.get("mode") != "dry_run" or data.get("rows") != 1 or data.get("failures") not in ([], None):
+              raise SystemExit("Batch 45 isolated staging dry-run failed: " + json.dumps(data))
+          print("ISOLATED_STAGING_DRY_RUN_PASSED", json.dumps({key: data.get(key) for key in ("mode", "rows", "updated", "sources_added", "failures")}))
+          PY
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_45.csv --base-url=http://127.0.0.1:8000 > staging-import-result.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("staging-import-result.json").read_text())
+          if data.get("rows") != 1 or data.get("read_back") != 1 or data.get("reverified") != 1 or data.get("republished") != 1 or data.get("failures"):
+              raise SystemExit("Batch 45 staging import/readback did not pass: " + json.dumps(data))
+          print("ISOLATED_STAGING_IMPORT_PASSED", json.dumps({key: data.get(key) for key in ("rows", "updated", "sources_added", "reverified", "republished", "read_back", "failures")}))
+          PY
+          php artisan visa:requirements-audit > staging-audit.json
+          APP_ROOT="$PWD" php scripts/batch45_readback.php > staging-readback.json
+          python3 -m json.tool staging-readback.json > /dev/null
+          echo "STAGING_READBACK_PASSED"
+      - name: Upload reviewed batch files to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          scp -P "$VPS_PORT" verified-batch-45/TristanDaCunhaCountryBackfillSeeder.php "$VPS_USER@$VPS_HOST:/tmp/TristanDaCunhaCountryBackfillSeeder.php"
+          scp -P "$VPS_PORT" verified-batch-45/verified_seed_batch_45.csv "$VPS_USER@$VPS_HOST:/tmp/verified_seed_batch_45.csv"
+          scp -P "$VPS_PORT" verified-batch-45/verified_full_audit_batch_45.csv "$VPS_USER@$VPS_HOST:/tmp/verified_full_audit_batch_45.csv"
+          scp -P "$VPS_PORT" verified-batch-45/batch45_readback.php "$VPS_USER@$VPS_HOST:/tmp/batch45-readback.php"
+      - name: Execute allowlisted production import and immediate database/API readback
+        id: production
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' > batch45-production-result.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          cd "$APP"
+          php artisan migrate:status --no-ansi > /tmp/batch45-migrations-final.txt
+          if grep -q "Pending" /tmp/batch45-migrations-final.txt; then
+            echo "Pending production migrations detected after backup; refusing import."
+            exit 1
+          fi
+          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $taCountry=\App\Models\Country::where("iso2","TA")->exists(); if(\App\Models\Country::count()!==250 || $rows->count()!==135 || $published!==133 || $pending!==2 || $taCountry) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA_country_exists"=>$taCountry])); exit(1); } echo "PRODUCTION_PREWRITE_COUNTS_RECONFIRMED".PHP_EOL;'
+          install -m 0644 /tmp/TristanDaCunhaCountryBackfillSeeder.php database/seeders/TristanDaCunhaCountryBackfillSeeder.php
+          install -m 0644 /tmp/verified_seed_batch_45.csv storage/app/imports/unigo_visa_requirements_research_template.csv
+          install -m 0644 /tmp/verified_full_audit_batch_45.csv storage/app/imports/verified_full_audit_batch_45.csv
+          php artisan optimize:clear >/dev/null
+          php artisan db:seed --class=TristanDaCunhaCountryBackfillSeeder --force > /tmp/batch45-country-seeder.log
+          php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > /tmp/batch45-requirement-seeder.log
+          touch /tmp/batch45-import-started.marker
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_45.csv > /tmp/batch45-import-result.json
+          php -r '$j=json_decode(file_get_contents("/tmp/batch45-import-result.json"),true); if(!is_array($j)||($j["rows"]??0)!==1||($j["read_back"]??0)!==1||($j["reverified"]??0)!==1||($j["republished"]??0)!==1||!empty($j["failures"])) { fwrite(STDERR,"BATCH45_IMPORT_RESULT_MISMATCH ".json_encode($j).PHP_EOL); exit(1); }'
+          php artisan visa:requirements-audit > /tmp/batch45-audit-after.json
+          APP_ROOT="$APP" php /tmp/batch45-readback.php > /tmp/batch45-readback.json
+          python3 -m json.tool /tmp/batch45-readback.json > /dev/null
+          mkdir -p /var/www/unigo/backend/shared/imports
+          cp /tmp/batch45-import-result.json /var/www/unigo/backend/shared/imports/batch45-import-result.json
+          cp /tmp/batch45-readback.json /var/www/unigo/backend/shared/imports/batch45-readback.json
+          cp /tmp/batch45-audit-after.json /var/www/unigo/backend/shared/imports/batch45-post-import-audit.json
+          cat /tmp/batch45-readback.json
+          REMOTE
+          python3 -m json.tool batch45-production-result.json > /dev/null
+          cat batch45-production-result.json
+      - name: Withhold batch 45 if production import or readback fails
+        if: failure() && steps.production.outcome == 'failure'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          cd "$APP"
+          if [ ! -f /tmp/batch45-import-started.marker ]; then
+            echo "BATCH45_IMPORT_NOT_STARTED; no visa record could have been published."
+            exit 0
+          fi
+          if [ ! -f /tmp/verified_full_audit_batch_45.csv ]; then
+            echo "BATCH45_AUDIT_FILE_MISSING; do not attempt a broad rollback."
+            exit 1
+          fi
+          php artisan visa:requirements-import-research --file=/tmp/verified_full_audit_batch_45.csv --unpublish-only > /tmp/batch45-unpublish-result.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          data = json.loads(Path("/tmp/batch45-unpublish-result.json").read_text())
+          if data.get("mode") != "unpublish_only" or data.get("rows") != 1 or data.get("unpublished") != 1 or data.get("read_back") != 1 or data.get("failures"):
+              raise SystemExit("Batch 45 unpublish-only safety readback failed: " + json.dumps(data))
+          print("BATCH45_FAILED_RECORD_WITHHELD", json.dumps(data))
+          PY
+          REMOTE
+      - name: Upload non-sensitive audit and verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unigo-batch-45-audit-results
+          path: |
+            backup-meta.json
+            restore-test-counts.txt
+            staging-migrations.txt
+            staging-country-seeder.log
+            staging-requirement-seeder.log
+            staging-dry-run.json
+            staging-import-result.json
+            staging-audit.json
+            staging-readback.json
+            batch45-production-result.json
+          if-no-files-found: warn
+          retention-days: 30
+      - name: Clean up isolated MySQL restore container
+        if: always()
+        run: docker rm -f unigo-batch45-restore >/dev/null 2>&1 || true
