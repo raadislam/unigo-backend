@@ -229,7 +229,7 @@ try {
     $list = null;
     for ($attempt = 0; $attempt < 5; $attempt++) {
         try {
-            $list = \\Illuminate\\Support\\Facades\\Http::timeout(45)
+            $list = \Illuminate\\Support\\Facades\\Http::timeout(45)
                 ->acceptJson()
                 ->get($apiBase . '/api/visa-requirements', ['passport' => 'BGD', 'purpose' => 'tourism'])
                 ->throw()
@@ -237,7 +237,7 @@ try {
             if ((int) data_get($list, 'meta.total') === 135) {
                 break;
             }
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($attempt === 4) {
                 throw $exception;
             }
@@ -252,7 +252,7 @@ try {
     $detail = null;
     for ($attempt = 0; $attempt < 5; $attempt++) {
         try {
-            $detail = \\Illuminate\\Support\\Facades\\Http::timeout(45)
+            $detail = \Illuminate\\Support\\Facades\\Http::timeout(45)
                 ->acceptJson()
                 ->get($apiBase . '/api/visa-requirements/IM', ['passport' => 'BGD', 'purpose' => 'tourism'])
                 ->throw()
@@ -260,7 +260,7 @@ try {
             if (data_get($detail, 'data.verification_status') === 'verified' && data_get($detail, 'data.is_published') === true) {
                 break;
             }
-        } catch (\\Throwable $exception) {
+        } catch (\Throwable $exception) {
             if ($attempt === 4) {
                 throw $exception;
             }
