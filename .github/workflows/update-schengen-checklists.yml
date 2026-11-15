@@ -195,7 +195,7 @@ jobs:
               if ($iso2 === 'HR' && ! str_contains(strtolower($allDocs), 'apostill')) {
                   throw new RuntimeException('Croatia conditional apostille checklist item missing.');
               }
-              if (in_array($iso2, ['BG','GR','LT','RO'], true) && ($photo['status'] ?? null) !== 'not_verified') {
+              if (in_array($iso2, ['LT','RO'], true) && ($photo['status'] ?? null) !== 'not_verified') {
                   throw new RuntimeException('Unverified route was incorrectly marked as photo-verified: ' . $iso2);
               }
               if (in_array($iso2, ['MT','SK'], true) && str_contains(strtolower($allDocs), 'apostill')) {
@@ -206,6 +206,18 @@ jobs:
               }
               if (! $record->sources()->where('source_url', 'https://www.consilium.europa.eu/en/policies/schengen-area/')->exists()) {
                   throw new RuntimeException('Current Schengen membership source missing for ' . $iso2);
+              }
+              if ($iso2 === 'BG' && (($photo['captured_at_vac'] ?? false) !== true || ($photo['status'] ?? null) !== 'partially_specified')) {
+                  throw new RuntimeException('Bulgaria VFS photo capture metadata missing.');
+              }
+              if ($iso2 === 'GR' && ($photo['status'] ?? null) !== 'not_verified') {
+                  throw new RuntimeException('Greece photo specification must remain unverified until its live checklist is retrieved.');
+              }
+              if ($iso2 === 'BG' && ! $record->sources()->where('source_url', 'https://visa.vfsglobal.com/bgd/en/bgr/')->exists()) {
+                  throw new RuntimeException('Bulgaria VFS Bangladesh source missing.');
+              }
+              if ($iso2 === 'GR' && ! $record->sources()->where('source_url', 'https://visa.vfsglobal.com/bgd/en/grc/')->exists()) {
+                  throw new RuntimeException('Greece VFS Bangladesh source missing.');
               }
           }
           echo "SCHENGEN_PRODUCTION_READBACK_OK countries=29 profiles=116 apostille=country-specific".PHP_EOL;
