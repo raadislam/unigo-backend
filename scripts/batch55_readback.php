@@ -55,10 +55,7 @@ try {
             'country_identity' => $country->name === 'Malaysia' && $country->slug === 'malaysia' && strtoupper((string) $country->iso2) === 'MY' && strtoupper((string) $country->iso3) === 'MYS',
         ];
         $failed = array_keys(array_filter($checks, fn ($ok) => $ok !== true));
-        if ($failed) {
-            throw new RuntimeException('Preflight checks failed: ' . implode(', ', $failed));
-        }
-        echo json_encode([
+        $preflight = [
             'mode' => 'preflight',
             'country_count' => $countryCount,
             'requirement_count' => $records->count(),
@@ -73,7 +70,12 @@ try {
                 'existing_photo_status' => data_get($record->photo_specifications, 'status'),
             ],
             'checks' => $checks,
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL;
+            'failed_checks' => $failed,
+        ];
+        echo json_encode($preflight, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . PHP_EOL;
+        if ($failed) {
+            throw new RuntimeException('Preflight checks failed: ' . implode(', ', $failed));
+        }
         exit(0);
     }
 

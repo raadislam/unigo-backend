@@ -94,7 +94,80 @@ jobs:
           scp -P "$VPS_PORT" scripts/batch55_readback.php "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/batch55_readback.php"
           scp -P "$VPS_PORT" scripts/validate_production_visa_audit.py "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/validate_production_visa_audit.py"
           scp -P "$VPS_PORT" database/data/country_discovery_ledger.csv "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/country_discovery_ledger.csv"
-      - name: Fresh production preflight, dry-run and database backup
+      - name: Fresh production preflight and dry-run
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          set +e
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          SHARED=/var/www/unigo/backend/shared
+          IMPORT_DIR="$SHARED/imports"
+          cd "$APP"
+          php artisan migrate:status --no-ansi > /tmp/batch55-migrations-before.txt
+          if grep -q "Pending" /tmp/batch55-migrations-before.txt; then
+            echo "Pending production migrations detected; refusing batch 55."
+            exit 1
+          fi
+          set +e
+          APP_ROOT="$APP" php "$IMPORT_DIR/batch55_readback.php" preflight > /tmp/batch55-preflight.json
+          PREFLIGHT_STATUS=$?
+          set -e
+          if [ "$PREFLIGHT_STATUS" -ne 0 ]; then
+            echo "BATCH55_PREFLIGHT_COMMAND_FAILED=$PREFLIGHT_STATUS"
+            exit "$PREFLIGHT_STATUS"
+          fi
+          php artisan visa:requirements-import-research --file="$IMPORT_DIR/visa_full_audit_batch_55.csv" --dry-run > /tmp/batch55-dry-run.json
+          php -r '
+          $x=json_decode(file_get_contents("/tmp/batch55-dry-run.json"),true,512,JSON_THROW_ON_ERROR);
+          if (($x["mode"]??null)!=="dry_run" || ($x["rows"]??0)!==1 || ($x["failures"]??[])!==[]) {
+              fwrite(STDERR,"BATCH55_DRY_RUN_FAILED\n");
+              exit(1);
+          }
+          echo "BATCH55_DRY_RUN_PASSED rows=1\n";
+          '
+          REMOTE
+          REMOTE_STATUS=$?
+          set -e
+          if ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'test -s /tmp/batch55-preflight.json'; then
+            ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'cat /tmp/batch55-preflight.json' > production-preflight.json
+            cat production-preflight.json
+          else
+            echo "Production preflight JSON was not created."
+          fi
+          if [ "$REMOTE_STATUS" -ne 0 ]; then
+            exit "$REMOTE_STATUS"
+          fi
+          if [ ! -s production-preflight.json ]; then
+            echo "Production preflight JSON is empty."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          preflight = json.loads(Path("production-preflight.json").read_text())
+          expected = {
+              "mode": "preflight",
+              "country_count": 252,
+              "requirement_count": 136,
+              "published_count": 134,
+              "pending_count": 2,
+              "source_count": 916,
+              "duplicate_keys": 0,
+          }
+          comparisons = {key: preflight.get(key) == value for key, value in expected.items()}
+          checks = preflight.get("checks")
+          print("BATCH55_PRODUCTION_PREFLIGHT=" + json.dumps(preflight, sort_keys=True))
+          print("BATCH55_PREFLIGHT_COMPARISONS=" + json.dumps(comparisons, sort_keys=True))
+          if not all(comparisons.values()) or not isinstance(checks, dict) or not all(value is True for value in checks.values()) or preflight.get("failed_checks"):
+              raise SystemExit("BATCH55 production preflight mismatch; refusing backup and production write.")
+          PY
+      - name: Create fresh production backup
         id: backup
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -109,21 +182,11 @@ jobs:
           SHARED=/var/www/unigo/backend/shared
           IMPORT_DIR="$SHARED/imports"
           cd "$APP"
-          php artisan migrate:status --no-ansi > /tmp/batch55-migrations-before.txt
-          if grep -q "Pending" /tmp/batch55-migrations-before.txt; then
-            echo "Pending production migrations detected; refusing batch 55."
+          php artisan migrate:status --no-ansi > /tmp/batch55-migrations-before-backup.txt
+          if grep -q "Pending" /tmp/batch55-migrations-before-backup.txt; then
+            echo "Pending production migrations detected; refusing batch 55 backup."
             exit 1
           fi
-          APP_ROOT="$APP" php "$IMPORT_DIR/batch55_readback.php" preflight > /tmp/batch55-preflight.json
-          php artisan visa:requirements-import-research --file="$IMPORT_DIR/visa_full_audit_batch_55.csv" --dry-run > /tmp/batch55-dry-run.json
-          php -r '
-          $x=json_decode(file_get_contents("/tmp/batch55-dry-run.json"),true,512,JSON_THROW_ON_ERROR);
-          if (($x["mode"]??null)!=="dry_run" || ($x["rows"]??0)!==1 || ($x["failures"]??[])!==[]) {
-              fwrite(STDERR,"BATCH55_DRY_RUN_FAILED\n");
-              exit(1);
-          }
-          echo "BATCH55_DRY_RUN_PASSED rows=1\n";
-          '
           mkdir -p "$SHARED/backups"
           cat > /tmp/batch55-backup.php <<'PHP'
           <?php
@@ -160,10 +223,12 @@ jobs:
           chmod($path, 0600);
           exec('gzip -t ' . escapeshellarg($path), $gzipOutput, $gzipStatus);
           if ($gzipStatus !== 0) throw new RuntimeException('Production backup gzip integrity check failed.');
-          $preflight = json_decode(file_get_contents('/tmp/batch55-preflight.json'), true);
-          if (! is_array($preflight) || ($preflight['mode'] ?? null) !== 'preflight') throw new RuntimeException('Batch 55 preflight did not pass.');
+          $preflightPath = '/tmp/batch55-preflight.json';
+          $preflight = json_decode(file_get_contents($preflightPath), true);
+          if (! is_array($preflight) || ($preflight['mode'] ?? null) !== 'preflight') throw new RuntimeException('Batch 55 preflight snapshot is missing or invalid.');
           echo json_encode([
               'preflight' => $preflight,
+              'preflight_sha256' => hash_file('sha256', $preflightPath),
               'backup_path' => $path,
               'sha256' => hash_file('sha256', $path),
               'size_bytes' => filesize($path),
@@ -176,17 +241,21 @@ jobs:
           REMOTE
           python3 -m json.tool backup-meta.json > /dev/null
           python3 - <<'PY'
+          import hashlib
           import json
           from pathlib import Path
+
           data = json.loads(Path("backup-meta.json").read_text())
           preflight = data["preflight"]
-          if preflight.get("mode") != "preflight" or preflight.get("country_count") != 252 or preflight.get("requirement_count") != 136 or preflight.get("published_count") != 134 or preflight.get("pending_count") != 2 or preflight.get("source_count") != 916 or preflight.get("duplicate_keys") != 0:
-              raise SystemExit("BATCH55 production preflight changed; refusing production write.")
+          validated = json.loads(Path("production-preflight.json").read_text())
+          validated_sha = hashlib.sha256(Path("production-preflight.json").read_bytes()).hexdigest()
+          print("PRODUCTION_PREFLIGHT", json.dumps(preflight, sort_keys=True))
+          if preflight != validated or data.get("preflight_sha256") != validated_sha:
+              raise SystemExit("BATCH55 backup preflight snapshot differs from the validated production preflight; refusing restore/import.")
           Path("backup-meta-summary.txt").write_text(data["backup_path"] + "\n" + data["sha256"] + "\n" + data["database_name"] + "\n")
           print("PRODUCTION_BACKUP_CREATED", data["backup_path"])
           print("PRODUCTION_BACKUP_SHA256", data["sha256"])
           print("PRODUCTION_BACKUP_SIZE_BYTES", data["size_bytes"])
-          print("PRODUCTION_PREFLIGHT", json.dumps(preflight, sort_keys=True))
           PY
           BACKUP_PATH="$(sed -n '1p' backup-meta-summary.txt)"
           BACKUP_SHA="$(sed -n '2p' backup-meta-summary.txt)"
