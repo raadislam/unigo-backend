@@ -8,6 +8,10 @@ on:
       - 'composer.json'
       - 'composer.lock'
       - '.github/workflows/pdf-dependency-bootstrap.yml'
+      - 'app/Services/VisaChecklistPdfService.php'
+      - 'app/Http/Controllers/Api/VisaChecklistPdfController.php'
+      - 'routes/api.php'
+      - 'tests/Unit/VisaChecklistPdfServiceTest.php'
   workflow_dispatch:
 
 permissions:
@@ -35,6 +39,14 @@ jobs:
         run: composer validate --strict
       - name: Install from the generated lock file
         run: composer install --prefer-dist --no-interaction
+      - name: Verify PHP syntax
+        run: |
+          php -l app/Services/VisaChecklistPdfService.php
+          php -l app/Http/Controllers/Api/VisaChecklistPdfController.php
+          php -l routes/api.php
+          php -l tests/Unit/VisaChecklistPdfServiceTest.php
+      - name: Run automated PDF tests
+        run: composer test
       - name: Verify PDF libraries
         run: |
           php -r "require 'vendor/autoload.php'; new setasign\Fpdi\Tcpdf\Fpdi(); echo 'FPDI/TCPDF autoload OK'.PHP_EOL;"
