@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: unigo-verified-tourism-batch-38
+  group: unigo-backend-production
   cancel-in-progress: false
 
 permissions:
