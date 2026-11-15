@@ -82,6 +82,43 @@ def main():
         and active(row, today)
     ]
     pending_bgd = [row for row in bgd_tourism if row not in published_bgd]
+
+    pending_record_diagnostics = []
+    for row in pending_bgd:
+        country = row.get("country") or {}
+        iso2 = str(country.get("iso2") or "").upper()
+        sources = row.get("sources") or []
+        primary_sources = [
+            {
+                "url": source.get("source_url"),
+                "checked_at": source.get("source_last_checked_at")
+            }
+            for source in sources
+            if source.get("source_type") == "official" and bool(source.get("is_primary"))
+        ]
+        photo = row.get("photo_specifications") or {}
+        checklists = row.get("applicant_checklists") or []
+        checklist_types = [
+            str(item.get("applicant_type") or "")
+            for item in checklists
+            if isinstance(item, dict)
+        ] if isinstance(checklists, list) else []
+        pending_record_diagnostics.append({
+            "iso2": iso2,
+            "verification_status": row.get("verification_status"),
+            "is_published": row.get("is_published"),
+            "visa_required": row.get("visa_required"),
+            "visa_free_available": row.get("visa_free_available"),
+            "visa_on_arrival_available": row.get("visa_on_arrival_available"),
+            "evisa_available": row.get("evisa_available"),
+            "maximum_permitted_stay": row.get("maximum_permitted_stay"),
+            "application_fee": row.get("application_fee"),
+            "processing_time": row.get("processing_time"),
+            "photo_status": photo.get("status") if isinstance(photo, dict) else None,
+            "applicant_checklist_types": checklist_types,
+            "source_count": len(sources),
+            "primary_official_sources": primary_sources
+        })
     verified_bgd = [row for row in bgd_tourism if row.get("verification_status") == "verified"]
 
     published_codes = []
@@ -356,8 +393,14 @@ def main():
         warn("Country master rows absent from production: " + ", ".join(missing_country_rows))
     if extra_country_rows:
         warn("Production country rows absent from discovery ledger: " + ", ".join(extra_country_rows))
+    if pending_record_diagnostics:
+        summary.extend(["", "## Pending BGD tourism record diagnostics", ""])
+        for diagnostic in pending_record_diagnostics:
+            summary.append(f"- **{diagnostic['iso2']}**: " + json.dumps(diagnostic, ensure_ascii=False))
     rendered = "\n".join(summary) + "\n"
     print(rendered)
+    for diagnostic in pending_record_diagnostics:
+        print("PENDING_RECORD_DIAGNOSTIC " + json.dumps(diagnostic, ensure_ascii=False))
     summary_path = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_path:
         with open(summary_path, "a", encoding="utf-8") as handle:
