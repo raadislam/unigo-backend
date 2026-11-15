@@ -7,7 +7,7 @@
 
 ## Decision
 
-**Research-complete; suitable for a controlled eVisa publication batch.** Bangladesh is not on the current Ascension Island Government (AIG) eVisa exclusion list. The AIG FAQ states that all nationalities require an eVisa except the specifically listed exempt classes. No visa-on-arrival facility exists.
+**Research-complete; suitable for a controlled eVisa publication batch.** The AIG FAQ states that all nationalities require an eVisa except the specifically listed exempt classes. The current AIG eligibility page separately lists nationalities to which it does not issue eVisas; Bangladesh is not on that list. This supports the visitor eVisa route for an ordinary Bangladesh passport, while preserving that visa issuance remains an AIG decision. No general visa-on-arrival facility exists.
 
 AIG separately states that nationals who require a UK visa may be required to show a multiple-entry UK visa valid for both outward and return journeys before an Ascension eVisa is issued. Bangladesh is on the UK Home Office visa-national list. This is a **possible, case-dependent condition**, not an automatic requirement; the public record must preserve that distinction and advise applicants to confirm with AIG before travel.
 
@@ -40,11 +40,11 @@ AIG separately states that nationals who require a UK visa may be required to sh
 
 ## Photo specification
 
-**Status: officially confirmed no fixed size published.** The AIG FAQ says the uploaded photograph must be JPEG and clearly show the applicant's face; it does not have to be a specific passport photo. No fixed printed dimensions, digital pixel dimensions, aspect ratio, file-size limit, background colour or head measurement is published in the reviewed guidance. AIG does not accept images surrounded by blank space, group photos or passport-scan images with holograms visible. The photo is uploaded online. AIG may separately require biometric fingerprints and a facial photograph.
+**Status: partially specified.** The AIG FAQ requires a JPEG photograph that clearly shows the applicant's face and says it does not have to be a specific passport photo. The reviewed FAQ does not publish printed dimensions, digital pixel dimensions, aspect ratio, file-size limit, background colour, head/face measurement, photo age or printed-copy count. Do not classify this as an officially confirmed universal no-fixed-size rule. AIG does not accept images surrounded by blank space, group photos or passport-scan images with holograms visible. The photo is uploaded online. AIG may separately require biometric fingerprints and a facial photograph; that is not a VAC photo-capture service.
 
 ## Applicant checklist
 
-The same official route applies to employee, self-employed, student and retired applicants. The four profile checklists contain the same core required items and distinguish the UK visa, onward itinerary, accommodation and under-18 documents as conditional rather than universally mandatory.
+The same official route applies to employee, self-employed, student and retired applicants. The four profile checklists contain the same core required items and distinguish the UK visa, onward itinerary, accommodation, under-18 documents and independently verifiable English translations for non-English supporting documents as conditional or if-applicable rather than universally mandatory.
 
 ## Source quality and limitations
 
