@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: unigo-verified-country-import-batch-18
+  group: unigo-backend-production
   cancel-in-progress: false
 
 jobs:
