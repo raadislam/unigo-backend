@@ -15,6 +15,7 @@ on:
       - 'scripts/validate_vfs_coverage.py'
       - '.github/workflows/validate-vfs-coverage.yml'
       - '.github/workflows/deploy.yml'
+      - '.github/enable-schengen-checklist-update.once'
       - '.github/workflows/dispatch-frontend-after-visa-publication.yml'
       - '.github/workflows/read-only-production-visa-audit.yml'
       - 'scripts/validate_production_visa_audit.py'

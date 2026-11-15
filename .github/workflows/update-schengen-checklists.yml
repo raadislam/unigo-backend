@@ -1,0 +1,253 @@
+name: Update Schengen Bangladesh Checklists
+
+on:
+  workflow_run:
+    workflows:
+      - Deploy UniGo Backend
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: Confirm the backed-up production checklist update
+        required: true
+        type: choice
+        options:
+          - review-only
+          - apply
+
+permissions:
+  contents: write
+
+concurrency:
+  group: unigo-schengen-checklist-production
+  cancel-in-progress: false
+
+jobs:
+  update:
+    if: (github.event_name == 'workflow_dispatch' && inputs.confirm == 'apply') || (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout backend
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Check one-time production update trigger
+        id: gate
+        if: github.event_name == 'workflow_run'
+        run: |
+          if test -f .github/enable-schengen-checklist-update.once; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Confirm manual production update
+        id: manual
+        if: github.event_name == 'workflow_dispatch'
+        run: echo "run=true" >> "$GITHUB_OUTPUT"
+
+      - name: Prepare SSH
+        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          : "${VPS_SSH_KEY:?VPS_SSH_KEY secret is missing}"
+          : "${VPS_HOST:?VPS_HOST secret is missing}"
+          : "${VPS_PORT:?VPS_PORT secret is missing}"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_deploy
+          chmod 600 ~/.ssh/unigo_deploy
+          for attempt in 1 2 3 4 5; do
+            if ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>~/.ssh/keyscan.log; then
+              if [ -s ~/.ssh/known_hosts ]; then
+                exit 0
+              fi
+            fi
+            echo "SSH host-key scan attempt $attempt failed."
+            cat ~/.ssh/keyscan.log
+            sleep 5
+          done
+          exit 1
+
+      - name: Verify deployed seeder and take a production database backup
+        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          SHARED_DIR="/var/www/unigo/backend/shared"
+          cd "$APP_DIR"
+          test -f "$SHARED_DIR/.env"
+          test -f "database/seeders/SchengenBangladeshChecklistSupplementSeeder.php"
+          command -v mysqldump >/dev/null
+          command -v gzip >/dev/null
+          php artisan migrate:status --no-ansi >/tmp/unigo-schengen-migration-status.txt
+          if grep -q 'Pending' /tmp/unigo-schengen-migration-status.txt; then
+            cat /tmp/unigo-schengen-migration-status.txt
+            echo "Pending migrations found; refusing to update production checklists."
+            exit 1
+          fi
+          mkdir -p "$SHARED_DIR/backups"
+          BACKUP="$SHARED_DIR/backups/unigo-schengen-checklists-preupdate-$(date -u +%Y%m%dT%H%M%SZ).sql"
+          BACKUP_GZ="$BACKUP.gz"
+          BACKUP_PATH="$BACKUP" php <<'PHP'
+          <?php
+          require getcwd() . '/vendor/autoload.php';
+          $app = require getcwd() . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $default = config('database.default');
+          $db = config('database.connections.' . $default);
+          if (! is_array($db) || $default !== 'mysql' || empty($db['database']) || empty($db['username'])) {
+              fwrite(STDERR, "Production database is not a configured MySQL connection.\n");
+              exit(1);
+          }
+          $host = $db['host'] ?? '127.0.0.1';
+          $port = (string) ($db['port'] ?? 3306);
+          $command = [
+              'mysqldump',
+              '--single-transaction',
+              '--quick',
+              '--routines',
+              '--triggers',
+              '--no-tablespaces',
+              '--default-character-set=utf8mb4',
+              '--host=' . $host,
+              '--port=' . $port,
+              '--user=' . $db['username'],
+              $db['database'],
+          ];
+          $environment = array_merge($_ENV, ['MYSQL_PWD' => (string) ($db['password'] ?? '')]);
+          $pipes = [];
+          $process = proc_open($command, [0 => ['pipe', 'r'], 1 => ['file', getenv('BACKUP_PATH'), 'w'], 2 => ['pipe', 'w']], $pipes, getcwd(), $environment);
+          if (! is_resource($process)) {
+              fwrite(STDERR, "Unable to start production database backup.\n");
+              exit(1);
+          }
+          fclose($pipes[0]);
+          $error = stream_get_contents($pipes[2]);
+          fclose($pipes[2]);
+          $status = proc_close($process);
+          if ($status !== 0) {
+              fwrite(STDERR, "Production database backup failed: " . $error . "\n");
+              exit(1);
+          }
+          PHP
+          gzip -9 "$BACKUP"
+          gzip -t "$BACKUP_GZ"
+          echo "SCHENGEN_DATABASE_BACKUP_CREATED=$BACKUP_GZ"
+          REMOTE
+
+      - name: Apply Schengen checklist and photo supplements with production readback
+        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          cd /var/www/unigo/backend/current
+          php artisan db:seed --class='Database\Seeders\SchengenBangladeshChecklistSupplementSeeder' --force
+          php <<'PHP'
+          <?php
+          require getcwd() . '/vendor/autoload.php';
+          $app = require getcwd() . '/bootstrap/app.php';
+          $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $expected = ['AT','BE','BG','HR','CZ','DK','EE','FI','FR','DE','GR','HU','IS','IT','LV','LI','LT','LU','MT','NL','NO','PL','PT','RO','SK','SI','ES','SE','CH'];
+          $records = App\Models\VisaRequirement::query()
+              ->with('country:id,iso2')
+              ->where('passport_nationality_iso3', 'BGD')
+              ->where('travel_purpose', 'tourism')
+              ->whereHas('country', fn ($query) => $query->whereIn('iso2', $expected))
+              ->get()
+              ->keyBy(fn ($record) => strtoupper((string) $record->country?->iso2));
+          if ($records->count() !== 29) {
+              throw new RuntimeException('Expected 29 Schengen tourism records; found ' . $records->count());
+          }
+          foreach ($expected as $iso2) {
+              $record = $records->get($iso2);
+              if (! $record || $record->verification_status !== 'verified' || ! $record->is_published) {
+                  throw new RuntimeException('Missing or unpublished verified Schengen record: ' . $iso2);
+              }
+              $photo = $record->photo_specifications;
+              $checklists = $record->applicant_checklists;
+              if (! is_array($photo) || empty($photo['status']) || ! is_array($checklists) || count($checklists) !== 4) {
+                  throw new RuntimeException('Photo/checklist metadata missing or malformed: ' . $iso2);
+              }
+              foreach (['employee','self_employed_or_business_owner','student','retired'] as $type) {
+                  if (! collect($checklists)->contains(fn ($item) => ($item['applicant_type'] ?? null) === $type && ! empty($item['documents']))) {
+                      throw new RuntimeException('Applicant profile missing for ' . $iso2 . ': ' . $type);
+                  }
+              }
+              $allDocs = collect($checklists)->flatMap(fn ($item) => $item['documents'] ?? [])->pluck('name')->implode(' | ');
+              if ($iso2 === 'IT' && ! str_contains(strtolower($allDocs), 'apostill')) {
+                  throw new RuntimeException('Italy apostille checklist item missing.');
+              }
+              if ($iso2 === 'HR' && ! str_contains(strtolower($allDocs), 'apostill')) {
+                  throw new RuntimeException('Croatia conditional apostille checklist item missing.');
+              }
+              if (in_array($iso2, ['BG','GR','LT','RO'], true) && ($photo['status'] ?? null) !== 'not_verified') {
+                  throw new RuntimeException('Unverified route was incorrectly marked as photo-verified: ' . $iso2);
+              }
+              if (in_array($iso2, ['MT','SK'], true) && str_contains(strtolower($allDocs), 'apostill')) {
+                  throw new RuntimeException('Italy apostille rule was incorrectly applied to represented destination: ' . $iso2);
+              }
+              if (! $record->sources()->where('source_url', 'https://www.eeas.europa.eu/bangladesh/travel-study_en')->exists()) {
+                  throw new RuntimeException('EEAS representation source missing for ' . $iso2);
+              }
+              if (! $record->sources()->where('source_url', 'https://www.consilium.europa.eu/en/policies/schengen-area/')->exists()) {
+                  throw new RuntimeException('Current Schengen membership source missing for ' . $iso2);
+              }
+          }
+          echo "SCHENGEN_PRODUCTION_READBACK_OK countries=29 profiles=116 apostille=country-specific".PHP_EOL;
+          PHP
+          REMOTE
+
+      - name: Verify public API checklist and photo data for all 29 Schengen countries
+        if: steps.gate.outputs.run == 'true' || steps.manual.outputs.run == 'true'
+        run: |
+          python3 - <<'PY'
+          import json
+          from urllib.request import Request, urlopen
+
+          countries = ["AT","BE","BG","HR","CZ","DK","EE","FI","FR","DE","GR","HU","IS","IT","LV","LI","LT","LU","MT","NL","NO","PL","PT","RO","SK","SI","ES","SE","CH"]
+          base = "https://api.unigo-bd.com/api/visa-requirements/{}?passport=BGD&purpose=tourism"
+          for iso2 in countries:
+              request = Request(base.format(iso2), headers={"Accept":"application/json","User-Agent":"UniGo-Schengen-Checklist-Verification/1.0"})
+              with urlopen(request, timeout=45) as response:
+                  if response.status != 200:
+                      raise SystemExit(f"Public API HTTP {response.status}: {iso2}")
+                  payload = json.loads(response.read().decode("utf-8"))
+              record = payload.get("data")
+              if payload.get("success") is not True or not isinstance(record, dict):
+                  raise SystemExit(f"Public API returned no record: {iso2}")
+              if not isinstance(record.get("photo_specifications"), dict):
+                  raise SystemExit(f"Photo metadata missing from public API: {iso2}")
+              checklists = record.get("applicant_checklists")
+              if not isinstance(checklists, list) or len(checklists) != 4:
+                  raise SystemExit(f"Applicant checklist profiles missing from public API: {iso2}")
+              print(f"PUBLIC_SCHENGEN_CHECKLIST_OK {iso2}")
+          print("PUBLIC_SCHENGEN_CHECKLISTS_OK countries=29")
+          PY
+
+      - name: Consume one-time update trigger
+        if: steps.gate.outputs.run == 'true' && steps.manual.outputs.run != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if test -f .github/enable-schengen-checklist-update.once; then
+            git rm .github/enable-schengen-checklist-update.once
+            git commit -m "Consume one-time Schengen checklist update trigger"
+            git push origin HEAD:main
+          fi
