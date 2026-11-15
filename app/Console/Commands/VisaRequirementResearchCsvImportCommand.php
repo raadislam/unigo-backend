@@ -43,21 +43,14 @@ class VisaRequirementResearchCsvImportCommand extends Command
         try {
             $rows = $this->rows($file);
             $this->validateRows($rows);
-            $index = $this->api('GET', $base . '/api/admin/visa-requirements?' . http_build_query(['passport' => 'BGD', 'purpose' => 'tourism', 'per_page' => 100]), [], $secret);
-            $records = data_get($index, 'data.data', []);
-            if (! is_array($records)) {
-                throw new RuntimeException('The signed admin API did not return a record list.');
-            }
-
-            $byIso2 = collect($records)->keyBy(fn (array $record) => strtoupper((string) data_get($record, 'country.iso2', '')));
-
             if ($unpublishOnly) {
                 $summary = ['mode' => 'unpublish_only', 'csv_sha256' => $hash, 'rows' => count($rows), 'unpublished' => 0, 'read_back' => 0, 'failures' => []];
                 foreach ($rows as $row) {
                     $iso2 = strtoupper(trim($row['destination_iso2']));
-                    $record = $byIso2->get($iso2);
-                    if (! is_array($record)) {
-                        $summary['failures'][] = ['destination_iso2' => $iso2, 'error' => 'No matching BGD tourism record.'];
+                    try {
+                        $record = $this->findRecord($base, $iso2, $secret);
+                    } catch (Throwable $exception) {
+                        $summary['failures'][] = ['destination_iso2' => $iso2, 'error' => $exception->getMessage()];
                         continue;
                     }
                     $id = (int) $record['id'];
@@ -86,9 +79,10 @@ class VisaRequirementResearchCsvImportCommand extends Command
 
             foreach ($rows as $row) {
                 $iso2 = strtoupper(trim($row['destination_iso2']));
-                $record = $byIso2->get($iso2);
-                if (! is_array($record)) {
-                    $summary['failures'][] = ['destination_iso2' => $iso2, 'error' => 'No matching BGD tourism record.'];
+                try {
+                    $record = $this->findRecord($base, $iso2, $secret);
+                } catch (Throwable $exception) {
+                    $summary['failures'][] = ['destination_iso2' => $iso2, 'error' => $exception->getMessage()];
                     continue;
                 }
 
@@ -493,6 +487,35 @@ class VisaRequirementResearchCsvImportCommand extends Command
         if ($exists) return false;
         if (! $dry) $this->api('POST', $base . '/api/admin/visa-requirements/' . $id . '/sources', $source, $secret);
         return true;
+    }
+
+    private function findRecord(string $base, string $iso2, string $secret): array
+    {
+        $index = $this->api('GET', $base . '/api/admin/visa-requirements?' . http_build_query([
+            'passport' => 'BGD',
+            'purpose' => 'tourism',
+            'search' => $iso2,
+            'per_page' => 100,
+        ]), [], $secret);
+        $records = data_get($index, 'data.data', []);
+        if (! is_array($records)) {
+            throw new RuntimeException('The signed admin API did not return a record list for ' . $iso2 . '.');
+        }
+
+        $matches = array_values(array_filter($records, function ($record) use ($iso2): bool {
+            return is_array($record)
+                && strtoupper((string) data_get($record, 'country.iso2', '')) === $iso2
+                && strtoupper((string) ($record['passport_nationality_iso3'] ?? '')) === 'BGD'
+                && (string) ($record['travel_purpose'] ?? '') === 'tourism';
+        }));
+
+        if (count($matches) !== 1) {
+            throw new RuntimeException(count($matches) === 0
+                ? 'No matching BGD tourism record for ' . $iso2 . '.'
+                : 'Multiple BGD tourism records found for ' . $iso2 . '.');
+        }
+
+        return $matches[0];
     }
 
     private function api(string $method, string $url, array $payload, string $secret): array
