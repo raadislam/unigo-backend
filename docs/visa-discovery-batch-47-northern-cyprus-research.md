@@ -73,3 +73,21 @@ Do not populate structured photo dimensions, claim no photo is required, or mark
 5. **Data model:** decide whether UniGo supports a non-ISO child destination under Cyprus. Until then, keep this candidate in the non-ISO research ledger only.
 
 No production country row, visa requirement, source record, photo specification, public API entry, or frontend page was created or changed in this batch.
+
+## Non-ISO discovery ledger entry
+
+| Field | Value |
+|---|---|
+| Candidate key | northern-cyprus-trnc |
+| Destination | Northern Cyprus (TRNC-administered area) |
+| Type | Non-ISO sub-destination; parent: Cyprus (CY) |
+| ISO-2 / ISO-3 | Not assigned; leave blank and do not invent a code |
+| Region | Europe / Eastern Mediterranean |
+| Passport / purpose | Bangladesh ordinary passport / tourism-visitor |
+| Status | Newly discovered, researched, research-only; not in country master or public directory |
+| Entry confidence | Pending Bangladesh-specific eVisa/arrival confirmation and Turkish transit clarification |
+| Photo status | Unresearched; no-fixed-size not confirmed |
+| Exact blocker | No approved non-ISO child-destination schema; current Bangladesh route, fee, stay, transit scope and photo/checklist remain unconfirmed |
+| Next action | Written confirmation from TRNC Immigration and Turkish Embassy Dhaka; decide parent-child data model before production |
+
+This sidecar entry is deliberately kept in this research document rather than the ISO country master or a production import directory. It therefore does not affect production country/ledger parity.
