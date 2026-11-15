@@ -48,6 +48,12 @@ on:
       - 'docs/frontend-content-dispatch.trigger'
       - '.github/workflows/composer-audit.yml'
       - 'docs/composer-audit.trigger'
+      - 'database/seeders/SchengenBangladeshChecklistSupplementSeeder.php'
+      - 'scripts/validate_schengen_checklist_seeder.py'
+      - 'scripts/verify_schengen_checklist_readback.php'
+      - 'scripts/run-schengen-checklist-update.trigger'
+      - 'docs/schengen-bangladesh-vfs-checklist-audit-2026-11-15.md'
+      - '.github/workflows/update-schengen-checklists.yml'
   workflow_dispatch:
 
 permissions:
