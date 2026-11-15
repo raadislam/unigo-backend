@@ -11,6 +11,7 @@ Route::get('/countries/{slug}', [CountryController::class, 'show']);
 
 Route::get('/visa-requirements', [VisaRequirementController::class, 'index']);
 Route::get('/visa-requirements/{destination}', [VisaRequirementController::class, 'show']);
+Route::post('/visa-requirements/{destination}/checklist-pdf', VisaChecklistPdfController::class)->middleware('throttle:20,1');
 
 Route::post('/contact', [ContactController::class, 'store'])
     ->middleware('throttle:5,1');
