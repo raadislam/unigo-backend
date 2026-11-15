@@ -86,6 +86,37 @@ jobs:
           ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit' > production-visa-audit.json
           test -s production-visa-audit.json
 
+      - name: Print non-sensitive production directory parity diagnostics
+        run: |
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("production-visa-audit.json").read_text(encoding="utf-8"))
+          records = data.get("records") or []
+          countries = data.get("country_table") or []
+          public = data.get("public_country_directory") or []
+          published = [
+              row for row in records
+              if row.get("passport_nationality_iso3") == "BGD"
+              and row.get("travel_purpose") == "tourism"
+              and row.get("verification_status") == "verified"
+              and row.get("is_published") is True
+          ]
+          print("PRODUCTION_AUDIT_COUNTS " + json.dumps({
+              "total_records": data.get("total"),
+              "published_count": data.get("published_count"),
+              "public_country_directory_count": data.get("public_country_directory_count"),
+              "country_table_count": data.get("country_table_count"),
+              "country_table_published_count": data.get("country_table_published_count"),
+              "bgd_tourism_records": sum(1 for row in records if row.get("passport_nationality_iso3") == "BGD" and row.get("travel_purpose") == "tourism"),
+              "active_published_bgd_tourism_candidates": len(published),
+          }, ensure_ascii=False))
+          print("PUBLIC_DIRECTORY_ISO2 " + json.dumps(sorted(str(row.get("iso2") or "").upper() for row in public)))
+          print("COUNTRY_FLAG_PUBLISHED_ISO2 " + json.dumps(sorted(str(row.get("iso2") or "").upper() for row in countries if row.get("is_published") is True)))
+          print("PUBLISHED_BGD_ISO2 " + json.dumps(sorted(str((row.get("country") or {}).get("iso2") or "").upper() for row in published)))
+          PY
+
       - name: Audit applicant checklist coverage without changing production
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
