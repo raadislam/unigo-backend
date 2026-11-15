@@ -559,6 +559,56 @@ jobs:
           python3 -m json.tool batch38-production-result.json > /dev/null
           cat batch38-production-result.json
 
+      - name: Withhold batch 38 records if production verification fails
+        if: failure() && steps.production.outcome == 'failure'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          cd "$APP"
+          if [ ! -f /tmp/verified_full_audit_batch_38.csv ]; then
+            echo "NO_BATCH38_IMPORT_FILE_STAGED; no batch 38 production rows could have been imported"
+            exit 0
+          fi
+          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $codes=["AR","BS"]; $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->whereHas("country",fn($q)=>$q->whereIn("iso2",$codes))->get(); file_put_contents("/tmp/batch38-existing-codes.json",json_encode($rows->pluck("country.iso2")->unique()->values()->all()));'
+          python3 - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+          codes=set(json.loads(Path("/tmp/batch38-existing-codes.json").read_text()))
+          if not codes:
+              print("NO_BATCH38_RECORDS_TO_UNPUBLISH")
+              raise SystemExit(0)
+          source=Path("/tmp/verified_full_audit_batch_38.csv")
+          target=Path("/tmp/verified_full_audit_batch_38_rollback.csv")
+          with source.open(newline="",encoding="utf-8-sig") as f:
+              reader=csv.DictReader(f)
+              headers=reader.fieldnames
+              rows=[r for r in reader if r.get("destination_iso2") in codes]
+          if {r.get("destination_iso2") for r in rows} != codes:
+              raise SystemExit("Rollback CSV does not match the exact existing batch 38 records")
+          with target.open("w",newline="",encoding="utf-8") as f:
+              writer=csv.DictWriter(f,fieldnames=headers)
+              writer.writeheader()
+              writer.writerows(rows)
+          print("BATCH38_ROLLBACK_ALLOWLIST",",".join(sorted(codes)))
+          PY
+          php artisan visa:requirements-import-research --file=/tmp/verified_full_audit_batch_38_rollback.csv --unpublish-only > /tmp/batch38-unpublish-result.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("/tmp/batch38-unpublish-result.json").read_text())
+          if result.get("mode")!="unpublish_only" or result.get("unpublished")!=result.get("rows") or result.get("read_back")!=result.get("rows") or result.get("failures"):
+              raise SystemExit("Batch 38 unpublish-only safety readback failed: "+json.dumps(result))
+          print("BATCH38_FAILURE_RECORDS_WITHHELD",json.dumps(result))
+          PY
+          REMOTE
+
       - name: Upload non-sensitive audit and verification artifacts
         if: always()
         uses: actions/upload-artifact@v4
