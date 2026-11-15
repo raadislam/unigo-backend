@@ -42,7 +42,9 @@ The official page describes the sea passage from Honolulu as approximately five 
 
 The State Department's visa-bond notice prohibits bonded B-1/B-2 holders from using sea ports of entry. CBP separately states that persons arriving in the United States on private vessels from a foreign port must report and be inspected at a designated U.S. port of entry.
 
-The sources reviewed do **not** establish whether a Bangladeshi traveller who first enters the United States through a commercial-air port in Hawaii, then travels on a private vessel from Honolulu to Palmyra and returns by the same route, remains compliant with the visa-bond terms; nor do they establish the CBP inspection/port-of-entry treatment of that specific domestic voyage. Do not infer that the vessel route is permitted or prohibited for a bonded traveller. Obtain written confirmation from the competent U.S. authorities before presenting it as an available Bangladesh-passport tourism route.
+The official FWS pages also differ on the currently available access mode: the Visit Us page lists work/contract/volunteer access, research permits, donor trips and visiting recreational vessels, while the What We Do page says access is currently available only to sea-going vessels through a Special Use Permit. The updated About Us page says entry is by permit only. Do not reconcile these statements by assuming a flight or donor-trip route remains open.
+
+The sources reviewed do **not** establish whether a Bangladeshi traveller who first enters the United States through a commercial-air port in Hawaii, then travels on a private vessel from Honolulu to Palmyra and returns by the same route, remains compliant with the visa-bond terms; nor do they establish the CBP inspection/port-of-entry treatment of that specific domestic voyage. Do not infer that the vessel route is permitted or prohibited for a bonded traveller. Obtain written confirmation from USFWS, CBP and the Department of State before presenting it as an available Bangladesh-passport tourism route.
 
 ## Fees, processing and documents
 
@@ -95,7 +97,11 @@ The sources reviewed do **not** establish whether a Bangladeshi traveller who fi
    https://www.help.cbp.gov/s/article/Article-1029  
    Supports the reporting and inspection requirements for pleasure vessels arriving from a foreign port. It does not resolve the specific domestic Hawaii–Palmyra voyage.
 
-8. **U.S. Customs and Border Protection — Vessel Inspection Guide**  
+8. **USFWS — Palmyra Atoll, What We Do**  
+   https://www.fws.gov/refuge/palmyra-atoll/what-we-do  
+   States that current refuge access is available only to sea-going vessels through a Special Use Permit. This differs from the broader access categories on the Visit Us page; retain the discrepancy as an unresolved source conflict.
+
+9. **U.S. Customs and Border Protection — Vessel Inspection Guide**  
    https://www.cbp.gov/sites/default/files/documents/vessel_guide_4.pdf  
    Supports documentary and inspection requirements for persons arriving in the United States by private vessel at a designated port of entry.
 
