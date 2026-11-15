@@ -118,6 +118,7 @@ jobs:
               '--quick',
               '--routines',
               '--triggers',
+              '--no-tablespaces',
               '--default-character-set=utf8mb4',
               '--host=' . $host,
               '--port=' . $port,
