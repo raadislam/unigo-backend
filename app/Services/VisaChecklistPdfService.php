@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\VisaRequirement;
+use DomainException;
 use InvalidArgumentException;
 use RuntimeException;
 use setasign\Fpdi\Tcpdf\Fpdi;
@@ -61,7 +62,7 @@ class VisaChecklistPdfService
 
         $documents = $this->requiredDocuments($requirement, $options);
         if ($documents === []) {
-            throw new RuntimeException('No required documents match the selected checklist filters.');
+            throw new DomainException('No required documents match the selected occupation filter.');
         }
 
         $pdf->SetFont('dejavusans', 'B', 9);
@@ -78,7 +79,7 @@ class VisaChecklistPdfService
 
         $qrY = $pageHeight - $bottom - $qrSize;
         if ($pdf->GetY() + 4 > $qrY) {
-            throw new RuntimeException('The selected required documents do not fit safely on one original letterhead page.');
+            throw new DomainException('The selected required documents do not fit safely on one original letterhead page.');
         }
 
         $pdf->SetDrawColor(215, 25, 45);
