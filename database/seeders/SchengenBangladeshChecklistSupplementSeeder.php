@@ -393,7 +393,7 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     'source_url' => $sourceDirectory,
                     'checked_at' => '2026-11-15',
                 ];
-                $documents = array_merge($baseDocuments, $profiles);
+                $documents = [];
                 $sourceName = 'UniGo research status — Bangladesh-specific checklist not verified';
                 $sourceUrl = $sourceDirectory;
                 $sourceType = 'official';
@@ -455,6 +455,33 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     'verification_notes' => $notes,
                 ]
             );
+
+            VisaRequirementSource::updateOrCreate(
+                ['visa_requirement_id' => $requirement->id, 'source_url' => $sourceDirectory],
+                [
+                    'source_type' => 'official',
+                    'source_name' => 'European External Action Service — Schengen visa issuing embassies and representation in Bangladesh',
+                    'source_url' => $sourceDirectory,
+                    'source_last_checked_at' => $checkedAt,
+                    'is_primary' => false,
+                    'verification_notes' => 'Used to verify the competent Schengen visa issuing mission and representation arrangement for Bangladesh. It is not a substitute for the destination-specific supporting-document checklist.',
+                ]
+            );
+
+            if ($iso2 === 'IT') {
+                $apostilleUrl = 'https://ambdhaka.esteri.it/en/servizi-consolari-e-visti/';
+                VisaRequirementSource::updateOrCreate(
+                    ['visa_requirement_id' => $requirement->id, 'source_url' => $apostilleUrl],
+                    [
+                        'source_type' => 'official',
+                        'source_name' => 'Embassy of Italy in Dhaka — Apostille of Bangladeshi public documents',
+                        'source_url' => $apostilleUrl,
+                        'source_last_checked_at' => $checkedAt,
+                        'is_primary' => false,
+                        'verification_notes' => 'The Embassy states that from June 2025 Bangladeshi public documents no longer require legalisation at the Italian Consular Office but require an apostille from the Bangladesh Ministry of Foreign Affairs through MyGov. Apply this to relevant public documents, not as a blanket requirement for every applicant.',
+                    ]
+                );
+            }
         }
     }
 }
