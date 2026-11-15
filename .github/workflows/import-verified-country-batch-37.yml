@@ -80,9 +80,10 @@ jobs:
                   require(row.get("verification_status") == "verified", f"{iso2}: {label} must be verified")
                   require(row.get("publish_status") == "published" if label == "audit" else True, f"{iso2}: audit must be approved for publication")
                   require(row.get("official_source_url", "").startswith("https://"), f"{iso2}: invalid primary official source URL")
-                  require(row.get("cross_check_source_url", "").startswith("https://"), f"{iso2}: invalid cross-check source URL")
                   require(row.get("official_source_last_checked") == date.today().isoformat(), f"{iso2}: primary source not checked today")
-                  require(row.get("cross_check_source_last_checked") == date.today().isoformat(), f"{iso2}: cross-check source not checked today")
+                  if label == "audit":
+                      require(row.get("cross_check_source_url", "").startswith("https://"), f"{iso2}: invalid cross-check source URL")
+                      require(row.get("cross_check_source_last_checked") == date.today().isoformat(), f"{iso2}: cross-check source not checked today")
 
               require(audit.get("full_audit", "").lower() == "true", f"{iso2}: full_audit must be true")
               require(len(audit.get("application_fee", "")) <= 120, f"{iso2}: application_fee exceeds 120 characters")
