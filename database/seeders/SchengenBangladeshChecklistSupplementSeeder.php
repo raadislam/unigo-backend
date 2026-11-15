@@ -475,7 +475,7 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     'source_url' => $sourceDirectory,
                     'source_last_checked_at' => $checkedAt,
                     'is_primary' => false,
-                    'verification_notes' => 'Used only as a starting point for legacy Bangladesh representation arrangements. This EEAS page still lists 26 Schengen states and is outdated for membership: Croatia, Bulgaria and Romania must be treated using current EU Council membership and each country's own mission guidance. It is not a substitute for a destination-specific supporting-document checklist.',
+                    'verification_notes' => 'Used only as a starting point for legacy Bangladesh representation arrangements. This EEAS page still lists 26 Schengen states and is outdated for membership: Croatia, Bulgaria and Romania must be treated using current EU Council membership and each country’s own mission guidance. It is not a substitute for a destination-specific supporting-document checklist.',
                 ]
             );
 
