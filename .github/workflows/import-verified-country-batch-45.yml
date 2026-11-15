@@ -58,7 +58,7 @@ jobs:
           root = Path("verified-batch-45")
           files = sorted(path for path in root.iterdir() if path.is_file())
           if len(files) != 5:
-              raise SystemExit("Batch 45 artifact must contain exactly four reviewed files.")
+              raise SystemExit("Batch 45 artifact must contain exactly five reviewed files.")
           for name in ("verified_seed_batch_45.csv", "verified_full_audit_batch_45.csv"):
               with (root / name).open(encoding="utf-8-sig", newline="") as handle:
                   rows = list(csv.DictReader(handle))
@@ -162,7 +162,14 @@ jobs:
               ->select('country_id', 'passport_nationality_iso3', 'travel_purpose')
               ->groupBy('country_id', 'passport_nationality_iso3', 'travel_purpose')->havingRaw('COUNT(*) > 1')->count();
           $taCountry = \App\Models\Country::query()->where('iso2', 'TA')->exists();
-          $taRecords = $records->filter(fn ($row) => $row->country?->iso2 === 'TA')->count();
+          $taRows = $records->filter(fn ($row) => $row->country?->iso2 === 'TA');
+          $taRecords = $taRows->count();
+          $taRecord = $taRows->first();
+          $taPending = $taRecord && $taRecord->verification_status === 'pending_review' && ! (bool) $taRecord->is_published;
+          $clean = $countryCount === 250 && $records->count() === 135 && $published === 133 && $pending === 2 && ! $taCountry && $taRecords === 0;
+          $countryOnly = $countryCount === 251 && $records->count() === 135 && $published === 133 && $pending === 2 && $taCountry && $taRecords === 0;
+          $requirementPending = $countryCount === 251 && $records->count() === 136 && $published === 133 && $pending === 3 && $taCountry && $taRecords === 1 && $taPending;
+          $preflightState = $clean ? 'clean' : ($countryOnly ? 'country_only' : ($requirementPending ? 'requirement_pending' : 'blocked'));
           $result = [
               'country_count' => $countryCount,
               'requirement_count' => $records->count(),
@@ -172,8 +179,10 @@ jobs:
               'duplicate_keys' => $duplicates,
               'TA_country_exists' => $taCountry,
               'TA_requirement_count' => $taRecords,
+              'preflight_state' => $preflightState,
+              'TA_partial_recovery_allowed' => true,
           ];
-          if ($countryCount !== 250 || $records->count() !== 135 || $published !== 133 || $pending !== 2 || $duplicates !== 0 || $taCountry || $taRecords !== 0) {
+          if ($duplicates !== 0 || (! $clean && ! $countryOnly && ! $requirementPending)) {
               fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
               exit(1);
           }
@@ -400,7 +409,7 @@ jobs:
             echo "Pending production migrations detected after backup; refusing import."
             exit 1
           fi
-          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $taCountry=\App\Models\Country::where("iso2","TA")->exists(); if(\App\Models\Country::count()!==250 || $rows->count()!==135 || $published!==133 || $pending!==2 || $taCountry) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA_country_exists"=>$taCountry])); exit(1); } echo "PRODUCTION_PREWRITE_COUNTS_RECONFIRMED".PHP_EOL;'
+          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->get(); $published=$rows->filter(fn($r)=>$r->verification_status==="verified" && (bool)$r->is_published)->count(); $pending=$rows->count()-$published; $taCountry=\App\Models\Country::where("iso2","TA")->exists(); $taRows=$rows->filter(fn($r)=>$r->country?->iso2==="TA"); $taRecord=$taRows->first(); $taPending=$taRecord && $taRecord->verification_status==="pending_review" && !(bool)$taRecord->is_published; $clean=\App\Models\Country::count()===250 && $rows->count()===135 && $published===133 && $pending===2 && !$taCountry && $taRows->count()===0; $countryOnly=\App\Models\Country::count()===251 && $rows->count()===135 && $published===133 && $pending===2 && $taCountry && $taRows->count()===0; $requirementPending=\App\Models\Country::count()===251 && $rows->count()===136 && $published===133 && $pending===3 && $taCountry && $taRows->count()===1 && $taPending; if(!$clean && !$countryOnly && !$requirementPending) { fwrite(STDERR,json_encode(["countries"=>\App\Models\Country::count(),"requirements"=>$rows->count(),"published"=>$published,"pending"=>$pending,"TA_country_exists"=>$taCountry,"TA_requirement_count"=>$taRows->count()])); exit(1); } echo "PRODUCTION_PREWRITE_COUNTS_RECONFIRMED TA_PARTIAL_RECOVERY_ALLOWED".PHP_EOL;'
           install -m 0644 /tmp/TristanDaCunhaCountryBackfillSeeder.php database/seeders/TristanDaCunhaCountryBackfillSeeder.php
           install -m 0644 /tmp/verified_seed_batch_45.csv storage/app/imports/unigo_visa_requirements_research_template.csv
           install -m 0644 /tmp/verified_full_audit_batch_45.csv storage/app/imports/verified_full_audit_batch_45.csv
@@ -461,6 +470,12 @@ jobs:
               raise SystemExit("Batch 45 unpublish-only safety readback failed: " + json.dumps(data))
           print("BATCH45_FAILED_RECORD_WITHHELD", json.dumps(data))
           PY
+          BATCH_HASH="$(sha256sum /tmp/verified_full_audit_batch_45.csv | awk '{print $1}')"
+          MARKER="storage/logs/visa-imports-${BATCH_HASH}.json"
+          if [ -f "$MARKER" ]; then
+            rm "$MARKER"
+            echo "BATCH45_REIMPORT_MARKER_CLEARED"
+          fi
           REMOTE
       - name: Upload non-sensitive audit and verification artifacts
         if: always()
