@@ -10,7 +10,7 @@ class VisaChecklistPdfService
 {
     public function generate(VisaRequirement $requirement, array $options = []): string
     {
-        $letterheadPath = resource_path('pdf/2026_UniGo_pad(1).pdf');
+        $letterheadPath = resource_path('pdf/unigo-letterhead.pdf');
 
         if (! is_file($letterheadPath)) {
             throw new RuntimeException('The original UniGo uploaded PDF letterhead is missing.');
