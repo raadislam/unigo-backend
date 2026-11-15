@@ -42,3 +42,16 @@ Ten previously unstarted African destinations were progressed: Algeria, Comoros,
 New research rows staged: 10; research-verified in files: 5; pending/draft: 5. Production inserts: 0; updates: 0; new verified records: 0; new publications: 0. All are research-file classifications only.
 
 The latest successful production audit remains the 14 November 2026 05:37:12 UTC backend deployment. The current deploy workflow performs rsync --delete, dependency installation, cache operations and several import/publish commands before its audit step; it is not read-only and was not triggered. The guarded importer still requires privileged MySQL access for an isolated backup-restore test. No safeguard was bypassed.
+
+
+## 15 November 2026 — photo and applicant-checklist follow-up
+
+The five verified Batch 19 destinations were rechecked against the official visitor route pages and the full-audit export now carries four applicant-type checklists (employee, self-employed/business owner, student and retired). No occupation-specific additions are claimed where the authority publishes one common visitor checklist.
+
+- **Algeria:** two recent photos are required by the Dhaka Embassy; dimensions, background, format and precise age limit are not published. Status: partially specified.
+- **Liberia:** the Ministry lists a Consulate General in Dhaka but does not publish its local photo checklist. The Brussels Embassy's detailed photo standard is not transferable to Bangladesh. Status: unresearched for the Bangladesh route; confirm with the Dhaka Consulate.
+- **Lesotho:** the reviewed official visitor checklist does not list a separate photograph or dimensions. Status: not specified; this is not a guarantee that Home Affairs cannot request one.
+- **Sierra Leone:** two passport photographs are listed; dimensions, background and age limit are not stated. Status: partially specified.
+- **São Tomé and Príncipe:** the public SMF eVisa instructions list a passport PDF, booking details, return ticket and funds but no separate photo or dimensions. Later portal steps may request additional material. Status: not specified.
+
+The five records already existed in production from the successful combined Batch 19/20 import run on 14 November 2026: https://github.com/raadislam/unigo-backend/actions/runs/43610308918. This follow-up updates the structured photo/checklist fields idempotently; it does not create new requirement keys. The latest read-only audit on 15 November 2026 (https://github.com/raadislam/unigo-backend/actions/runs/43695012856) showed 250 country rows, 135 BGD tourism records, 133 verified/published, 2 pending, zero duplicate BGD tourism keys, and 133/133 ledger-public-directory parity before this follow-up.

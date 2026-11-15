@@ -84,3 +84,14 @@ The post-import database audit/readback remained unchanged: 250 discovery-master
 The automatic deploy workflow did not create or restore-test a database backup. The existing import commands were idempotent/no-op for the reconciled batches, so no new production requirement or country row was inserted or published. This backend deployment was an unintended path-trigger consequence of the research-only seeder file, not the planned batch-20 import. PR #42 now adds `database/seeders/KosovoCountryBackfillSeeder.php` to `paths-ignore` to prevent the same trigger in future.
 
 The guarded importer still does not support batch 20, and the isolated backup-restore privilege check remains a separate requirement before any production import. The last confirmed frontend/static/sitemap parity remains 41/41; no frontend build or sitemap regeneration occurred.
+
+
+## 15 November 2026 — photo and applicant-checklist follow-up
+
+The three verified Batch 20 destinations were rechecked against the official visitor route pages and the full-audit export now carries four applicant-type checklists (employee, self-employed/business owner, student and retired). No occupation-specific additions are claimed where the authority publishes one common visitor checklist.
+
+- **Kosovo:** a Visa C photograph not older than one month and meeting ICAO standards is required; exact dimensions, background, file format and copy count are not published. Status: partially specified.
+- **Chad:** the official eVisa portal asks for one recent colour visa-type photograph in JPEG/PDF; it publishes no pixel dimensions, file-size limit or head measurement. Status: partially specified.
+- **Somalia:** the ICA foreign-visa guidance lists a six-month passport, application form and supporting documents by visa type, but no separate photograph. Its two-photo item is under Somali citizen passport services and does not apply to foreign visitor visas. The ETAS form may request uploads not described on the public page. Status: not specified.
+
+These three records already existed in production from the successful combined Batch 19/20 import run on 14 November 2026: https://github.com/raadislam/unigo-backend/actions/runs/43610308918. This follow-up updates photo/checklist fields idempotently; it does not create new requirement keys. The latest read-only audit on 15 November 2026 (https://github.com/raadislam/unigo-backend/actions/runs/43695012856) showed 250 country rows, 135 BGD tourism records, 133 verified/published, 2 pending, zero duplicate BGD tourism keys, and 133/133 ledger-public-directory parity before this follow-up.

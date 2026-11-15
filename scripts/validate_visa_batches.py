@@ -91,6 +91,10 @@ for path in files:
         if missing:
             errors.append(f"{path.name}: missing columns {sorted(missing)}")
         rows = list(reader)
+        if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv"}:
+            missing_photo_fields = {"photo_specifications", "applicant_checklists"} - set(reader.fieldnames or [])
+            if missing_photo_fields:
+                errors.append(f"{path.name}: missing photo/checklist columns {sorted(missing_photo_fields)}")
     if not rows:
         errors.append(f"{path.name}: no rows")
     if path.name == "visa_full_audit_batch_38.csv":
@@ -158,9 +162,9 @@ for path in files:
                 errors.append(f"{path.name}:{line}: Bahamas route flags or source are inconsistent")
         checklist_raw = (row.get("applicant_checklists", "") or "").strip()
         photo_raw = (row.get("photo_specifications", "") or "").strip()
-        if (path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not checklist_raw:
+        if (path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not checklist_raw:
             errors.append(f"{path.name}:{line}: applicant_checklists is required for the new publishable batch")
-        if (path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not photo_raw:
+        if (path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"})) and not photo_raw:
             errors.append(f"{path.name}:{line}: photo_specifications is required for the new publishable batch")
         if checklist_raw:
             try:
@@ -175,7 +179,7 @@ for path in files:
                     if not applicant_type:
                         raise ValueError("applicant_type is required")
                     applicant_types.add(applicant_type)
-                    if path.name == "visa_full_audit_batch_38.csv":
+                    if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_38.csv"}:
                         if not checklist.get("source_name") or not (checklist.get("source_url") or "").startswith("https://") or checklist.get("checked_at") != "2026-11-15":
                             raise ValueError("batch 38 applicant checklist needs an official source name, HTTPS URL and checked date")
                     if path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}:
@@ -198,7 +202,7 @@ for path in files:
                         notes = document.get("notes")
                         if notes is not None and (not isinstance(notes, str) or len(notes) > 1000):
                             raise ValueError("checklist document notes exceed 1000 characters")
-                if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}):
+                if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv", "visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} or (path.name == "visa_full_audit_batch_12.csv" and row.get("destination_iso2") in {"UG", "ZW"}):
                     expected_applicant_types = {"employee", "self_employed_or_business_owner", "student", "retired"}
                     if applicant_types != expected_applicant_types:
                         raise ValueError(f"expected four applicant types, got {sorted(applicant_types)}")
@@ -221,6 +225,9 @@ for path in files:
                         raise ValueError("batch 41 photo must remain partially specified without invented dimensions")
                     if not photo.get("source_name") or not (photo.get("source_url") or "").startswith("https://") or photo.get("checked_at") != "2026-11-15":
                         raise ValueError("batch 41 photo source metadata is incomplete")
+                if path.name in {"visa_full_audit_batch_19.csv", "visa_full_audit_batch_20.csv"}:
+                    if photo.get("status") not in {"partially_specified", "not_specified", "unresearched"} or photo.get("checked_at") != "2026-11-15" or photo.get("dimensions_mm") or photo.get("digital_dimensions_px"):
+                        raise ValueError("batches 19/20 photo status/source date must be explicit without invented dimensions")
                 if path.name == "visa_full_audit_batch_33.csv":
                     if photo.get("status") != "not_specified" or photo.get("dimensions_mm") or photo.get("digital_dimensions_px"):
                         raise ValueError("South Georgia photo status must be not_specified without invented dimensions")
