@@ -454,7 +454,9 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
             $requirement->forceFill([
                 'photo_specifications' => $photo,
                 'required_documents' => collect($requirement->required_documents ?? [])
-                    ->when(in_array($photo['status'] ?? '', ['verified', 'partially_specified'], true), fn ($items) => $items->merge(['Recent colour photograph meeting the destination-specific Schengen photo rules or live-photo capture instruction']))
+                    ->when($iso2 === 'NL', fn ($items) => $items->merge(['Live digital photograph captured at the VFS appointment; a printed photo is not required when this live-photo route is used']))
+                    ->when($iso2 === 'BG', fn ($items) => $items->merge(['Digital photograph captured at the VFS Bangladesh appointment; the accessible portal does not state printed-photo size/count, so verify the live Tourism checklist']))
+                    ->when(in_array($photo['status'] ?? '', ['verified', 'partially_specified'], true) && ! in_array($iso2, ['NL', 'BG'], true), fn ($items) => $items->merge(['Recent colour photograph meeting the destination-specific Schengen photo rules or live-photo capture instruction']))
                     ->when($iso2 === 'IT', fn ($items) => $items->merge(['Apostilled English translations of civil-status documents and specified minor-related documents, only where applicable under the Italy VFS checklist']))
                     ->when($iso2 === 'HR', fn ($items) => $items->merge(['Apostille/international certification of supporting public documents if specifically requested by the Croatian Embassy']))
                     ->unique()
