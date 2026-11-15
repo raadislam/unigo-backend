@@ -179,14 +179,13 @@ jobs:
           BACKUP_DIR=/var/www/unigo/backend/shared/backups
           IMPORT_DIR=/var/www/unigo/backend/shared/imports
           cd "$APP"
-          mkdir -p "$APP/storage/app/imports" "$BACKUP_DIR" "$IMPORT_DIR"
+          mkdir -p "$BACKUP_DIR" "$IMPORT_DIR"
           php artisan migrate:status --no-ansi > /tmp/batch47-migrations.txt
           if grep -q "Pending" /tmp/batch47-migrations.txt; then
             echo "Pending production migrations detected; refusing batch 47."
             exit 1
           fi
           php artisan help visa:requirements-import-research >/dev/null
-          install -m 0644 /tmp/verified_full_audit_batch_47.csv "$APP/storage/app/imports/verified_full_audit_batch_47.csv"
           UNIGO_APP_DIR="$APP" php /tmp/batch47_preflight.php > /tmp/batch47-preflight.json
           python3 -m json.tool /tmp/batch47-preflight.json > /dev/null
           php artisan visa:requirements-audit > /tmp/batch47-audit-before.txt
@@ -240,7 +239,7 @@ jobs:
           : > "$TABLE_COUNTS_PATH"
           while IFS= read -r TABLE; do
             [ -n "$TABLE" ] || continue
-            COUNT="$(mysql --defaults-extra-file="$CNF" --batch --skip-column-names "$DB_NAME" -e "SELECT COUNT(*) FROM `$TABLE`;")"
+            COUNT="$(mysql --defaults-extra-file="$CNF" --batch --skip-column-names "$DB_NAME" -e "SELECT COUNT(*) FROM \`$TABLE\`;")"
             printf '%s\t%s\n' "$TABLE" "$COUNT" >> "$TABLE_COUNTS_PATH"
           done <<< "$TABLES"
           test -s "$TABLE_COUNTS_PATH"
@@ -262,16 +261,19 @@ jobs:
           }
           with open(os.environ["GITHUB_OUTPUT"], "a") as handle:
               for key, value in outputs.items():
-                  handle.write(f"{key}={value}\n")
+                  handle.write(f"{key}={value}\\n")
           print("PRODUCTION_BACKUP_CREATED", data["backup_path"])
           print("PRODUCTION_BACKUP_SHA256", data["sha256"])
           print("PRODUCTION_BACKUP_SIZE_BYTES", data["size_bytes"])
           PY
+          BACKUP_PATH="$(python3 -c 'import json; print(json.load(open("backup-meta.json"))["backup_path"])')"
+          BACKUP_SHA="$(python3 -c 'import json; print(json.load(open("backup-meta.json"))["sha256"])')"
+          TABLE_COUNTS_PATH="$(python3 -c 'import json; print(json.load(open("backup-meta.json"))["table_counts_path"])')"
           scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:$BACKUP_PATH" production-backup.sql.gz
           scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:$TABLE_COUNTS_PATH" production-table-counts.tsv
           scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:/tmp/batch47-preflight.json" batch47-preflight.json
           scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:/tmp/batch47-audit-before.txt" batch47-audit-before.txt
-          echo "${{ steps.backup.outputs.backup_sha256 }}  production-backup.sql.gz" | sha256sum -c -
+          echo "$BACKUP_SHA  production-backup.sql.gz" | sha256sum -c -
           gzip -t production-backup.sql.gz
 
       - name: Restore-test production backup in isolated MySQL 8
@@ -300,7 +302,7 @@ jobs:
           : > restored-table-counts.tsv
           while IFS= read -r TABLE; do
             [ -n "$TABLE" ] || continue
-            COUNT="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch47-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT COUNT(*) FROM `$TABLE`;")"
+            COUNT="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch47-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT COUNT(*) FROM \`$TABLE\`;")"
             printf '%s\t%s\n' "$TABLE" "$COUNT" >> restored-table-counts.tsv
           done <<< "$TABLES"
           diff -u production-table-counts.tsv restored-table-counts.tsv
@@ -318,6 +320,8 @@ jobs:
           set -euo pipefail
           APP=/var/www/unigo/backend/current
           cd "$APP"
+          mkdir -p "$APP/storage/app/imports"
+          install -m 0644 /tmp/verified_full_audit_batch_47.csv "$APP/storage/app/imports/verified_full_audit_batch_47.csv"
           php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_47.csv --base-url=https://api.unigo-bd.com --dry-run > /tmp/batch47-dry-run.json
           python3 -m json.tool /tmp/batch47-dry-run.json > /dev/null
           python3 - <<'PY'
