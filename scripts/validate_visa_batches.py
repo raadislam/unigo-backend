@@ -121,6 +121,7 @@ for path in files:
                     errors.append(f"{path.name}:{line}: {field} exceeds actual visa_requirements schema limit {limit}")
             if row.get("notes", "").strip():
                 errors.append(f"{path.name}:{line}: free-text notes are not mapped by the importer; use schema-supported fields and review_notes")
+        if path.name == "visa_full_audit_batch_33.csv":
             if row.get("visa_required") != "false" or row.get("visa_free_eligibility") != "false" or "not a visa" not in row.get("visa_requirement_type", "").lower():
                 errors.append(f"{path.name}:{line}: mandatory entry permit must not be misclassified as a visa or visa-free")
         if len(row.get("review_notes", "") or "") > 5000:
