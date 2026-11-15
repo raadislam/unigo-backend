@@ -204,6 +204,9 @@ jobs:
               if (! $record->sources()->where('source_url', 'https://www.eeas.europa.eu/bangladesh/travel-study_en')->exists()) {
                   throw new RuntimeException('EEAS representation source missing for ' . $iso2);
               }
+              if (! $record->sources()->where('source_url', 'https://www.consilium.europa.eu/en/policies/schengen-area/')->exists()) {
+                  throw new RuntimeException('Current Schengen membership source missing for ' . $iso2);
+              }
           }
           echo "SCHENGEN_PRODUCTION_READBACK_OK countries=29 profiles=116 apostille=country-specific".PHP_EOL;
           PHP
