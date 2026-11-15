@@ -55,9 +55,9 @@ $countryIdentityValid = $country
     && $country->visa_information === null;
 
 $baselineValid = $records->count() === 136
-    && $publishedCount === 134
-    && $pendingCount === 2
-    && $sourceCount === 916
+    && $publishedCount === 133
+    && $pendingCount === 3
+    && $sourceCount === 924
     && $duplicateKeys === 0
     && ! $slugConflict
     && $ascensionRequirementCount === 0;
