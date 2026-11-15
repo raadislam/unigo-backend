@@ -1,0 +1,457 @@
+name: Import verified tourism entry batch 47
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/run-verified-country-import-batch-47.trigger'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'database/data/visa_full_audit_batch_47.csv'
+      - 'scripts/validate_visa_batch_47.py'
+      - 'scripts/validate_visa_batches.py'
+      - 'scripts/batch47_preflight.php'
+      - 'scripts/batch47_readback.php'
+      - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
+      - '.github/workflows/import-verified-country-batch-47.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-backend-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: mbstring, pdo_mysql, curl, xml, zip
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Validate exact Isle of Man allowlist and repository batch schema
+        run: |
+          set -euo pipefail
+          python3 -m py_compile scripts/validate_visa_batch_47.py scripts/validate_visa_batches.py
+          python3 scripts/validate_visa_batch_47.py
+          python3 scripts/validate_visa_batches.py
+          php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
+          php -l scripts/batch47_preflight.php
+          php -l scripts/batch47_readback.php
+          ruby -e 'require "yaml"; YAML.load_file(".github/workflows/import-verified-country-batch-47.yml", aliases: true); puts "Batch 47 workflow YAML syntax OK"'
+
+      - name: Build immutable one-country allowlist artifact
+        run: |
+          set -euo pipefail
+          mkdir -p verified-batch-47
+          cp database/data/visa_full_audit_batch_47.csv verified-batch-47/verified_full_audit_batch_47.csv
+          cp scripts/batch47_preflight.php verified-batch-47/batch47_preflight.php
+          cp scripts/batch47_readback.php verified-batch-47/batch47_readback.php
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          directory = Path("verified-batch-47")
+          files = [
+              "verified_full_audit_batch_47.csv",
+              "batch47_preflight.php",
+              "batch47_readback.php",
+          ]
+          manifest = {
+              "batch": 47,
+              "passport_iso3": "BGD",
+              "travel_purpose": "tourism",
+              "destination_iso2_allowlist": ["IM"],
+              "files": {
+                  name: hashlib.sha256((directory / name).read_bytes()).hexdigest()
+                  for name in files
+              },
+          }
+          (directory / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
+          print("BATCH47_IMMUTABLE_ALLOWLIST_VALIDATED", json.dumps(manifest, sort_keys=True))
+          PY
+
+      - name: Upload exact batch 47 source files
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-batch-47-source-files
+          path: verified-batch-47/
+          if-no-files-found: error
+          retention-days: 14
+
+  import:
+    needs: validate
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout authorized backend
+        uses: actions/checkout@v4
+
+      - name: Download exact batch 47 allowlist
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-batch-47-source-files
+          path: verified-batch-47
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify immutable allowlist checksums
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          directory = Path("verified-batch-47")
+          manifest = json.loads((directory / "manifest.json").read_text())
+          if manifest.get("destination_iso2_allowlist") != ["IM"]:
+              raise SystemExit("The production allowlist is not restricted to IM.")
+          if manifest.get("passport_iso3") != "BGD" or manifest.get("travel_purpose") != "tourism":
+              raise SystemExit("The production allowlist has an invalid passport or purpose.")
+          for name, expected in manifest["files"].items():
+              actual = hashlib.sha256((directory / name).read_bytes()).hexdigest()
+              if actual != expected:
+                  raise SystemExit(f"Batch 47 immutable file checksum mismatch: {name}")
+          print("BATCH47_IMMUTABLE_FILES_VERIFIED")
+          PY
+
+      - name: Prepare authorized VPS connection
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VPS_SSH_KEY }}
+
+      - name: Trust configured VPS host
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          test -n "$VPS_HOST"
+          test -n "$VPS_PORT"
+          install -m 700 -d ~/.ssh
+          ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Upload exact batch 47 files to the VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes verified-batch-47/verified_full_audit_batch_47.csv "$VPS_USER@$VPS_HOST:/tmp/verified_full_audit_batch_47.csv"
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes verified-batch-47/batch47_preflight.php "$VPS_USER@$VPS_HOST:/tmp/batch47_preflight.php"
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes verified-batch-47/batch47_readback.php "$VPS_USER@$VPS_HOST:/tmp/batch47_readback.php"
+
+      - name: Fresh production preflight and full database backup
+        id: backup
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' > backup-meta.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          BACKUP_DIR=/var/www/unigo/backend/shared/backups
+          IMPORT_DIR=/var/www/unigo/backend/shared/imports
+          cd "$APP"
+          mkdir -p "$APP/storage/app/imports" "$BACKUP_DIR" "$IMPORT_DIR"
+          php artisan migrate:status --no-ansi > /tmp/batch47-migrations.txt
+          if grep -q "Pending" /tmp/batch47-migrations.txt; then
+            echo "Pending production migrations detected; refusing batch 47."
+            exit 1
+          fi
+          php artisan help visa:requirements-import-research >/dev/null
+          install -m 0644 /tmp/verified_full_audit_batch_47.csv "$APP/storage/app/imports/verified_full_audit_batch_47.csv"
+          UNIGO_APP_DIR="$APP" php /tmp/batch47_preflight.php > /tmp/batch47-preflight.json
+          python3 -m json.tool /tmp/batch47-preflight.json > /dev/null
+          php artisan visa:requirements-audit > /tmp/batch47-audit-before.txt
+          cat > /tmp/batch47-mysql-config.php <<'PHP'
+          <?php
+          require '/var/www/unigo/backend/current/vendor/autoload.php';
+          $app = require '/var/www/unigo/backend/current/bootstrap/app.php';
+          $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+          $connection = config('database.connections.' . config('database.default'));
+          if (($connection['driver'] ?? null) !== 'mysql' || empty($connection['database']) || empty($connection['username'])) {
+              throw new RuntimeException('The production database connection is not a complete MySQL connection.');
+          }
+          $quote = static fn ($value) => '"' . str_replace(["\\", '"'], ["\\\\", '\\"'], (string) $value) . '"';
+          $content = "[client]\n";
+          $content .= 'host=' . $quote($connection['host'] ?? '127.0.0.1') . "\n";
+          $content .= 'user=' . $quote($connection['username']) . "\n";
+          $content .= 'password=' . $quote($connection['password'] ?? '') . "\n";
+          $content .= 'port=' . $quote($connection['port'] ?? 3306) . "\n";
+          $content .= "default-character-set=utf8mb4\n";
+          if (! empty($connection['unix_socket'])) {
+              $content .= 'socket=' . $quote($connection['unix_socket']) . "\n";
+          }
+          file_put_contents('/tmp/unigo-batch47-mysql.cnf', $content, LOCK_EX);
+          chmod('/tmp/unigo-batch47-mysql.cnf', 0600);
+          file_put_contents('/tmp/unigo-batch47-dbname', (string) $connection['database'], LOCK_EX);
+          PHP
+          php -l /tmp/batch47-mysql-config.php > /dev/null
+          php /tmp/batch47-mysql-config.php
+          CNF=/tmp/unigo-batch47-mysql.cnf
+          DB_NAME="$(cat /tmp/unigo-batch47-dbname)"
+          command -v mysqldump >/dev/null
+          command -v mysql >/dev/null
+          command -v gzip >/dev/null
+          DB_BYTES="$(mysql --defaults-extra-file="$CNF" --batch --skip-column-names "$DB_NAME" -e "SELECT COALESCE(SUM(data_length + index_length), 0) FROM information_schema.tables WHERE table_schema = DATABASE();")"
+          FREE_KB="$(df -Pk "$BACKUP_DIR" | awk 'NR == 2 {print $4}')"
+          FREE_BYTES="$((FREE_KB * 1024))"
+          REQUIRED_BYTES="$((DB_BYTES * 3 + 268435456))"
+          if [ "$FREE_BYTES" -lt "$REQUIRED_BYTES" ]; then
+            echo "Insufficient VPS free space for a safe backup and restore verification."
+            exit 1
+          fi
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          BACKUP_PATH="$BACKUP_DIR/unigo-pre-verified-batch-47-$STAMP-$$.sql.gz"
+          TABLE_COUNTS_PATH="$BACKUP_DIR/unigo-pre-verified-batch-47-table-counts-$STAMP-$$.tsv"
+          mysqldump --defaults-extra-file="$CNF" --single-transaction --routines --triggers --no-tablespaces --quick --hex-blob "$DB_NAME" | gzip -1 > "$BACKUP_PATH"
+          test -s "$BACKUP_PATH"
+          test "$(stat -c %s "$BACKUP_PATH")" -gt 1024
+          gzip -t "$BACKUP_PATH"
+          BACKUP_SHA="$(sha256sum "$BACKUP_PATH" | awk '{print $1}')"
+          TABLES="$(mysql --defaults-extra-file="$CNF" --batch --skip-column-names "$DB_NAME" -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;")"
+          : > "$TABLE_COUNTS_PATH"
+          while IFS= read -r TABLE; do
+            [ -n "$TABLE" ] || continue
+            COUNT="$(mysql --defaults-extra-file="$CNF" --batch --skip-column-names "$DB_NAME" -e "SELECT COUNT(*) FROM `$TABLE`;")"
+            printf '%s\t%s\n' "$TABLE" "$COUNT" >> "$TABLE_COUNTS_PATH"
+          done <<< "$TABLES"
+          test -s "$TABLE_COUNTS_PATH"
+          php -r '$pre=json_decode(file_get_contents("/tmp/batch47-preflight.json"), true, 512, JSON_THROW_ON_ERROR); $backup=$argv[1]; $counts=$argv[2]; $database=$argv[3]; echo json_encode(["preflight"=>$pre,"backup_path"=>$backup,"sha256"=>hash_file("sha256",$backup),"size_bytes"=>filesize($backup),"database_name"=>$database,"table_counts_path"=>$counts,"created_at_utc"=>gmdate(DATE_ATOM)], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);' "$BACKUP_PATH" "$TABLE_COUNTS_PATH" "$DB_NAME"
+          rm -f "$CNF" /tmp/unigo-batch47-dbname /tmp/batch47-mysql-config.php
+          REMOTE
+          python3 -m json.tool backup-meta.json > /dev/null
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(Path("backup-meta.json").read_text())
+          outputs = {
+              "database_name": data["database_name"],
+              "backup_path": data["backup_path"],
+              "backup_sha256": data["sha256"],
+              "table_counts_path": data["table_counts_path"],
+          }
+          with open(os.environ["GITHUB_OUTPUT"], "a") as handle:
+              for key, value in outputs.items():
+                  handle.write(f"{key}={value}\n")
+          print("PRODUCTION_BACKUP_CREATED", data["backup_path"])
+          print("PRODUCTION_BACKUP_SHA256", data["sha256"])
+          print("PRODUCTION_BACKUP_SIZE_BYTES", data["size_bytes"])
+          PY
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:$BACKUP_PATH" production-backup.sql.gz
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:$TABLE_COUNTS_PATH" production-table-counts.tsv
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:/tmp/batch47-preflight.json" batch47-preflight.json
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:/tmp/batch47-audit-before.txt" batch47-audit-before.txt
+          echo "${{ steps.backup.outputs.backup_sha256 }}  production-backup.sql.gz" | sha256sum -c -
+          gzip -t production-backup.sql.gz
+
+      - name: Restore-test production backup in isolated MySQL 8
+        env:
+          DB_NAME: ${{ steps.backup.outputs.database_name }}
+        run: |
+          set -euo pipefail
+          RESTORE_DB_PASSWORD="$(openssl rand -hex 24)"
+          echo "::add-mask::$RESTORE_DB_PASSWORD"
+          docker run -d --name unigo-batch47-restore -e MYSQL_ROOT_PASSWORD="$RESTORE_DB_PASSWORD" -e MYSQL_DATABASE="$DB_NAME" mysql:8.0
+          READY=false
+          for attempt in $(seq 1 90); do
+            if docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch47-restore mysql -uroot -N -B -e "SELECT 1" >/dev/null 2>&1; then
+              READY=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$READY" != "true" ]; then
+            docker logs --tail 80 unigo-batch47-restore || true
+            echo "Isolated MySQL did not become ready for authenticated queries."
+            exit 1
+          fi
+          gzip -dc production-backup.sql.gz | docker exec -i -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch47-restore mysql -uroot "$DB_NAME"
+          TABLES="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch47-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT TABLE_NAME FROM information_schema.tables WHERE table_schema = DATABASE() AND TABLE_TYPE = 'BASE TABLE' ORDER BY TABLE_NAME;")"
+          : > restored-table-counts.tsv
+          while IFS= read -r TABLE; do
+            [ -n "$TABLE" ] || continue
+            COUNT="$(docker exec -e MYSQL_PWD="$RESTORE_DB_PASSWORD" unigo-batch47-restore mysql -uroot -N -B "$DB_NAME" -e "SELECT COUNT(*) FROM `$TABLE`;")"
+            printf '%s\t%s\n' "$TABLE" "$COUNT" >> restored-table-counts.tsv
+          done <<< "$TABLES"
+          diff -u production-table-counts.tsv restored-table-counts.tsv
+          echo "ISOLATED_MYSQL_RESTORE_TEST_PASSED table_count=$(wc -l < restored-table-counts.tsv | tr -d ' ')"
+          echo "RESTORE_TEST_PASSED=true" >> "$GITHUB_ENV"
+
+      - name: Run production read-only dry-run
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' > batch47-dry-run.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          cd "$APP"
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_47.csv --base-url=https://api.unigo-bd.com --dry-run > /tmp/batch47-dry-run.json
+          python3 -m json.tool /tmp/batch47-dry-run.json > /dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("/tmp/batch47-dry-run.json").read_text())
+          if data.get("mode") != "dry_run" or data.get("rows") != 1 or data.get("updated") != 1 or data.get("failures") not in ([], None):
+              raise SystemExit("Production read-only dry-run did not validate the exact IM allowlist: " + json.dumps(data))
+          if data.get("sources_added", 0) < 1:
+              raise SystemExit("Production read-only dry-run did not validate any new source records.")
+          print(json.dumps({key: data.get(key) for key in ("mode", "rows", "updated", "sources_added", "failures")}, sort_keys=True))
+          PY
+          mkdir -p /var/www/unigo/backend/shared/imports
+          cp /tmp/batch47-dry-run.json /var/www/unigo/backend/shared/imports/batch47-dry-run.json
+          cat /tmp/batch47-dry-run.json
+          REMOTE
+          python3 -m json.tool batch47-dry-run.json > /dev/null
+
+      - name: Execute allowlisted production import and immediate database/API readback
+        id: production
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' > batch47-production-result.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          SHARED=/var/www/unigo/backend/shared
+          cd "$APP"
+          CSV=storage/app/imports/verified_full_audit_batch_47.csv
+          HASH="$(sha256sum "$CSV" | awk '{print $1}')"
+          MARKER="$APP/storage/logs/visa-imports-$HASH.json"
+          if [ -f "$MARKER" ]; then
+            echo "The exact batch 47 CSV already has an import marker; refusing to assume its current production state."
+            exit 1
+          fi
+          set +e
+          php artisan visa:requirements-import-research --file="$CSV" --base-url=https://api.unigo-bd.com > /tmp/batch47-import-result.json
+          IMPORT_EXIT=$?
+          set -e
+          if [ "$IMPORT_EXIT" -ne 0 ]; then
+            python3 -m json.tool /tmp/batch47-import-result.json || true
+            exit "$IMPORT_EXIT"
+          fi
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("/tmp/batch47-import-result.json").read_text())
+          if data.get("mode") != "import" or data.get("rows") != 1 or data.get("updated") != 1:
+              raise SystemExit("Batch 47 import result did not confirm one updated record: " + json.dumps(data))
+          if data.get("failures") not in ([], None) or data.get("read_back") != 1 or data.get("reverified") != 1 or data.get("republished") != 1:
+              raise SystemExit("Batch 47 import readback/publication result is incomplete: " + json.dumps(data))
+          PY
+          php artisan visa:requirements-audit > /tmp/batch47-audit-after.txt
+          UNIGO_APP_DIR="$APP" php /tmp/batch47_readback.php > /tmp/batch47-readback.json
+          python3 -m json.tool /tmp/batch47-readback.json > /dev/null
+          php -r '$import=json_decode(file_get_contents("/tmp/batch47-import-result.json"), true, 512, JSON_THROW_ON_ERROR); $readback=json_decode(file_get_contents("/tmp/batch47-readback.json"), true, 512, JSON_THROW_ON_ERROR); echo json_encode(["import"=>$import,"readback"=>$readback], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);' > /tmp/batch47-production-summary.json
+          python3 -m json.tool /tmp/batch47-production-summary.json > /dev/null
+          mkdir -p "$SHARED/imports"
+          cp /tmp/batch47-import-result.json "$SHARED/imports/batch47-import-result.json"
+          cp /tmp/batch47-readback.json "$SHARED/imports/batch47-readback.json"
+          cp /tmp/batch47-audit-after.txt "$SHARED/imports/batch47-post-import-audit.txt"
+          cp /tmp/batch47-production-summary.json "$SHARED/imports/batch47-production-summary.json"
+          cat /tmp/batch47-production-summary.json
+          REMOTE
+          python3 -m json.tool batch47-production-result.json > /dev/null
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch47-import-result.json" batch47-import-result.json
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch47-readback.json" batch47-readback.json
+          scp -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/batch47-post-import-audit.txt" batch47-post-import-audit.txt
+
+      - name: Withhold Isle of Man publication if production verification fails
+        if: failure() && steps.production.outcome == 'failure'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'bash -s' > batch47-withhold-result.json <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          SHARED=/var/www/unigo/backend/shared
+          cd "$APP"
+          php artisan visa:requirements-import-research --file=storage/app/imports/verified_full_audit_batch_47.csv --base-url=https://api.unigo-bd.com --unpublish-only > /tmp/batch47-withhold-result.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path("/tmp/batch47-withhold-result.json").read_text())
+          if data.get("mode") != "unpublish_only" or data.get("rows") != 1 or data.get("unpublished") != 1 or data.get("read_back") != 1 or data.get("failures") not in ([], None):
+              raise SystemExit("Batch 47 publication could not be safely withheld: " + json.dumps(data))
+          PY
+          HASH="$(sha256sum storage/app/imports/verified_full_audit_batch_47.csv | awk '{print $1}')"
+          rm -f "$APP/storage/logs/visa-imports-$HASH.json"
+          mkdir -p "$SHARED/imports"
+          cp /tmp/batch47-withhold-result.json "$SHARED/imports/batch47-withhold-result.json"
+          cat /tmp/batch47-withhold-result.json
+          REMOTE
+          python3 -m json.tool batch47-withhold-result.json > /dev/null
+
+      - name: Upload non-sensitive backup, restore, import and readback artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-batch-47-production-audit
+          path: |
+            backup-meta.json
+            batch47-preflight.json
+            batch47-audit-before.txt
+            production-table-counts.tsv
+            restored-table-counts.tsv
+            batch47-dry-run.json
+            batch47-production-result.json
+            batch47-import-result.json
+            batch47-readback.json
+            batch47-post-import-audit.txt
+            batch47-withhold-result.json
+            verified-batch-47/manifest.json
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Clean up temporary restore and transfer files
+        if: always()
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set +e
+          docker rm -f unigo-batch47-restore >/dev/null 2>&1
+          rm -f production-backup.sql.gz production-table-counts.tsv restored-table-counts.tsv
+          ssh -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'rm -f /tmp/verified_full_audit_batch_47.csv /tmp/batch47_preflight.php /tmp/batch47_readback.php /tmp/batch47-mysql-config.php /tmp/unigo-batch47-mysql.cnf /tmp/unigo-batch47-dbname /tmp/batch47-preflight.json /tmp/batch47-migrations.txt /tmp/batch47-audit-before.txt /tmp/batch47-audit-after.txt /tmp/batch47-dry-run.json /tmp/batch47-import-result.json /tmp/batch47-readback.json /tmp/batch47-production-summary.json /tmp/batch47-withhold-result.json' >/dev/null 2>&1
+          true
