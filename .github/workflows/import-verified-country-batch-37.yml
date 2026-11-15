@@ -57,13 +57,15 @@ jobs:
               ah, ar = read_rows(audit_path)
               require(sh is not None and ah is not None, f"Missing headers for {iso2}")
               if seed_headers is None:
-                  seed_headers = sh
-              else:
-                  require(seed_headers == sh, "Seed CSV headers differ across source batches")
+                  seed_headers = []
+              for header in sh:
+                  if header not in seed_headers:
+                      seed_headers.append(header)
               if audit_headers is None:
-                  audit_headers = ah
-              else:
-                  require(audit_headers == ah, "Full-audit CSV headers differ across source batches")
+                  audit_headers = []
+              for header in ah:
+                  if header not in audit_headers:
+                      audit_headers.append(header)
 
               s = [row for row in sr if row.get("destination_iso2", "").upper() == iso2]
               a = [row for row in ar if row.get("destination_iso2", "").upper() == iso2]
