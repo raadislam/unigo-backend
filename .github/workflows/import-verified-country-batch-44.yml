@@ -412,8 +412,8 @@ jobs:
           import json
           from pathlib import Path
           data=json.loads(Path("staging-dry-run.json").read_text())
-          if data.get("rows") != 2 or data.get("failures") not in ([], None):
-              raise SystemExit("Isolated staging dry-run did not validate both allowlisted rows: "+json.dumps(data))
+          if data.get("rows") != 1 or data.get("failures") not in ([], None):
+              raise SystemExit("Isolated staging dry-run did not validate the single allowlisted row: "+json.dumps(data))
           print("ISOLATED_STAGING_DRY_RUN_PASSED", json.dumps({k:data.get(k) for k in ("mode","rows","updated","sources_added","failures")}))
           PY
 
