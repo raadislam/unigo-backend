@@ -38,7 +38,7 @@ class VisaChecklistPdfService
         $pdf->SetMargins(16, 44, 16);
         $pdf->SetHeaderMargin(0);
         $pdf->SetFooterMargin(12);
-        $pdf->SetAutoPageBreak(true, 20);
+        $pdf->SetAutoPageBreak(true, 34);
         $pdf->setPrintHeader(true);
         $pdf->setPrintFooter(true);
         $pdf->SetFont('helvetica', '', 11);
@@ -104,6 +104,9 @@ class VisaChecklistPdfService
             'Travel insurance' => $requirement->travel_insurance_rule,
             'Health requirements' => $requirement->health_requirements,
             'Transit requirements' => $requirement->transit_requirements,
+            'Effective from' => $requirement->effective_from?->toDateString(),
+            'Effective until' => $requirement->effective_until?->toDateString(),
+            'Official information last checked' => $requirement->official_source_checked_at?->toDateTimeString(),
         ]);
 
         $photo = $requirement->photo_specifications ?? [];
@@ -111,9 +114,10 @@ class VisaChecklistPdfService
         $html .= $photo ? $this->section('', $photo) : '<p>No verified photo specification is currently recorded. Confirm photo capture and format with the official application centre.</p>';
 
         $sources = $requirement->sources ?? collect();
-        $html .= '<h2>Official sources</h2>';
+        $html .= '<h2>Official and supporting sources</h2>';
         foreach ($sources as $source) {
             $html .= '<p><strong>'.$this->escape($source->source_name ?? $source->source_type).'</strong><br />';
+            $html .= 'Source type: '.$this->escape((string) $source->source_type).'<br />';
             if ($source->source_url) {
                 $url = $this->escape($source->source_url);
                 $html .= '<a href="'.$url.'">'.$url.'</a><br />';
