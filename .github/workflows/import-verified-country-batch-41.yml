@@ -71,6 +71,7 @@ jobs:
                   require(row.get("travel_purpose") == "tourism", f"{iso2}: {label} purpose must be tourism")
                   expected_status = "pending_review" if label == "seed" else "verified"
                   require(row.get("verification_status") == expected_status, f"{iso2}: {label} verification status must be {expected_status}")
+                  require(len(row.get("entry_count", "")) <= 40, f"{iso2}: {label} entry_count exceeds the 40-character schema limit")
                   require(row.get("official_source_url", "").startswith("https://"), f"{iso2}: invalid primary source")
                   require(row.get("official_source_last_checked") == today, f"{iso2}: primary source not checked today")
 
@@ -353,7 +354,7 @@ jobs:
         run: |
           set -euo pipefail
           cat > .env <<EOF
-          APP_NAME=UniGoBatch38Staging
+          APP_NAME=UniGoBatch41Staging
           APP_ENV=testing
           APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
           APP_DEBUG=false
