@@ -5,11 +5,19 @@ on:
     branches:
       - main
     paths:
-      - 'docs/composer-audit.trigger'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/composer-audit.yml'
+  schedule:
+    - cron: '45 3 * * 1'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: unigo-backend-composer-audit
+  cancel-in-progress: false
 
 jobs:
   audit:
@@ -46,6 +54,9 @@ jobs:
           }
           echo "COMPOSER_ADVISORY_COUNT=" . $total . PHP_EOL;
           echo "ABANDONED_PACKAGES=" . count($data["abandoned"] ?? []) . PHP_EOL;
+          if ($total > 0) {
+              exit(1);
+          }
           '
       - name: Upload full Composer audit report
         uses: actions/upload-artifact@v4
