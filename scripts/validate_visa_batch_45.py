@@ -45,7 +45,7 @@ if "no universal maximum" not in row.get("maximum_permitted_stay", "").lower():
     raise SystemExit("Do not invent a universal stay limit.")
 if "GBP 30" not in row.get("application_fee", "") or "GBP 15" not in row.get("application_fee", ""):
     raise SystemExit("Main-island landing charges must distinguish cruise and yacht passengers.")
-if len(row.get("application_fee", "")) > 120 or len(row.get("processing_time", "")) > 120 or len(row.get("entry_count", "")) > 40 or len(row.get("application_channel", "")) > 180:
+if len(row.get("visa_requirement_type", "")) > 50 or len(row.get("maximum_permitted_stay", "")) > 120 or len(row.get("application_fee", "")) > 120 or len(row.get("processing_time", "")) > 120 or len(row.get("entry_count", "")) > 40 or len(row.get("application_channel", "")) > 180:
     raise SystemExit("A field exceeds its actual database column length.")
 if "tdcenquiries@tdc-gov.com" not in row.get("application_channel", ""):
     raise SystemExit("Official advance-approval email channel is missing.")
