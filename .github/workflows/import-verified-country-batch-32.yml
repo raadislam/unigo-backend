@@ -5,7 +5,7 @@ on:
     branches:
       - main
     paths:
-      - scripts/run-verified-country-import-batch-31.trigger
+      - scripts/run-verified-country-import-batch-32.trigger
   workflow_dispatch:
 
 permissions:
