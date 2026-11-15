@@ -3,7 +3,7 @@ name: Validate Visa Research Batches
 on:
   push:
     branches:
-      - 'automation/country-discovery-*'
+      - main
     paths:
       - 'database/data/visa_full_audit_batch_*.csv'
       - 'database/data/new_country_visa_batch_*.csv'
@@ -29,6 +29,13 @@ on:
       - '.github/workflows/deploy.yml'
       - '.github/workflows/validate-visa-batches.yml'
       - 'docs/visa-discovery-batch-09-release-checklist.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-visa-batch-validation-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
 
 jobs:
   validate:
