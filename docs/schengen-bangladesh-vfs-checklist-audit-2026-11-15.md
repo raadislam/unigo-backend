@@ -7,7 +7,7 @@ Scope: All 29 Schengen states. This is a source and checklist audit, not a claim
 
 ## Schengen membership
 
-The Council of the EU confirms 29 Schengen countries, including Bulgaria and Romania as full members from 1 January 2025: https://www.consilium.europa.eu/en/policies/schengen-area/
+The Council of the EU confirms 29 Schengen countries, including Bulgaria and Romania as full members from 1 January 2025: https://www.consilium.europa.eu/en/policies/schengen-area/\n\nImportant source-quality warning: the EEAS Bangladesh travel page reviewed here still says there are 26 Schengen countries and incorrectly places Croatia, Bulgaria and Romania outside the area. It is therefore used only as a starting point for older Bangladesh representation arrangements, never as the source of current Schengen membership. Current membership is taken from the EU Council and national foreign ministries.
 
 ## Bangladesh application channels and source coverage
 
