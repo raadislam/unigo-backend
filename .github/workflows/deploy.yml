@@ -11,7 +11,6 @@ on:
       - 'database/data/destination_discovery_batch_*.csv'
       - 'database/seeders/KosovoCountryBackfillSeeder.php'
       - 'database/seeders/AscensionIslandCountryBackfillSeeder.php'
-      - 'scripts/batch46_database_guard.php'
       - 'scripts/validate_discovery_candidate_batch_46.py'
       - 'database/data/new_country_visa_batch_*.csv'
       - 'database/data/visa_full_audit_batch_*.csv'
