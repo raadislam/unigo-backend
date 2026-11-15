@@ -48,7 +48,6 @@ jobs:
           python3 -m py_compile scripts/validate_visa_batch_55.py
           python3 scripts/validate_visa_batch_55.py
           php -l scripts/batch55_readback.php
-          php -l scripts/batch55_unpublish.php
           ruby -e 'require "yaml"; YAML.load_file(ARGV.fetch(0), aliases: true); puts "Batch 55 workflow YAML syntax OK"' .github/workflows/import-verified-country-batch-55-photo-checklist.yml
 
   guarded-import:
@@ -94,7 +93,6 @@ jobs:
           ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" "umask 077; mkdir -p '$REMOTE_IMPORT_DIR'"
           scp -P "$VPS_PORT" database/data/visa_full_audit_batch_55.csv "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/visa_full_audit_batch_55.csv"
           scp -P "$VPS_PORT" scripts/batch55_readback.php "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/batch55_readback.php"
-          scp -P "$VPS_PORT" scripts/batch55_unpublish.php "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/batch55_unpublish.php"
           scp -P "$VPS_PORT" scripts/validate_production_visa_audit.py "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/validate_production_visa_audit.py"
           scp -P "$VPS_PORT" database/data/country_discovery_ledger.csv "$VPS_USER@$VPS_HOST:$REMOTE_IMPORT_DIR/country_discovery_ledger.csv"
       - name: Fresh production preflight, dry-run and database backup
@@ -237,7 +235,7 @@ jobs:
           PY
           echo "RESTORE_TEST_PASSED=true" >> "$GITHUB_ENV"
           docker rm -f unigo-batch55-restore >/dev/null 2>&1 || true
-      - name: Withhold conflicting Malaysia record and import researched fields
+      - name: Import researched Malaysia fields; controller keeps unresolved record unpublished
         if: env.RESTORE_TEST_PASSED == 'true'
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -253,7 +251,6 @@ jobs:
           SHARED=/var/www/unigo/backend/shared
           IMPORT_DIR="$SHARED/imports"
           cd "$APP"
-          APP_ROOT="$APP" php "$IMPORT_DIR/batch55_unpublish.php"
           php artisan visa:requirements-import-research --file="$IMPORT_DIR/visa_full_audit_batch_55.csv" > "$IMPORT_DIR/batch55-import-result.json"
           php -r '
           $x=json_decode(file_get_contents($argv[1]),true,512,JSON_THROW_ON_ERROR);
