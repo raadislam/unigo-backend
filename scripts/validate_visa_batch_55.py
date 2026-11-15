@@ -118,7 +118,7 @@ if "SEV validity conflicts" not in row.get("maximum_permitted_stay", ""):
     raise SystemExit("BATCH55_VALIDATION_ERROR visa-validity conflict must be explicit")
 if row.get("verification_status") != "pending_review" or row.get("publish_status") != "draft":
     raise SystemExit("BATCH55_VALIDATION_ERROR unresolved official-source conflicts must block publication")
-if "35 × 45 mm" not in photo.get("notes", "") or "not an official" not in photo.get("notes", ""):
+if "35 × 45 mm" not in photo.get("notes", "") or "not an official Malaysian requirement" not in photo.get("notes", ""):
     raise SystemExit("BATCH55_VALIDATION_ERROR agency photo-size conflict must be documented")
 
 print(json.dumps({
