@@ -201,16 +201,16 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     ['name' => 'Original completed and signed Schengen Type C application form; both parents/legal guardian sign for minors', 'status' => 'required'],
                     ['name' => 'Two recent identical colour photographs, 40 × 35 mm, white background, taken within 6 months', 'status' => 'required'],
                     ['name' => 'Passport valid at least 3 months beyond visa validity and with at least 2 blank unmarked visa pages; biodata copy', 'status' => 'required'],
-                    ['name' => 'For employees: original employer letter on official letterhead with contacts, role, salary, service years, leave approval and return-to-work confirmation', 'status' => 'if_applicable'],
-                    ['name' => 'For self-employed applicants: trade licence, incorporation certificate, income tax return, TIN certificate and last 6 months company bank statement', 'status' => 'if_applicable'],
-                    ['name' => 'For students: enrolment evidence and leave certificate; school-trip letter stating purpose, duration and destination if applicable', 'status' => 'if_applicable'],
-                    ['name' => 'Personal bank statement for the last 6 months and other proof of financial solvency', 'status' => 'required'],
-                    ['name' => 'Return flight booking with reservation/passenger registration number and travel itinerary', 'status' => 'required'],
-                    ['name' => 'Hotel confirmation or other accommodation proof for the entire Schengen stay', 'status' => 'required'],
-                    ['name' => 'Travel insurance valid throughout the Schengen area and entire stay, covering medical costs, hospitalisation and repatriation for at least EUR 30,000', 'status' => 'required'],
-                                        ['name' => 'For visits to family/friends: VFS invitation form, proof of relationship, host identity document and host residence permit copy if the host is a foreign national', 'status' => 'if_applicable'],
+                    ['name' => 'For employees: original employer letter in English on official company letterhead, stamped, signed and dated; it must state the employer address, telephone and fax numbers, signatory name and position, applicant name, position, salary and years of service, who will pay travel and stay costs, approved leave, and confirmation that the applicant will retain the position after returning', 'status' => 'if_applicable'],
+                    ['name' => 'For self-employed applicants: City Corporation-issued trade licence, RJSC-issued certificate of incorporation, income tax return, TIN certificate and company bank statements for the last 6 months', 'status' => 'if_applicable'],
+                    ['name' => 'For students: proof of enrolment at an educational institution in Bangladesh; if travelling during the school year, leave certificate showing the institution's full address, telephone number, permission of absence and name/function of the authorising person; for a school trip, school letter stating purpose, duration and destination', 'status' => 'if_applicable'],
+                    ['name' => 'Personal bank statement issued by any bank operating in Bangladesh for the last 6 months, plus other proof of financial solvency such as credit-card statements; if own funds are insufficient, an Italian-bank-issued bank guarantee (Fidejussione Bancaria) is required', 'status' => 'required'],
+                    ['name' => 'Return airline booking showing the Passenger Registration Number or Reservation Number, together with the travel itinerary', 'status' => 'required'],
+                    ['name' => 'Hotel confirmation or other documentary proof of accommodation for the entire period of stay in all Schengen Member States', 'status' => 'required'],
+                    ['name' => 'Travel insurance valid throughout the entire Schengen area and full stay, covering medical expenses, hospitalisation and repatriation for at least EUR 30,000', 'status' => 'required'],
+                                        ['name' => 'For visits to family/friends residing in Italy: invitation letter in the VFS-prescribed format, proof of family relationship/ties, host identity document, and host residence-permit copy if the host is a foreign national', 'status' => 'if_applicable'],
                 ],
-                'notes' => 'The VFS tourism checklist expressly requires apostille for specified civil-status documents and minor-related documents. One apostille per submitted document is accepted. The Italian Embassy Dhaka separately states that from June 2025 Bangladeshi public documents submitted for Italian legalisation no longer require Embassy legalisation but need an MOFA apostille through MyGov. Apostille is conditional on the document/applicant scenario; it is not a universal item for every applicant.',
+                'notes' => 'The Bangladesh VFS tourism PDF has 12 numbered items. It specifies two identical ICAO colour photographs, 40 × 35 mm, white background, taken within six months; occupation-specific employee, self-employed and student evidence; six-month personal bank statements; return booking with passenger-registration/reservation number and itinerary; accommodation for the full Schengen stay; travel insurance covering the whole Schengen area for at least EUR 30,000; English-translated and apostilled civil-status documents for married, divorced and widowed applicants; apostilled parental consent, minor birth certificate and court-issued guardianship evidence in the listed minor cases; and a valid Bangladesh residence permit for non-Bangladeshi applicants. Only one apostille per submitted document is accepted. The VFS English passport-validity wording says three months beyond visa validity, while the Bengali wording says three months from application date; applicants should confirm this discrepancy with VFS/Embassy before relying on either interpretation. The Italian Embassy Dhaka separately states that from June 2025 Bangladeshi public documents require an MOFA apostille through MyGov rather than Embassy legalisation. Apostille remains conditional on applicant/document circumstances, not a universal item for every applicant.',
             ],
             'HR' => [
                 'countries' => ['HR'],
@@ -471,7 +471,19 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                         ->all();
 
                     if ($iso2 === 'IT') {
-                        $combined[] = ['name' => 'Apostilled English translation of marriage/divorce/spouse death documents when relevant; apostilled parental consent, minor birth certificate and guardianship documents in the listed minor cases', 'status' => 'if_applicable'];
+                        $combined = array_merge($combined, [
+                            ['name' => 'For married applicants: marriage certificate, including Muslim Nikah Nama or Hindu marriage act, translated into English and apostilled; only one apostille for each submitted document is accepted', 'status' => 'if_applicable'],
+                            ['name' => 'For divorced applicants: divorce certificate, including Muslim Talaq Nama, translated into English and apostilled; only one apostille for each submitted document is accepted', 'status' => 'if_applicable'],
+                            ['name' => 'For widowed applicants: spouse death certificate translated into English and apostilled; only one apostille for each submitted document is accepted', 'status' => 'if_applicable'],
+                            ['name' => 'For minors not travelling with both parents: original consent of both parents or custodian, apostilled', 'status' => 'if_applicable'],
+                            ['name' => 'For minors: photocopies of both parents’ passports or the legal guardian’s passport', 'status' => 'if_applicable'],
+                            ['name' => 'For minors: proof of financial means of both parents or legal guardian', 'status' => 'if_applicable'],
+                            ['name' => 'For minors: original birth certificate issued by the relevant authority, apostilled', 'status' => 'if_applicable'],
+                            ['name' => 'For minors under legal guardianship: original documents issued by the competent Bangladeshi courts proving legal-guardian status, apostilled', 'status' => 'if_applicable'],
+                            ['name' => 'For minors: only one apostille for each submitted document is accepted', 'status' => 'if_applicable'],
+                            ['name' => 'For non-Bangladeshi applicants: valid Bangladeshi residence permit in addition to all other checklist documents', 'status' => 'if_applicable'],
+                            ['name' => 'The Embassy may request supplementary documents not listed in the VFS tourism checklist', 'status' => 'conditional'],
+                        ]);
                     }
 
                     if ($iso2 === 'HR') {
