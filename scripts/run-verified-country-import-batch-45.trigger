@@ -1,0 +1,1 @@
+Approved production import trigger for the exact single-country allowlist: Tristan da Cunha (TA) / Bangladesh ordinary passport (BGD) / tourism. Requires fresh backup, isolated restore test, dry-run, readback and publication verification.
