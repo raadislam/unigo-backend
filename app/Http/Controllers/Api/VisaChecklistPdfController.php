@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\VisaRequirement;
 use App\Services\VisaChecklistPdfService;
 use Illuminate\Http\Request;
+use DomainException;
 use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -32,7 +33,7 @@ class VisaChecklistPdfController extends Controller
 
         try {
             $bytes = $pdfService->generate($requirement, $options);
-        } catch (InvalidArgumentException $exception) {
+        } catch (InvalidArgumentException|DomainException $exception) {
             return response()->json(['success' => false, 'message' => $exception->getMessage()], 422);
         }
         $filename = ($requirement->country?->slug ?: 'destination').'-visa-checklist-unigo.pdf';
