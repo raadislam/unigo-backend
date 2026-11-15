@@ -115,6 +115,33 @@ jobs:
           print("PUBLIC_DIRECTORY_ISO2 " + json.dumps(sorted(str(row.get("iso2") or "").upper() for row in public)))
           print("COUNTRY_FLAG_PUBLISHED_ISO2 " + json.dumps(sorted(str(row.get("iso2") or "").upper() for row in countries if row.get("is_published") is True)))
           print("PUBLISHED_BGD_ISO2 " + json.dumps(sorted(str((row.get("country") or {}).get("iso2") or "").upper() for row in published)))
+          from datetime import date
+          today = date.today().isoformat()
+          inactive_published = []
+          for row in published:
+              start = str(row.get("effective_from") or "")[:10]
+              end = str(row.get("effective_until") or "")[:10]
+              active = (not start or start <= today) and (not end or end >= today)
+              if not active:
+                  inactive_published.append({
+                      "iso2": str((row.get("country") or {}).get("iso2") or "").upper(),
+                      "id": row.get("id"),
+                      "effective_from": row.get("effective_from"),
+                      "effective_until": row.get("effective_until"),
+                      "verification_status": row.get("verification_status"),
+                      "is_published": row.get("is_published"),
+                  })
+          print("INACTIVE_PUBLISHED_BGD_RECORDS " + json.dumps(inactive_published, ensure_ascii=False))
+          print("PENDING_BGD_ISO2 " + json.dumps(sorted(
+              str((row.get("country") or {}).get("iso2") or "").upper()
+              for row in records
+              if row.get("passport_nationality_iso3") == "BGD"
+              and row.get("travel_purpose") == "tourism"
+              and (row.get("verification_status") != "verified" or row.get("is_published") is not True
+                   or (row.get("effective_from") and str(row.get("effective_from"))[:10] > today)
+                   or (row.get("effective_until") and str(row.get("effective_until"))[:10] < today))
+              and (row.get("country") or {}).get("iso2")
+          )))
           PY
 
       - name: Audit applicant checklist coverage without changing production
