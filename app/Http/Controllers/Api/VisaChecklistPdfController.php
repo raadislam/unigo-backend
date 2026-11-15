@@ -16,13 +16,11 @@ class VisaChecklistPdfController extends Controller
         $options = $request->validate([
             'scope' => ['nullable', 'in:applicant,both,sponsor'],
             'applicant_occupation' => ['nullable', 'in:employee,business,student,retired,other'],
-            'sponsor_occupation' => ['nullable', 'in:employee,business,student,retired,other'],
             'funding' => ['nullable', 'in:self,full,partial'],
-            'relationship' => ['nullable', 'string', 'max:160'],
         ]);
 
         $requirement = VisaRequirement::query()
-            ->with(['country:id,name,slug,iso2', 'sources' => fn ($query) => $query->orderByDesc('is_primary')->orderBy('source_type')])
+            ->with('country:id,name,slug,iso2')
             ->where('passport_nationality_iso3', 'BGD')
             ->where('travel_purpose', 'tourism')
             ->where('verification_status', 'verified')
