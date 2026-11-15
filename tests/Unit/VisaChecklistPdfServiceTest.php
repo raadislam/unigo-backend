@@ -31,26 +31,25 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement->setRelation('country', $country);
         $requirement->setRelation('sources', new Collection());
 
-        $pdf = app(VisaChecklistPdfService::class)->generate($requirement, ['scope' => 'applicant']);
+        $source = new \\App\\Models\\VisaRequirementSource();
+        $source->source_type = 'official';
+        $source->source_name = 'Test Government';
+        $source->source_url = 'https://example.gov/visa';
+        $source->source_last_checked_at = now();
+        $requirement->setRelation('sources', new Collection([$source]));
 
+        $service = app(VisaChecklistPdfService::class);
+        $html = $service->buildHtml($requirement, ['scope' => 'applicant']);
+        $this->assertStringContainsString('Completeness verification document 001', $html);
+        $this->assertStringContainsString('Completeness verification document 090', $html);
+        $this->assertStringContainsString('USD 75', $html);
+        $this->assertStringContainsString('35 × 45 mm', $html);
+        $this->assertStringContainsString('https://example.gov/visa', $html);
+
+        $pdf = $service->generate($requirement, ['scope' => 'applicant']);
         $this->assertStringStartsWith('%PDF-', $pdf);
         $this->assertStringContainsString('%%EOF', $pdf);
-        preg_match_all('/\/Type\s*\/Page\b/', $pdf, $pages);
+        preg_match_all('~/Type\\s*/Page\\b~', $pdf, $pages);
         $this->assertGreaterThan(1, count($pages[0]));
-
-        preg_match_all('/<([0-9A-F]{4,})>\s*Tj/', $pdf, $matches);
-        $text = '';
-        foreach ($matches[1] as $hex) {
-            $decoded = @iconv('UTF-16BE', 'UTF-8//IGNORE', hex2bin($hex));
-            if ($decoded !== false) {
-                $text .= $decoded;
-            }
-        }
-
-        $this->assertStringContainsString('Completeness verification document 001', $text);
-        $this->assertStringContainsString('Completeness verification document 090', $text);
-        $this->assertStringContainsString('USD 75', $text);
-        $this->assertStringContainsString('35', $text);
-        $this->assertStringContainsString('Page', $text);
     }
 }
