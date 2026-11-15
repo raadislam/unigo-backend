@@ -143,7 +143,7 @@ for path in files:
         photo_raw = (row.get("photo_specifications", "") or "").strip()
         if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} and not checklist_raw:
             errors.append(f"{path.name}:{line}: applicant_checklists is required for the new publishable batch")
-        if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv"} and not photo_raw:
+        if path.name in {"visa_full_audit_batch_28.csv", "visa_full_audit_batch_29.csv", "visa_full_audit_batch_33.csv", "visa_full_audit_batch_36.csv", "visa_full_audit_batch_38.csv"} and not photo_raw:
             errors.append(f"{path.name}:{line}: photo_specifications is required for the new publishable batch")
         if checklist_raw:
             try:
@@ -158,6 +158,9 @@ for path in files:
                     if not applicant_type:
                         raise ValueError("applicant_type is required")
                     applicant_types.add(applicant_type)
+                    if path.name == "visa_full_audit_batch_38.csv":
+                        if not checklist.get("source_name") or not (checklist.get("source_url") or "").startswith("https://") or checklist.get("checked_at") != "2026-11-15":
+                            raise ValueError("batch 38 applicant checklist needs an official source name, HTTPS URL and checked date")
                     checklist_notes = checklist.get("notes")
                     if checklist_notes is not None and (not isinstance(checklist_notes, str) or len(checklist_notes) > 1000):
                         raise ValueError("applicant checklist notes exceed 1000 characters")

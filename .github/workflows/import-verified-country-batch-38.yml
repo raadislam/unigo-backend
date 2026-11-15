@@ -93,6 +93,8 @@ jobs:
               checks = json.loads(audit.get("applicant_checklists") or "[]")
               require(isinstance(photo, dict) and photo.get("source_name") and photo.get("source_url", "").startswith("https://") and photo.get("checked_at") == today, f"{iso2}: photo metadata incomplete")
               require(isinstance(checks, list) and {x.get("applicant_type") for x in checks} == required_types, f"{iso2}: four applicant checklists missing")
+              for item in checks:
+                  require(item.get("source_name") and item.get("source_url", "").startswith("https://") and item.get("checked_at") == today, f"{iso2}: applicant checklist source metadata incomplete")
 
               if iso2 == "AR":
                   require(audit.get("visa_required") == "true" and audit.get("visa_free_eligibility") == "false", "AR must be visa-required")
@@ -454,7 +456,11 @@ jobs:
           $checklists = function ($row) {
               if (! $row || ! is_array($row->applicant_checklists)) return false;
               $types = array_column($row->applicant_checklists, 'applicant_type');
-              return count(array_diff(['employee','self_employed_or_business_owner','student','retired'], $types)) === 0;
+              if (count(array_diff(['employee','self_employed_or_business_owner','student','retired'], $types)) !== 0) return false;
+              foreach ($row->applicant_checklists as $item) {
+                  if (! data_get($item, 'source_name') || ! str_starts_with((string) data_get($item, 'source_url'), 'https://') || data_get($item, 'checked_at') !== '2026-11-15') return false;
+              }
+              return true;
           };
           $result = [
               'country_count' => \App\Models\Country::query()->count(),
@@ -515,8 +521,26 @@ jobs:
               $detail = \Illuminate\Support\Facades\Http::timeout(30)->get($apiBase . '/api/visa-requirements/' . $iso2, ['passport' => 'BGD', 'purpose' => 'tourism'])->throw()->json();
               if (strtoupper((string) data_get($detail, 'data.country.iso2')) !== $iso2) throw new RuntimeException('Public API detail identity mismatch for ' . $iso2);
               if (data_get($detail, 'data.verification_status') !== 'verified' || ! data_get($detail, 'data.is_published')) throw new RuntimeException('Public API publication mismatch for ' . $iso2);
-              if ($iso2 === 'AR' && (! data_get($detail, 'data.visa_required') || data_get($detail, 'data.visa_free_available') || data_get($detail, 'data.evisa_available') || data_get($detail, 'data.visa_on_arrival_available'))) throw new RuntimeException('Argentina public API route flags mismatch.');
-              if ($iso2 === 'BS' && (data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.visa_free_available') || data_get($detail, 'data.evisa_available') || data_get($detail, 'data.visa_on_arrival_available'))) throw new RuntimeException('Bahamas public API route flags mismatch.');
+              $apiSources = data_get($detail, 'data.sources', []);
+              $expectedPrimary = $iso2 === 'AR' ? 'https://www.migraciones.gob.ar/accesible/indexdnm.php?visas=' : 'https://cdn.bahamas.gov.bs/tenant/tenanttgotb/documents/Visa-Requirements-for-Visitors-Travelling-to-TheBahamas1-20240216054224-20250528004922.pdf';
+              $apiPrimary = collect($apiSources)->contains(fn ($source) => data_get($source, 'is_primary') && data_get($source, 'source_type') === 'official' && data_get($source, 'source_url') === $expectedPrimary && data_get($source, 'source_last_checked_at') === '2026-11-15');
+              if (! $apiPrimary) throw new RuntimeException('Public API primary official source mismatch for ' . $iso2);
+              $apiPhoto = data_get($detail, 'data.photo_specifications');
+              if (! data_get($apiPhoto, 'source_name') || ! str_starts_with((string) data_get($apiPhoto, 'source_url'), 'https://') || data_get($apiPhoto, 'checked_at') !== '2026-11-15') throw new RuntimeException('Public API photo source metadata mismatch for ' . $iso2);
+              $apiChecklists = data_get($detail, 'data.applicant_checklists', []);
+              $apiTypes = is_array($apiChecklists) ? array_column($apiChecklists, 'applicant_type') : [];
+              if (count(array_diff(['employee','self_employed_or_business_owner','student','retired'], $apiTypes)) !== 0) throw new RuntimeException('Public API applicant checklist types missing for ' . $iso2);
+              foreach ($apiChecklists as $item) {
+                  if (! data_get($item, 'source_name') || ! str_starts_with((string) data_get($item, 'source_url'), 'https://') || data_get($item, 'checked_at') !== '2026-11-15') throw new RuntimeException('Public API applicant checklist source metadata missing for ' . $iso2);
+              }
+              if ($iso2 === 'AR') {
+                  if (! data_get($detail, 'data.visa_required') || data_get($detail, 'data.visa_free_available') || data_get($detail, 'data.evisa_available') || data_get($detail, 'data.visa_on_arrival_available')) throw new RuntimeException('Argentina public API route flags mismatch.');
+                  if (data_get($apiPhoto, 'status') !== 'verified' || data_get($apiPhoto, 'dimensions_mm.width') != 40 || data_get($apiPhoto, 'dimensions_mm.height') != 40) throw new RuntimeException('Argentina public API photo dimensions mismatch.');
+              }
+              if ($iso2 === 'BS') {
+                  if (data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.visa_free_available') || data_get($detail, 'data.evisa_available') || data_get($detail, 'data.visa_on_arrival_available')) throw new RuntimeException('Bahamas public API route flags mismatch.');
+                  if (data_get($apiPhoto, 'status') !== 'not_applicable') throw new RuntimeException('Bahamas public API photo status mismatch.');
+              }
           }
           $result['public_api_total'] = data_get($list, 'meta.total');
           $result['public_api_details_verified'] = ['AR','BS'];
@@ -534,6 +558,56 @@ jobs:
           REMOTE
           python3 -m json.tool batch38-production-result.json > /dev/null
           cat batch38-production-result.json
+
+      - name: Withhold batch 38 records if production verification fails
+        if: failure() && steps.production.outcome == 'failure'
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          ssh -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP=/var/www/unigo/backend/current
+          cd "$APP"
+          if [ ! -f /tmp/verified_full_audit_batch_38.csv ]; then
+            echo "NO_BATCH38_IMPORT_FILE_STAGED; no batch 38 production rows could have been imported"
+            exit 0
+          fi
+          php -r 'require "vendor/autoload.php"; $app=require "bootstrap/app.php"; $app->make(\Illuminate\Contracts\Console\Kernel::class)->bootstrap(); $codes=["AR","BS"]; $rows=\App\Models\VisaRequirement::with("country")->where("passport_nationality_iso3","BGD")->where("travel_purpose","tourism")->whereHas("country",fn($q)=>$q->whereIn("iso2",$codes))->get(); file_put_contents("/tmp/batch38-existing-codes.json",json_encode($rows->pluck("country.iso2")->unique()->values()->all()));'
+          python3 - <<'PY'
+          import csv
+          import json
+          from pathlib import Path
+          codes=set(json.loads(Path("/tmp/batch38-existing-codes.json").read_text()))
+          if not codes:
+              print("NO_BATCH38_RECORDS_TO_UNPUBLISH")
+              raise SystemExit(0)
+          source=Path("/tmp/verified_full_audit_batch_38.csv")
+          target=Path("/tmp/verified_full_audit_batch_38_rollback.csv")
+          with source.open(newline="",encoding="utf-8-sig") as f:
+              reader=csv.DictReader(f)
+              headers=reader.fieldnames
+              rows=[r for r in reader if r.get("destination_iso2") in codes]
+          if {r.get("destination_iso2") for r in rows} != codes:
+              raise SystemExit("Rollback CSV does not match the exact existing batch 38 records")
+          with target.open("w",newline="",encoding="utf-8") as f:
+              writer=csv.DictWriter(f,fieldnames=headers)
+              writer.writeheader()
+              writer.writerows(rows)
+          print("BATCH38_ROLLBACK_ALLOWLIST",",".join(sorted(codes)))
+          PY
+          php artisan visa:requirements-import-research --file=/tmp/verified_full_audit_batch_38_rollback.csv --unpublish-only > /tmp/batch38-unpublish-result.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          result=json.loads(Path("/tmp/batch38-unpublish-result.json").read_text())
+          if result.get("mode")!="unpublish_only" or result.get("unpublished")!=result.get("rows") or result.get("read_back")!=result.get("rows") or result.get("failures"):
+              raise SystemExit("Batch 38 unpublish-only safety readback failed: "+json.dumps(result))
+          print("BATCH38_FAILURE_RECORDS_WITHHELD",json.dumps(result))
+          PY
+          REMOTE
 
       - name: Upload non-sensitive audit and verification artifacts
         if: always()
