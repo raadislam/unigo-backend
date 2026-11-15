@@ -198,7 +198,7 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     ['name' => 'Original completed and signed Schengen Type C application form; both parents/legal guardian sign for minors', 'status' => 'required'],
                     ['name' => 'Two recent identical colour photographs, 40 × 35 mm, white background, taken within 6 months', 'status' => 'required'],
                     ['name' => 'Passport valid at least 3 months beyond visa validity and with at least 2 blank unmarked visa pages; biodata copy', 'status' => 'required'],
-                    ['name' => 'For employees: original employer letter in English on official letterhead with stamp, signature, date, employer contacts, applicant role, salary, service years, leave approval and job continuation after return', 'status' => 'if_applicable'],
+                    ['name' => 'For employees: original employer letter on official letterhead with contacts, role, salary, service years, leave approval and return-to-work confirmation', 'status' => 'if_applicable'],
                     ['name' => 'For self-employed applicants: trade licence, incorporation certificate, income tax return, TIN certificate and last 6 months company bank statement', 'status' => 'if_applicable'],
                     ['name' => 'For students: enrolment evidence and leave certificate; school-trip letter stating purpose, duration and destination if applicable', 'status' => 'if_applicable'],
                     ['name' => 'Personal bank statement for the last 6 months and other proof of financial solvency', 'status' => 'required'],
@@ -408,17 +408,23 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                 $notes = $details['notes'];
             }
 
+            $countryBaseDocuments = $baseDocuments;
+            if (isset($unverified[$iso2])) {
+                $countryBaseDocuments[2]['status'] = 'conditional';
+                $countryBaseDocuments[2]['notes'] = 'The Bangladesh-route photo requirement and specifications have not been verified in the reviewed mission/provider sources. Confirm the current competent-mission checklist before submission.';
+            }
+
             $requirement->forceFill([
                 'photo_specifications' => $photo,
                 'required_documents' => collect($requirement->required_documents ?? [])
-                    ->merge(['Recent colour photograph meeting the destination-specific Schengen photo rules or live-photo capture instruction'])
+                    ->when(in_array($photo['status'] ?? '', ['verified', 'partially_specified'], true), fn ($items) => $items->merge(['Recent colour photograph meeting the destination-specific Schengen photo rules or live-photo capture instruction']))
                     ->when($iso2 === 'IT' || $iso2 === 'MT' || $iso2 === 'SK', fn ($items) => $items->merge(['Apostilled English translations of civil-status documents and specified minor-related documents, only where applicable under the Italy/VFS checklist']))
                     ->when($iso2 === 'HR', fn ($items) => $items->merge(['Apostille/international certification of supporting public documents if specifically requested by the Croatian Embassy']))
                     ->unique()
                     ->values()
                     ->all(),
-                'applicant_checklists' => collect($profiles)->map(function ($profileDocs, $type) use ($baseDocuments, $documents, $sourceName, $sourceUrl, $notes, $iso2) {
-                    $combined = collect($baseDocuments)
+                'applicant_checklists' => collect($profiles)->map(function ($profileDocs, $type) use ($countryBaseDocuments, $documents, $sourceName, $sourceUrl, $notes, $iso2) {
+                    $combined = collect($countryBaseDocuments)
                         ->merge($profileDocs)
                         ->merge($documents)
                         ->unique(fn ($item) => $item['name'])
