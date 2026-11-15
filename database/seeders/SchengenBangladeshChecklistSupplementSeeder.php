@@ -414,7 +414,11 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                 $countryBaseDocuments[2]['notes'] = 'The Bangladesh-route photo requirement and specifications have not been verified in the reviewed mission/provider sources. Confirm the current competent-mission checklist before submission.';
             }
 
-            if (in_array($iso2, ['MT', 'SK'], true)) {\n                $notes .= ' The Italy VFS apostille rule has not been independently confirmed for this represented destination; do not assume it applies without checking the competent mission.';\n            }\n\n            $requirement->forceFill([
+            if (in_array($iso2, ['MT', 'SK'], true)) {
+                $notes .= ' The Italy VFS apostille rule has not been independently confirmed for this represented destination; do not assume it applies without checking the competent mission.';
+            }
+
+            $requirement->forceFill([
                 'photo_specifications' => $photo,
                 'required_documents' => collect($requirement->required_documents ?? [])
                     ->when(in_array($photo['status'] ?? '', ['verified', 'partially_specified'], true), fn ($items) => $items->merge(['Recent colour photograph meeting the destination-specific Schengen photo rules or live-photo capture instruction']))
