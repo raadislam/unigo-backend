@@ -16,7 +16,7 @@ The Council of the EU confirms 29 Schengen countries, including Bulgaria and Rom
 | Austria | France represents Austria for short-stay Schengen visas | France-Visas/VFS France Bangladesh process. Use the France-Visas personalised checklist; do not use Austria's separate long-stay VFS page as a Type C checklist. |
 | Belgium | VFS Belgium Bangladesh | VFS gives photo and biometric guidance but points applicants to the Belgian Embassy in New Delhi for the document list. Do not copy India-only apostille instructions into Bangladesh requirements. |
 | Bulgaria | No Bangladesh VFS checklist or local representation found in the reviewed sources | Destination-specific Bangladesh checklist remains unverified; direct applicants to the competent Bulgarian mission. |
-| Croatia | VFS Croatia Bangladesh | Tourist checklist and photo specification are published. Apostille may be requested for supporting documents; this is conditional, not an automatic requirement for every tourist applicant. |
+| Croatia | Croatian Embassy in New Delhi / VFS Croatia Bangladesh | Croatian MFA confirms Bangladesh applicants can submit at VFS Dhaka. Tourist checklist and photo specification are published; the one-pager has some generic India-oriented wording, so confirm the live Bangladesh appointment instructions. Apostille may be requested for supporting documents; conditional, not automatic. |
 | Czechia | France represents Czechia for short-stay Schengen visas | France-Visas/VFS France Bangladesh process; use personalised checklist. Documents in Czech must be translated into French or English. |
 | Denmark | Danish Embassy / VFS Denmark Bangladesh | Tourism checklist published. Denmark also represents Norway. |
 | Estonia | German Embassy / VFS Germany Bangladesh, subject to current restrictions | Germany's January 2026 tourism information sheet covers Estonia, but the Embassy's 22 October 2026 notice restricts Estonia applications to specified groups. Ordinary applicants outside those groups should not be told to apply through this route. |
@@ -84,6 +84,7 @@ Bangladesh's Apostille Convention status: the Convention entered into force for 
 - Italy VFS — tourism checklist: https://visa.vfsglobal.com/one-pager/italy/bangladesh/english/pdf/TURISM_updated.pdf
 - Italy Embassy Dhaka — apostille requirement for Bangladeshi public documents, effective June 2025: https://ambdhaka.esteri.it/en/servizi-consolari-e-visti/
 - Croatia VFS — Bangladesh visa information, photo and conditional apostille guidance: https://visa.vfsglobal.com/one-pager/croatia/bangladesh/english/
+- Croatian Ministry of Foreign Affairs — Bangladesh visa requirements and VFS Dhaka submission: https://mvep.gov.hr/services-consular-portal/consular-information-22802/visas-22807/visa-requirements-overview-22879/22879?country=159
 - Belgium VFS — Bangladesh visa information and photo specification: https://visa.vfsglobal.com/one-pager/belgium/bangladesh/english/index.html
 - France VFS Bangladesh: https://visa.vfsglobal.com/bgd/en/fra
 - France-Visas Bangladesh: https://france-visas.gouv.fr/en/bangladesh
