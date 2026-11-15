@@ -1,4 +1,4 @@
-name: Import verified tourism visa batch 31
+name: Import verified tourism visa batch 36
 
 on:
   push:
@@ -34,9 +34,9 @@ jobs:
           def read(path):
               with Path(path).open(encoding="utf-8-sig", newline="") as f:
                   return list(csv.DictReader(f))
-          seed = read("database/data/new_country_visa_batch_31.csv")
-          audit = read("database/data/visa_full_audit_batch_31.csv")
-          pending = read("database/data/pending_country_research_batch_31.csv")
+          seed = read("database/data/new_country_visa_batch_36.csv")
+          audit = read("database/data/visa_full_audit_batch_36.csv")
+          pending = read("database/data/pending_country_research_batch_36.csv")
           ledger_rows = read("database/data/country_discovery_ledger.csv")
           ledger = {r["iso2"]: r for r in ledger_rows}
           seed_by = {r["destination_iso2"]: r for r in seed}
@@ -51,7 +51,7 @@ jobs:
           for code in expected:
               row = audit_by[code]
               seed_row = seed_by[code]
-              if ledger.get(code, {}).get("discovery_status") != "research_complete_batch_31" or ledger[code].get("visa_record_status") != "verified_ready_for_import":
+              if ledger.get(code, {}).get("discovery_status") != "research_complete_batch_36" or ledger[code].get("visa_record_status") != "verified_ready_for_import":
                   raise SystemExit(f"{code}: discovery ledger is not marked research complete and ready for import.")
               if ledger[code].get("country_row_status") != "country_row_present_unpublished":
                   raise SystemExit(f"{code}: country master row must already exist and remain unpublished before import.")
@@ -116,13 +116,13 @@ jobs:
                   raise SystemExit(f"{code}: seed row is not verified.")
           for code in pending_expected:
               row = pending_by[code]
-              if ledger.get(code, {}).get("discovery_status") != "research_in_progress_batch_31" or not ledger[code].get("visa_record_status", "").startswith("pending_"):
+              if ledger.get(code, {}).get("discovery_status") != "research_in_progress_batch_36" or not ledger[code].get("visa_record_status", "").startswith("pending_"):
                   raise SystemExit(f"{code}: pending ledger status mismatch.")
-              if row.get("discovery_status") != "research_in_progress_batch_31" or not row.get("exact_blocker") or not row.get("next_research_action") or not row.get("official_sources_checked"):
+              if row.get("discovery_status") != "research_in_progress_batch_36" or not row.get("exact_blocker") or not row.get("next_research_action") or not row.get("official_sources_checked"):
                   raise SystemExit(f"{code}: pending blocker/source/next action missing.")
               if row.get("last_checked") != checked:
                   raise SystemExit(f"{code}: pending research checked date mismatch.")
-          with Path("verified_full_audit_batch_31.csv").open("w", encoding="utf-8", newline="") as f:
+          with Path("verified_full_audit_batch_36.csv").open("w", encoding="utf-8", newline="") as f:
               writer = csv.DictWriter(f, fieldnames=list(audit[0].keys()), lineterminator="\n")
               writer.writeheader()
               writer.writerows([audit_by[c] for c in sorted(expected)])
@@ -132,10 +132,10 @@ jobs:
         with:
           name: verified-country-batch-36
           path: |
-            database/data/new_country_visa_batch_31.csv
-            database/data/visa_full_audit_batch_31.csv
-            database/data/pending_country_research_batch_31.csv
-            verified_full_audit_batch_31.csv
+            database/data/new_country_visa_batch_36.csv
+            database/data/visa_full_audit_batch_36.csv
+            database/data/pending_country_research_batch_36.csv
+            verified_full_audit_batch_36.csv
 
   import-production:
     needs: validate
@@ -174,7 +174,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           ssh -i ~/.ssh/unigo_import -p "$VPS_PORT" "$VPS_USER@$VPS_HOST" 'mkdir -p /var/www/unigo/backend/shared/imports'
-          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" database/data/new_country_visa_batch_31.csv verified_full_audit_batch_31.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
+          scp -i ~/.ssh/unigo_import -P "$VPS_PORT" database/data/new_country_visa_batch_36.csv verified_full_audit_batch_36.csv "$VPS_USER@$VPS_HOST:/var/www/unigo/backend/shared/imports/"
       - name: Export fresh production audit
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
@@ -262,7 +262,7 @@ jobs:
           BACKUP_DIR="$SHARED_DIR/backups"
           mkdir -p "$BACKUP_DIR"
           test -f "$SHARED_DIR/.env"
-          test -s "$IMPORT_DIR/verified_full_audit_batch_31.csv"
+          test -s "$IMPORT_DIR/verified_full_audit_batch_36.csv"
           CNF="$(mktemp)"
           DB_FILE="$(mktemp)"
           STAMP="$(date -u +%Y%m%dT%H%M%SZ)-$$"
@@ -337,14 +337,14 @@ jobs:
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
           cd "$APP_DIR"
           mkdir -p storage/app/imports
-          cp "$IMPORT_DIR/new_country_visa_batch_31.csv" storage/app/imports/unigo_visa_requirements_research_template.csv
+          cp "$IMPORT_DIR/new_country_visa_batch_36.csv" storage/app/imports/unigo_visa_requirements_research_template.csv
           : > "$IMPORT_DIR/batch36_dry_run.json"
           : > "$IMPORT_DIR/batch36_dry_run.stderr"
           php artisan db:seed --class=ImportMajorVisaRequirementsSeeder --force > "$IMPORT_DIR/batch36_seed_result.txt" 2>&1
           SEED_STATUS=$?
           DRY_STATUS=99
           if [ "$SEED_STATUS" -eq 0 ]; then
-            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_31.csv" --base-url=https://api.unigo-bd.com --dry-run > "$IMPORT_DIR/batch36_dry_run.json" 2> "$IMPORT_DIR/batch36_dry_run.stderr"
+            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_36.csv" --base-url=https://api.unigo-bd.com --dry-run > "$IMPORT_DIR/batch36_dry_run.json" 2> "$IMPORT_DIR/batch36_dry_run.stderr"
             DRY_STATUS=$?
           fi
           printf '%s\n' "$SEED_STATUS" > "$IMPORT_DIR/batch36_seed_exit_code.txt"
@@ -386,7 +386,7 @@ jobs:
           APP_DIR="/var/www/unigo/backend/current"
           IMPORT_DIR="/var/www/unigo/backend/shared/imports"
           cd "$APP_DIR"
-          EXPECTED_CSV_SHA="$(sha256sum "$IMPORT_DIR/verified_full_audit_batch_31.csv" | awk '{print $1}')"
+          EXPECTED_CSV_SHA="$(sha256sum "$IMPORT_DIR/verified_full_audit_batch_36.csv" | awk '{print $1}')"
           STORED_CSV_SHA=""
           if [ -s "$IMPORT_DIR/batch36_import_result.json" ]; then
             STORED_CSV_SHA="$(php -r '$p=json_decode(file_get_contents($argv[1]),true); echo is_array($p)?($p["csv_sha256"]??""):"";' "$IMPORT_DIR/batch36_import_result.json" 2>/dev/null || true)"
@@ -398,7 +398,7 @@ jobs:
             echo "Exact Batch 36 CSV hash already has a successful complete readback; no duplicate write performed."
           else
             if [ -f "$IMPORT_DIR/batch36_import_result.json" ]; then mv "$IMPORT_DIR/batch36_import_result.json" "$IMPORT_DIR/batch36_import_result_failed_$(date -u +%Y%m%dT%H%M%SZ).json"; fi
-            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_31.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch36_import_result.json"
+            php artisan visa:requirements-import-research --file="$IMPORT_DIR/verified_full_audit_batch_36.csv" --base-url=https://api.unigo-bd.com > "$IMPORT_DIR/batch36_import_result.json"
           fi
           php artisan visa:requirements-audit > "$IMPORT_DIR/batch36_post_import_audit.json"
           test -s "$IMPORT_DIR/batch36_import_result.json" && test -s "$IMPORT_DIR/batch36_post_import_audit.json"
@@ -430,8 +430,12 @@ jobs:
                   if not isinstance(spec,dict) or not spec: photo["missing_unresearched"]+=1
                   elif spec.get("status") in {"no_fixed_size_published","no_fixed_size"} and spec.get("source_url"): photo["official_no_fixed_size_published"]+=1
                   elif spec.get("status") in {"not_published","not_specified"}: photo["not_specified_without_confirmation"]+=1
+                  elif spec.get("status")=="partially_specified" and spec.get("source_url") and spec.get("source_name"):
+                      photo["partially_specified"]+=1
+                      partially_specified.append(code)
                   elif spec.get("status")=="verified" and spec.get("source_url") and spec.get("source_name") and any(spec.get(k) for k in ["dimensions_mm","dimensions_px","digital_dimensions_px","file_size","file_format","format","copies"]):
                       photo["structured_verified"]+=1
+                      structured.append(code)
                       capture=str(spec.get("biometric_capture") or "").lower()
                       if any(term in capture for term in ["vfs","photo captured at the centre","captured at the visa application centre","australian biometric collection centre"]): biometric.append(code)
                   else: photo["missing_unresearched"]+=1
@@ -444,7 +448,7 @@ jobs:
           post=json.loads(Path("batch36_post_import_audit.json").read_text())
           summary=json.loads(Path("batch36_pre_import_summary.json").read_text())
           imported=json.loads(Path("batch36_import_result.json").read_text())
-          rows={r["destination_iso2"]:r for r in csv.DictReader(Path("verified_full_audit_batch_31.csv").open(encoding="utf-8-sig",newline=""))}
+          rows={r["destination_iso2"]:r for r in csv.DictReader(Path("verified_full_audit_batch_36.csv").open(encoding="utf-8-sig",newline=""))}
           if imported.get("mode")!="import" or imported.get("rows")!=2 or imported.get("failures") or imported.get("read_back")!=2 or imported.get("reverified")!=2 or imported.get("republished")!=2:
               raise SystemExit(f"Importer did not confirm both rows read back and published: {imported}")
           new_codes=set(summary.get("new_requirement_codes",[]))
@@ -482,7 +486,6 @@ jobs:
           if "ET" not in post_photo["partially_specified_iso2"]: raise SystemExit("Ethiopia partially specified photo record is missing.")
           if post_photo["photo"].get("structured_verified",0) < pre_photo["photo"].get("structured_verified",0) + 1: raise SystemExit("Antigua structured photo coverage did not increase by one.")
           if post_photo["photo"].get("partially_specified",0) < pre_photo["photo"].get("partially_specified",0) + 1: raise SystemExit("Ethiopia partially specified photo coverage did not increase by one.")
-          if post_photo["checklists"].get("complete_four_type",0) < pre_photo["checklists"].get("complete_four_type",0) + 2: raise SystemExit("Both new four-type applicant checklists were not counted.")
           if post_photo["checklists"].get("complete_four_type",0)<pre_photo["checklists"].get("complete_four_type",0)+2: raise SystemExit("Both new four-type applicant checklists were not counted.")
           Path("batch36_photo_checklist_audit.json").write_text(json.dumps({"pre":pre_photo,"post":post_photo},indent=2))
           base="https://api.unigo-bd.com/api"
@@ -538,6 +541,6 @@ jobs:
             batch36_backup_sha256.txt
             batch36_migration_status.txt
             batch36_photo_checklist_audit.json
-            verified_full_audit_batch_31.csv
-            database/data/new_country_visa_batch_31.csv
-            database/data/pending_country_research_batch_31.csv
+            verified_full_audit_batch_36.csv
+            database/data/new_country_visa_batch_36.csv
+            database/data/pending_country_research_batch_36.csv
