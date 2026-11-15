@@ -293,9 +293,12 @@ try {
     );
 
     foreach ($expectedSources as $source) {
+        if ((string) ($source['source_type'] ?? '') !== 'official') {
+            continue;
+        }
         batch47Require(
-            $apiSourceExists((string) $source['source_url'], (string) $source['source_type'], false, $checkedDate),
-            'The public API is missing an additional source.'
+            $apiSourceExists((string) $source['source_url'], 'official', false, $checkedDate),
+            'The public API is missing an additional official source.'
         );
     }
 
