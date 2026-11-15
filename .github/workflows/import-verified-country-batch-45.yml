@@ -36,6 +36,7 @@ jobs:
           python3 -m py_compile scripts/validate_visa_batch_45.py
           python3 scripts/validate_visa_batch_45.py
           php -l database/seeders/TristanDaCunhaCountryBackfillSeeder.php
+          php -l database/seeders/ImportMajorVisaRequirementsSeeder.php
           php -l scripts/batch45_readback.php
           php -l app/Console/Commands/VisaRequirementResearchCsvImportCommand.php
       - name: Validate workflow syntax and create immutable allowlist artifact
