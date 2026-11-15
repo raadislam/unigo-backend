@@ -103,3 +103,51 @@ Bangladesh's Apostille Convention status: the Convention entered into force for 
 - Preserve separate route and country-specific photo dimensions, count, age, background, capture-at-VAC and head-measurement details.
 - Apostille must be an explicit checklist document only for the relevant country and applicant scenario; it must not be a universal Schengen item.
 - Recheck the provider/mission page before every publication. VFS is a document collection provider, not the visa decision authority.
+
+
+## Non-Italy VFS checklist extraction and database update — 15 November 2026
+
+The earlier source audit is retained as the discovery baseline. This addendum records the additional country-specific requirements extracted from the Bangladesh-route tourism checklists and applied to the four UniGo applicant profiles (employee, self-employed/business owner, student and retired). Conditional requirements remain conditional and are not presented as universal documents.
+
+### Germany and Estonia route — German Embassy Dhaka / VFS Germany
+
+Source: https://visa.vfsglobal.com/one-pager/germany/bangladesh/english/pdf/VFS_Requirements_for_Tourist_visa_.pdf
+
+The January 2026 tourism sheet requires VIDEX application pages including barcodes, Declaration of Consent, passport with two free visa pages and specified validity, one 35 × 45 mm white-background biometric photograph with 70–80% face coverage, separate travel medical insurance (credit-card insurance is not accepted), flight reservation and full-address hotel reservation, covering letter, complete tour plan, occupation evidence, six-month personal bank statements, asset evidence, tax-return certificate and annual tax-payment confirmation. Employee letters must include employer contact details, position, employment start date, salary, leave dates and expected return to duties. Self-employed evidence includes trade licence, RJSC incorporation certificate/MAA director pages and six-month company statements. Student evidence includes enrolment and detailed leave approval. Civil-status records must be translated into English or German; minor legal-parenthood evidence and notarised guardian consent are conditional. Non-Bangladeshi applicants need a qualifying Bangladesh residence permit. All photocopies are A4 and non-English/non-German documents need translation. Estonia remains subject to the Embassy's 22 October 2026 access restrictions.
+
+### Denmark and Norway route — VFS Denmark Bangladesh
+
+Source: https://visa.vfsglobal.com/one-pager/denmark/Bangladesh/english/pdf/visiting_family_or_friends_tourism.pdf
+
+The current two-page tourism/family-friends checklist requires the printed and signed ApplyVisa cover letter, online visa-fee receipt, VU2 online invitation or personal invitation letter where relevant, passport with two blank pages and post-trip validity, all previous passports and relevant visa copies, applicant cover letter, employer letter where applicable, original six-month personal bank statements and company statements for self-employed applicants, Bangladesh establishment/ties evidence, original and photocopy of travel insurance, accommodation, transport reservations for the whole trip and a tour programme where appropriate. Host ties and host identity/residence document are conditional on a private visit. The Danish mission recommends reservations rather than buying a flight ticket before visa approval. Denmark represents Norway for these cases.
+
+### Netherlands and Poland route — NetherlandsWorldwide checklist linked by VFS Netherlands Bangladesh
+
+Sources: https://www.netherlandsworldwide.nl/visa-the-netherlands/checklist-schengen-visa-tourism/bangladesh and https://visa.vfsglobal.com/one-pager/netherlands/bangladesh/english/
+
+The VFS portal links to the official Bangladesh tourism checklist. The checklist requires an online completed and signed application with a unique code, a travel document meeting age/page/validity rules, a 35 × 45 mm colour photograph on a white/light background no older than six months unless a live photograph is taken at the VAC, proof of legal residence in the application country, social/economic ties, financial means for the last six months, round-trip reservation with Passenger Registration Number/reservation number and onward permits where relevant, travel insurance of at least EUR 30,000 for all Schengen states, and full-stay accommodation. The Bangladesh supporting-document list further identifies self-employed trade licence/RJSC/income-tax/company statements, student enrolment/leave/school-trip letters, caregiver/property/children-school evidence, civil-status records, and detailed minor consent, parent travel-document, parent financial, death, guardianship and court-permission documents. The VFS portal states that a live photograph is taken at the VAC; a printed photograph is not required when that live-photo route is used.
+
+### Sweden, Finland, Iceland, Latvia, Luxembourg and Slovenia route — VFS Sweden Bangladesh
+
+Source: https://visa.vfsglobal.com/one-pager/sweden/bangladesh/english/pdf/Tourist-Visa-Checklist-1.pdf
+
+The tourism checklist requires application form 119031, passport and previous-passport evidence, one 35 × 45 mm colour photograph on a light background no older than six months, detailed cover letter, employer/owner letter, original/photocopy travel insurance, proof of financial means and six-month personal bank/credit-card evidence, round-trip reservation showing Passenger Registration Number/reservation number, itinerary and onward permits where relevant, civil-status evidence, minor parental/custodian consent and parent/guardian passport and financial evidence, host invitation/ties for private visits, and full-stay accommodation. Employee letters must include company address/telephone/fax, countersigning officer name/position and applicant position/salary/service duration. Self-employed applicants need City Corporation trade licence, RJSC incorporation certificate where applicable, TIN and six-month company bank statement. Student requirements include enrolment, detailed leave certificate and school-trip letter where relevant. Non-Bangladeshi applicants need a Bangladesh residence permit valid at least three months beyond Schengen departure, onward-journey evidence and evidence of activity on return. The checklist states all supporting documents must be A4. The represented-country group uses the same Sweden tourism process, subject to current representation rules.
+
+### Croatia — VFS Croatia Bangladesh
+
+Source: https://visa.vfsglobal.com/one-pager/croatia/bangladesh/english/
+
+The live Tourist section confirms the application form, passport, two 35 × 45 mm photographs, EUR 30,000 travel insurance, supporting financial evidence (including three-month bank statements, three years of tax returns where applicable, international credit-card statements and foreign-exchange evidence), occupation-specific evidence, accommodation and minor/guardian documents. Employees need an employer letter confirming position, service duration, leave and three months of salary evidence; business owners need a company letter and registration papers; students need school/university leave and valid student ID. The page accepts reservation-only flight and hotel evidence, not confirmed bookings. It says the Embassy may request additional supporting documents, certified translations and apostille/international certification. Apostille is therefore stored as conditional, not mandatory for every applicant. The VFS page states a 60-calendar-day standard processing timeline; applicants should check the live page before booking because timings may change.
+
+### Routes where the VFS portal does not publish a complete Bangladesh tourism checklist
+
+- Belgium: the VFS Bangladesh page publishes general short-stay and photo/biometric information but directs applicants to the Belgian Embassy in New Delhi for category-specific documents. India-specific apostille instructions are excluded from the Bangladesh checklist.
+- Bulgaria and Greece: the official VFS Bangladesh portals are recorded, but the dynamic Tourism-category document lists were not retrievable from the accessible source. Their records retain the common baseline and applicant profiles, with unverified photo/checklist details clearly marked. Bulgaria's live-photo-at-VAC statement is recorded without inventing printed-photo dimensions or count.
+- France and represented Austria, Czechia and Portugal: France-Visas generates the personalised supporting-document checklist. UniGo stores the official personalised-checklist route and translation conditions, not another country's generic list.
+- Spain: the Bangladesh route is BLS, not VFS. It remains labelled as BLS and is not falsely presented as a VFS checklist.
+- Switzerland, Hungary and Liechtenstein: the Embassy of Switzerland in Dhaka is the competent source; its Bangladesh tourism checklist remains the source of record.
+- Lithuania and Romania: Bangladesh-specific competent-mission tourism checklists remain unverified. No photo size, apostille rule or detailed country-specific list is inferred.
+
+### Apostille control
+
+The additional non-Italy VFS extraction does not create a general Schengen apostille requirement. Croatia's VFS wording is conditional (“may require”). Germany's minor guardian consent is notarised/legalised only in the stated narrow scenario; it is not a general apostille instruction. Belgium's India-specific MEA apostille paragraph is not copied into Bangladesh requirements. Italy's separate apostille conditions remain country-specific and unchanged.
