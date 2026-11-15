@@ -236,6 +236,29 @@ def main():
         if (row.get("country") or {}).get("iso2")
     }
     if ledger_public_codes != set(public_codes):
+        bahamas_records = [
+            row for row in bgd_tourism
+            if str((row.get("country") or {}).get("iso2") or "").strip().upper() == "BS"
+        ]
+        print("LEDGER_PUBLIC_PARITY_DIAGNOSTIC " + json.dumps({
+            "ledger_public_only": sorted(ledger_public_codes - set(public_codes)),
+            "production_public_only": sorted(set(public_codes) - ledger_public_codes),
+            "ledger_verified_only": sorted(ledger_verified_codes - set(published_codes)),
+            "production_verified_only": sorted(set(published_codes) - ledger_verified_codes),
+        }, ensure_ascii=False))
+        print("BS_RECORD_DIAGNOSTIC " + json.dumps([
+            {
+                key: row.get(key)
+                for key in (
+                    "id", "country_id", "verification_status", "is_published",
+                    "effective_from", "effective_until", "visa_required",
+                    "visa_free_available", "visa_on_arrival_available", "evisa_available",
+                    "official_source_url", "official_source_last_checked",
+                    "created_at", "updated_at", "last_synced_at", "notes"
+                )
+            }
+            for row in bahamas_records
+        ], ensure_ascii=False))
         fail("Discovery ledger public_directory codes do not match the production public country directory.")
     if ledger_verified_codes != set(published_codes):
         fail("Discovery ledger verified_published codes do not match active verified BGD tourism records.")
