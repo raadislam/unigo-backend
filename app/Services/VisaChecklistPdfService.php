@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\VisaRequirement;
+use InvalidArgumentException;
 use RuntimeException;
 use setasign\Fpdi\Tcpdf\Fpdi;
 
@@ -105,6 +106,14 @@ class VisaChecklistPdfService
         $funding = $options['funding'] ?? 'self';
         $documents = [];
 
+        if ($scope !== 'applicant' && $funding !== 'self') {
+            throw new InvalidArgumentException('Verified sponsor-specific required documents are not available for this destination. The applicant checklist cannot be reused as a sponsor checklist.');
+        }
+
+        if ($scope === 'sponsor') {
+            throw new InvalidArgumentException('A sponsor-only checklist cannot be generated until verified sponsor-specific requirements are recorded.');
+        }
+
         if ($scope !== 'sponsor') {
             foreach ($requirement->required_documents ?? [] as $document) {
                 $this->appendRequiredDocument($documents, $document);
@@ -120,19 +129,7 @@ class VisaChecklistPdfService
                 }
             }
         }
-
-        if ($scope !== 'applicant' && $funding !== 'self') {
-            foreach ($requirement->applicant_checklists ?? [] as $profile) {
-                if (! is_array($profile) || ! $this->matchesOccupation($profile['applicant_type'] ?? '', $sponsorOccupation)) {
-                    continue;
-                }
-
-                foreach ($profile['documents'] ?? [] as $document) {
-                    $this->appendRequiredDocument($documents, $document);
-                }
-            }
-        }
-
+\n
         return array_values($documents);
     }
 
@@ -163,7 +160,7 @@ class VisaChecklistPdfService
 
         $aliases = [
             'employee' => ['employee', 'employed', 'salaried_employee', 'government_employee', 'private_employee'],
-            'business' => ['business', 'business_owner', 'self_employed', 'entrepreneur', 'trader'],
+            'business' => ['business', 'business_owner', 'self_employed', 'self_employed_or_business_owner', 'entrepreneur', 'trader'],
             'student' => ['student', 'pupil'],
             'retired' => ['retired', 'pensioner'],
             'other' => ['other', 'unemployed', 'freelancer'],
