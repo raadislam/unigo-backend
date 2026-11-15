@@ -1,0 +1,48 @@
+name: Validate one-page visa checklist PDF
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/Services/VisaChecklistPdfService.php'
+      - 'app/Http/Controllers/Api/VisaChecklistPdfController.php'
+      - 'tests/Unit/VisaChecklistPdfServiceTest.php'
+      - 'resources/pdf/unigo-letterhead.pdf'
+      - 'composer.json'
+      - 'composer.lock'
+      - '.github/workflows/validate-one-page-checklist.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-one-page-checklist-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+      - name: Verify original letterhead asset
+        run: test -s resources/pdf/unigo-letterhead.pdf
+      - name: Validate Composer manifests
+        run: composer validate --strict
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction
+      - name: Verify PHP syntax
+        run: |
+          php -l app/Services/VisaChecklistPdfService.php
+          php -l app/Http/Controllers/Api/VisaChecklistPdfController.php
+          php -l tests/Unit/VisaChecklistPdfServiceTest.php
+      - name: Run PDF checklist tests
+        run: php artisan test --filter=VisaChecklistPdfServiceTest
+        env:
+          APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
