@@ -1,12 +1,12 @@
 <?php
 
-namespace App\\Http\\Controllers\\Api;
+namespace App\Http\Controllers\Api;
 
-use App\\Http\\Controllers\\Controller;
-use App\\Models\\VisaRequirement;
-use App\\Services\\VisaChecklistPdfService;
-use Illuminate\\Http\\Request;
-use Symfony\\Component\\HttpFoundation\\Response;
+use App\Http\Controllers\Controller;
+use App\Models\VisaRequirement;
+use App\Services\VisaChecklistPdfService;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response;
 
 class VisaChecklistPdfController extends Controller
 {
