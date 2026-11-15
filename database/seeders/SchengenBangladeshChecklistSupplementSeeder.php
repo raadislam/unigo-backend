@@ -364,6 +364,7 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
 
         $sourceDirectory = 'https://www.eeas.europa.eu/bangladesh/travel-study_en';
         $visaCodeSource = 'https://eur-lex.europa.eu/eli/reg/2009/810/oj/eng';
+        $schengenMembershipSource = 'https://www.consilium.europa.eu/en/policies/schengen-area/';
 
         foreach ($groups as $group) {
             foreach ($group['countries'] as $iso2) {
@@ -487,6 +488,18 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     'source_last_checked_at' => $checkedAt,
                     'is_primary' => false,
                     'verification_notes' => 'General common framework for Schengen visa applications and supporting documents. It does not replace a destination-specific Bangladesh checklist or a mission request for additional documents.',
+                ]
+            );
+
+            VisaRequirementSource::updateOrCreate(
+                ['visa_requirement_id' => $requirement->id, 'source_url' => $schengenMembershipSource],
+                [
+                    'source_type' => 'official',
+                    'source_name' => 'Council of the European Union — Current 29-country Schengen membership',
+                    'source_url' => $schengenMembershipSource,
+                    'source_last_checked_at' => $checkedAt,
+                    'is_primary' => false,
+                    'verification_notes' => 'Authoritative current membership source. Confirms 29 countries and Bulgaria/Romania full membership from 1 January 2025; used instead of the outdated EEAS Bangladesh page for membership.',
                 ]
             );
 
