@@ -75,6 +75,8 @@ if ($mode === 'preflight') {
         'duplicate_keys' => $duplicateKeys,
         'AC_exists' => (bool) $country,
         'AC_identity_valid' => (bool) $countryIdentityValid,
+        'AC_slug_conflict' => (bool) $slugConflict,
+        'baseline_valid' => (bool) $baselineValid,
         'AC_BGD_tourism_requirement_count' => $ascensionRequirementCount,
         'can_proceed' => $baselineValid && $countryStateValid,
     ];
