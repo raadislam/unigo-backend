@@ -251,6 +251,7 @@ jobs:
           cd /var/www/unigo/backend/current
           install -m 0644 /tmp/SchengenBangladeshChecklistSupplementSeeder.php database/seeders/SchengenBangladeshChecklistSupplementSeeder.php
           rm -f /tmp/SchengenBangladeshChecklistSupplementSeeder.php
+          php -l database/seeders/SchengenBangladeshChecklistSupplementSeeder.php
           php artisan db:seed --class='Database\Seeders\SchengenBangladeshChecklistSupplementSeeder' --force
           php <<'PHP'
           <?php
