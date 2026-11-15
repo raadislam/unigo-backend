@@ -39,7 +39,7 @@ try {
     $primaryUrl = 'https://www.tristandc.com/visitsorganise.php';
     $crossUrl = 'https://www.tristandc.com/visitsadmin.php';
     $primary = $record->sources->contains(fn ($source) => $source->source_type === 'official' && (bool) $source->is_primary && $source->source_url === $primaryUrl && $sourceDate($source) === '2026-11-15');
-    $cross = $record->sources->contains(fn ($source) => in_array($source->source_type, ['official', 'secondary'], true) && ! (bool) $source->is_primary && $source->source_url === $crossUrl && $source->source_name === 'Tristan da Cunha Government — Summary of Conditions and Charges for Visits' && $sourceDate($source) === '2026-11-15');
+    $cross = $record->sources->contains(fn ($source) => $source->source_type === 'official' && ! (bool) $source->is_primary && $source->source_url === $crossUrl && $source->source_name === 'Tristan da Cunha Government — Summary of Conditions and Charges for Visits' && $sourceDate($source) === '2026-11-15');
     $checklists = is_array($record->applicant_checklists) ? $record->applicant_checklists : [];
     $expectedTypes = ['employee', 'self_employed_or_business_owner', 'student', 'retired'];
     $types = array_values(array_unique(array_column($checklists, 'applicant_type')));
@@ -83,7 +83,7 @@ try {
         'four_applicant_checklists' => $checklistsValid,
         'primary_official_source' => $primary,
         'cross_check_source' => $cross,
-        'official_source_count' => $record->sources->where('source_type', 'official')->count() >= 3,
+        'official_source_count' => $record->sources->where('source_type', 'official')->count() >= 4,
         'official_checked_at' => substr((string) $record->official_source_checked_at, 0, 10) === '2026-11-15',
     ];
     $failed = array_keys(array_filter($databaseChecks, fn ($ok) => $ok !== true));
@@ -105,7 +105,7 @@ try {
     $apiExpectedTypes = $expectedTypes;
     sort($apiExpectedTypes);
     $apiPrimary = collect($apiSources)->contains(fn ($source) => data_get($source, 'source_type') === 'official' && data_get($source, 'is_primary') === true && data_get($source, 'source_url') === $primaryUrl && substr((string) data_get($source, 'source_last_checked_at'), 0, 10) === '2026-11-15');
-    $apiCross = collect($apiSources)->contains(fn ($source) => in_array(data_get($source, 'source_type'), ['official', 'secondary'], true) && data_get($source, 'is_primary') === false && data_get($source, 'source_url') === $crossUrl && data_get($source, 'source_name') === 'Tristan da Cunha Government — Summary of Conditions and Charges for Visits' && substr((string) data_get($source, 'source_last_checked_at'), 0, 10) === '2026-11-15');
+    $apiCross = collect($apiSources)->contains(fn ($source) => data_get($source, 'source_type') === 'official' && data_get($source, 'is_primary') === false && data_get($source, 'source_url') === $crossUrl && data_get($source, 'source_name') === 'Tristan da Cunha Government — Summary of Conditions and Charges for Visits' && substr((string) data_get($source, 'source_last_checked_at'), 0, 10) === '2026-11-15');
     $apiChecklistsValid = $apiTypes === $apiExpectedTypes;
     foreach ($apiChecklists as $item) {
         if (! data_get($item, 'source_name') || ! str_starts_with((string) data_get($item, 'source_url'), 'https://') || data_get($item, 'checked_at') !== '2026-11-15') {
