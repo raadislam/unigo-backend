@@ -451,6 +451,12 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
             ['source_name' => 'Croatian Ministry of Foreign Affairs — Bangladesh applicants and competent mission', 'source_url' => 'https://mvep.gov.hr/services-consular-portal/consular-information-22802/visas-22807/visa-requirements-overview-22879/22879?country=159', 'source_type' => 'official', 'verification_notes' => 'Confirms the competent Croatian mission and Bangladesh submission route; VFS page includes tourist checklist and conditional apostille/translation language.'],
         ];
 
+        $groups['NL']['extra_sources'] = [
+            ['source_name' => 'VFS Global — Netherlands Bangladesh visa information and tourism checklist link', 'source_url' => 'https://visa.vfsglobal.com/one-pager/netherlands/bangladesh/english/', 'source_type' => 'provider', 'verification_notes' => 'VFS Bangladesh directs tourism applicants to the official NetherlandsWorldwide Bangladesh tourism checklist and confirms live photograph/biometric capture at the VAC.'],
+        ];
+        $groups['FR']['extra_sources'] = [
+            ['source_name' => 'VFS Global — France Bangladesh visa information', 'source_url' => 'https://visa.vfsglobal.com/bgd/en/fra', 'source_type' => 'provider', 'verification_notes' => 'Confirms the Bangladesh application channel; France-Visas generates the personalised Type C supporting-document checklist for France and represented Austria, Czechia and Portugal.'],
+        ];
         $unverified = [
             'LT' => 'No Bangladesh-specific VFS or competent-mission tourism checklist was located in this review. Do not infer photo dimensions or apostille requirements. Check the competent Lithuanian mission before advising applicants.',
             'RO' => 'No Bangladesh-specific VFS or competent-mission tourism checklist was located in this review. Do not infer photo dimensions or apostille requirements. Check the competent Romanian mission before advising applicants.',
