@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SEED = ROOT / "database/data/new_country_visa_batch_45.csv"
 AUDIT = ROOT / "database/data/visa_full_audit_batch_45.csv"
 SEEDER = ROOT / "database/seeders/TristanDaCunhaCountryBackfillSeeder.php"
+READBACK = ROOT / "scripts/batch45_readback.php"
 
 def read_one(path):
     with path.open(encoding="utf-8-sig", newline="") as handle:
@@ -79,9 +80,15 @@ for source in extra:
         raise SystemExit("Additional source metadata must be official, dated and explained.")
 
 seeder = SEEDER.read_text(encoding="utf-8")
+readback = READBACK.read_text(encoding="utf-8")
 for marker in ("['iso2' => 'TA']", "'slug' => 'tristan-da-cunha'", "'iso3' => null", "'is_published' => false"):
     if marker not in seeder:
         raise SystemExit(f"Country backfill seeder is missing safe territory handling: {marker}")
+
+if "APP_ROOT" not in readback or "/api/visa-requirements/TA" not in readback or "BATCH45_READBACK_ERROR" not in readback:
+    raise SystemExit("Batch 45 readback script is missing the scoped TA database/API checks.")
+if any(token in readback.lower() for token in ("truncate table", "drop table", "delete from visa_requirements")):
+    raise SystemExit("Batch 45 readback script must remain read-only.")
 
 print("BATCH45_ALLOWLIST_VALIDATED TA")
 print("BATCH45_ROWS 1")
