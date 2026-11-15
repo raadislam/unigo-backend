@@ -27,6 +27,7 @@ on:
       - 'scripts/prepare_verified_country_backlog_batch_*.py'
       - 'database/data/verified_country_backlog_batch_*_overrides.csv'
       - 'database/data/pending_country_research_batch_*.csv'
+      - 'database/data/photo_checklist_research_batch_*.csv'
       - '.github/workflows/import-verified-country-batch-18.yml'
       - 'scripts/validate_visa_batches.py'
       - 'app/Console/Commands/VisaRequirementResearchCsvImportCommand.php'
