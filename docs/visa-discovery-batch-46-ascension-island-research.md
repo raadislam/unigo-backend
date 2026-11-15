@@ -35,11 +35,13 @@ Until then, keep the Bangladesh tourism record pending and unpublished. Do not i
 
 ## Photo and checklist status
 
-- **Digital photo:** clear-face JPEG upload is confirmed by the official FAQ and visitor help sheet.
-- **Fixed size:** no fixed printed or digital dimensions are stated in the reviewed official guidance.
-- **Printed photo:** not established as unnecessary; the official instructions describe a digital upload but do not expressly rule out a later request for a printed photo.
-- **Other route details:** six-month passport validity, medical/travel insurance and at least GBP 500,000 evacuation cover are published. Return ticket, confirmed accommodation and sufficient funds appear in the UK Government's summary of local Ascension rules, but its stated passport basis is British citizen; confirm Bangladesh applicability with Ascension before treating these as a mandatory Bangladesh-specific checklist.
-- **VAC:** no Bangladesh VAC or intermediary is identified; applications are made directly to the official Ascension eVisa portal.
+- **Digital photo:** the official FAQ requires a scanned JPEG photo. Any image clearly showing the applicant's face is acceptable; it need not be passport-photo quality. Group photos, blank-space borders and passport-scan images with holograms are not accepted.
+- **Fixed size:** no fixed printed dimensions, digital pixel dimensions, aspect ratio or file-size limit is published. The authority's “any clear-face image” instruction is the basis for recording no fixed dimensions in the general route guidance; it is not a fabricated standard size.
+- **Printed photo:** the FAQ says not to send photographs other than the required scanned photograph unless specifically requested. No standard printed-photo submission is published.
+- **Biometrics:** the application terms say fingerprints and a facial photograph may be requested. The guidance does not identify a Bangladesh VAC or specify where capture would occur; do not treat this as confirmed VAC capture.
+- **Mandatory visitor documents in the published FAQ:** scanned photograph and medical insurance unless exempt. The insurance must cover medical treatment and air evacuation; the minimum air medical-evacuation cover is GBP 500,000. Applicants must provide insurer name, policy number, issue date and expiry, and show the policy at entry.
+- **Supporting documents:** the FAQ says applicants may provide onward itinerary and place-of-stay details for stays of 48 hours or more. The application asks about accommodation arrangements. Under-18 applicants are strongly advised to provide parental consent and a parent/guardian passport bio page when travelling unaccompanied or with someone other than a parent. Non-English documents require a verifiable translation.
+- **VAC:** no Bangladesh VAC or intermediary is identified; applications are made directly to the official Ascension eVisa portal. Bangladesh-specific applicability remains unconfirmed.
 
 ## Data and publication decision
 
