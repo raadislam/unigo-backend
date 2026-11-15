@@ -114,7 +114,7 @@ class VisaChecklistPdfService
         }
 
         foreach ($requirement->required_documents ?? [] as $document) {
-                $this->appendRequiredDocument($documents, $document);
+            $this->appendRequiredDocument($documents, $document);
         }
 
         foreach ($requirement->applicant_checklists ?? [] as $profile) {
