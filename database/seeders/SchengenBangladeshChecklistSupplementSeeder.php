@@ -205,11 +205,7 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     ['name' => 'Return flight booking with reservation/passenger registration number and travel itinerary', 'status' => 'required'],
                     ['name' => 'Hotel confirmation or other accommodation proof for the entire Schengen stay', 'status' => 'required'],
                     ['name' => 'Travel insurance valid throughout the Schengen area and entire stay, covering medical costs, hospitalisation and repatriation for at least EUR 30,000', 'status' => 'required'],
-                    ['name' => 'For married applicants: marriage certificate/Nikah Nama or Hindu marriage act, translated into English and apostilled', 'status' => 'if_applicable'],
-                    ['name' => 'For divorced applicants: divorce certificate/Talak Nama, translated into English and apostilled', 'status' => 'if_applicable'],
-                    ['name' => 'For widowed applicants: spouse death certificate, translated into English and apostilled', 'status' => 'if_applicable'],
-                    ['name' => 'For minors: apostilled parental consent, apostilled original birth certificate, and apostilled legal-guardianship documents where relevant; parent/guardian passport copies and financial evidence', 'status' => 'if_applicable'],
-                    ['name' => 'For visits to family/friends: VFS invitation form, proof of relationship, host identity document and host residence permit copy if the host is a foreign national', 'status' => 'if_applicable'],
+                                        ['name' => 'For visits to family/friends: VFS invitation form, proof of relationship, host identity document and host residence permit copy if the host is a foreign national', 'status' => 'if_applicable'],
                 ],
                 'notes' => 'The VFS tourism checklist expressly requires apostille for specified civil-status documents and minor-related documents. One apostille per submitted document is accepted. The Italian Embassy Dhaka separately states that from June 2025 Bangladeshi public documents submitted for Italian legalisation no longer require Embassy legalisation but need an MOFA apostille through MyGov. Apostille is conditional on the document/applicant scenario; it is not a universal item for every applicant.',
             ],
@@ -414,11 +410,11 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                 $countryBaseDocuments[2]['notes'] = 'The Bangladesh-route photo requirement and specifications have not been verified in the reviewed mission/provider sources. Confirm the current competent-mission checklist before submission.';
             }
 
-            $requirement->forceFill([
+            if (in_array($iso2, ['MT', 'SK'], true)) {\n                $notes .= ' The Italy VFS apostille rule has not been independently confirmed for this represented destination; do not assume it applies without checking the competent mission.';\n            }\n\n            $requirement->forceFill([
                 'photo_specifications' => $photo,
                 'required_documents' => collect($requirement->required_documents ?? [])
                     ->when(in_array($photo['status'] ?? '', ['verified', 'partially_specified'], true), fn ($items) => $items->merge(['Recent colour photograph meeting the destination-specific Schengen photo rules or live-photo capture instruction']))
-                    ->when($iso2 === 'IT' || $iso2 === 'MT' || $iso2 === 'SK', fn ($items) => $items->merge(['Apostilled English translations of civil-status documents and specified minor-related documents, only where applicable under the Italy/VFS checklist']))
+                    ->when($iso2 === 'IT', fn ($items) => $items->merge(['Apostilled English translations of civil-status documents and specified minor-related documents, only where applicable under the Italy VFS checklist']))
                     ->when($iso2 === 'HR', fn ($items) => $items->merge(['Apostille/international certification of supporting public documents if specifically requested by the Croatian Embassy']))
                     ->unique()
                     ->values()
@@ -431,7 +427,7 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                         ->values()
                         ->all();
 
-                    if (in_array($iso2, ['IT', 'MT', 'SK'], true)) {
+                    if ($iso2 === 'IT') {
                         $combined[] = ['name' => 'Apostilled English translation of marriage/divorce/spouse death documents when relevant; apostilled parental consent, minor birth certificate and guardianship documents in the listed minor cases', 'status' => 'if_applicable'];
                     }
 
