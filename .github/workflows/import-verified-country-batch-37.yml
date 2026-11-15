@@ -508,7 +508,7 @@ jobs:
                   'verification_status' => $gm->verification_status,
                   'is_published' => (bool) $gm->is_published,
                   'visa_required' => (bool) $gm->visa_required,
-                  'visa_free_eligibility' => (bool) $gm->visa_free_eligibility,
+                  'visa_free_available' => (bool) $gm->visa_free_available,
                   'maximum_permitted_stay' => $gm->maximum_permitted_stay,
                   'primary_source_verified' => $sourceCheck($gm, 'https://gambia.gov.gm/immigration-and-visas/'),
                   'photo_status' => data_get($gm->photo_specifications, 'status'),
@@ -531,7 +531,7 @@ jobs:
               fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
               exit(1);
           }
-          if ($result['GM']['visa_required'] || ! $result['GM']['visa_free_eligibility'] || ! str_contains(strtolower($result['GM']['maximum_permitted_stay']), '90 days') || ! $result['GM']['primary_source_verified'] || $result['GM']['photo_status'] !== 'not_applicable' || ! $result['GM']['four_checklists']) {
+          if ($result['GM']['visa_required'] || ! $result['GM']['visa_free_available'] || ! str_contains(strtolower($result['GM']['maximum_permitted_stay']), '90 days') || ! $result['GM']['primary_source_verified'] || $result['GM']['photo_status'] !== 'not_applicable' || ! $result['GM']['four_checklists']) {
               fwrite(STDERR, json_encode($result, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . PHP_EOL);
               exit(1);
           }
@@ -543,7 +543,7 @@ jobs:
               if (strtoupper((string) data_get($detail, 'data.country.iso2')) !== $iso2) throw new RuntimeException('Public API detail identity mismatch for ' . $iso2);
               if (data_get($detail, 'data.verification_status') !== 'verified' || ! data_get($detail, 'data.is_published')) throw new RuntimeException('Public API publication mismatch for ' . $iso2);
               if ($iso2 === 'AG' && (! data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.evisa_available') || ! data_get($detail, 'data.visa_on_arrival_available'))) throw new RuntimeException('Antigua public API route flags mismatch.');
-              if ($iso2 === 'GM' && (data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.visa_free_eligibility'))) throw new RuntimeException('Gambia public API Commonwealth exemption flags mismatch.');
+              if ($iso2 === 'GM' && (data_get($detail, 'data.visa_required') || ! data_get($detail, 'data.visa_free_available'))) throw new RuntimeException('Gambia public API Commonwealth exemption flags mismatch.');
           }
           $result['public_api_total'] = data_get($list, 'meta.total');
           $result['public_api_details_verified'] = ['AG','GM'];
