@@ -103,15 +103,10 @@ class VisaChecklistPdfService
     {
         $scope = $options['scope'] ?? 'applicant';
         $applicantOccupation = $options['applicant_occupation'] ?? 'employee';
-        $funding = $options['funding'] ?? 'self';
         $documents = [];
 
-        if ($scope !== 'applicant' && $funding !== 'self') {
-            throw new InvalidArgumentException('Verified sponsor-specific required documents are not available for this destination. The applicant checklist cannot be reused as a sponsor checklist.');
-        }
-
-        if ($scope === 'sponsor') {
-            throw new InvalidArgumentException('A sponsor-only checklist cannot be generated until verified sponsor-specific requirements are recorded.');
+        if ($scope !== 'applicant') {
+            throw new InvalidArgumentException('Only applicant checklists are currently supported. Sponsor-specific requirements are not yet stored as verified destination data.');
         }
 
         foreach ($requirement->required_documents ?? [] as $document) {
