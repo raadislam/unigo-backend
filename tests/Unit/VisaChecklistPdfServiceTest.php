@@ -122,6 +122,50 @@ class VisaChecklistPdfServiceTest extends TestCase
         $this->assertSame(['Trade licence'], $documents);
     }
 
+    public function test_italy_pdf_collapses_semantic_duplicates_and_keeps_the_detailed_vfs_requirements(): void
+    {
+        $country = new Country();
+        $country->iso2 = 'IT';
+
+        $requirement = new VisaRequirement();
+        $requirement->required_documents = [
+            'Valid passport issued within the previous 10 years',
+            'Completed Schengen visa application form',
+            'Recent ICAO-compliant photograph',
+            'Travel medical insurance covering emergency medical care and repatriation',
+            'Evidence of purpose and itinerary',
+            'Evidence of accommodation',
+            'Evidence of sufficient financial means',
+            'Recent colour photograph meeting destination-specific rules',
+            'Completed and signed short-stay Schengen application form',
+            'Passport with at least 2 blank visa pages and validity extending 3 months beyond departure',
+            'Return airline booking showing Passenger Registration Number and travel itinerary',
+            'Hotel confirmation for the entire Schengen stay',
+            'Travel insurance for all Schengen countries, minimum EUR 30,000',
+        ];
+        $requirement->applicant_checklists = [[
+            'applicant_type' => 'employee',
+            'documents' => [
+                ['name' => 'Original employer letter showing role, salary, service duration, leave and funding', 'status' => 'required'],
+                ['name' => 'Personal bank statement for the last 6 months and other financial solvency evidence', 'status' => 'required'],
+            ],
+        ]];
+        $requirement->setRelation('country', $country);
+
+        $documents = app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
+            'scope' => 'applicant',
+            'applicant_occupation' => 'employee',
+        ]);
+
+        $this->assertCount(1, array_filter($documents, fn ($document) => str_contains(strtolower($document), 'photograph')));
+        $this->assertCount(1, array_filter($documents, fn ($document) => str_contains(strtolower($document), 'passport')));
+        $this->assertCount(1, array_filter($documents, fn ($document) => str_contains(strtolower($document), 'insurance')));
+        $this->assertCount(1, array_filter($documents, fn ($document) => str_contains(strtolower($document), 'accommodation') || str_contains(strtolower($document), 'hotel')));
+        $this->assertCount(1, array_filter($documents, fn ($document) => str_contains(strtolower($document), 'financial') || str_contains(strtolower($document), 'bank statement')));
+        $this->assertContains('Two recent identical ICAO-compliant colour photographs, 40 × 35 mm, with a white background, taken within the last 6 months', $documents);
+        $this->assertContains('Original employer letter showing role, salary, service duration, leave and funding', $documents);
+    }
+
     public function test_pdf_uses_the_original_uploaded_letterhead_page_size_and_contains_exactly_one_page(): void
     {
         $letterhead = resource_path('pdf/unigo-letterhead.pdf');
