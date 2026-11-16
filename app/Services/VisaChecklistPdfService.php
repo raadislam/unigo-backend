@@ -114,6 +114,10 @@ class VisaChecklistPdfService
                 continue;
             }
 
+            if (($profile['checklist_review_status'] ?? null) !== 'verified') {
+                throw new DomainException('The client-submission checklist for this destination and applicant type has not been reviewed yet. Please contact UniGo for the current document list.');
+            }
+
             foreach ($profile['client_documents'] ?? [] as $document) {
                 $this->appendRequiredDocument($documents, $document);
             }
