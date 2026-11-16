@@ -39,7 +39,7 @@ class VisaChecklistPdfService
         $pdf->SetCreator('UniGo');
         $pdf->SetAuthor('UniGo Tours & Travels');
         $pdf->SetTitle(($requirement->country?->name ?? 'Destination').' required visa documents');
-        $pdf->SetSubject('Required visa documents for Bangladeshi ordinary passport holders');
+        $pdf->SetSubject('Documents UniGo needs from the applicant for visa-file preparation');
         $pdf->SetMargins($left, $top, $right);
         $pdf->SetHeaderMargin(0);
         $pdf->SetFooterMargin(0);
@@ -62,12 +62,12 @@ class VisaChecklistPdfService
 
         $documents = $this->requiredDocuments($requirement, $options);
         if ($documents === []) {
-            throw new DomainException('No required documents match the selected occupation filter.');
+            throw new DomainException('No client-submission documents are configured for the selected occupation. This checklist must be reviewed before it can be issued.');
         }
 
         $pdf->SetFont('dejavusans', 'B', 9);
         $pdf->SetTextColor(8, 43, 76);
-        $pdf->MultiCell($contentWidth, 5, 'Required documents', 0, 'L', false, 1);
+        $pdf->MultiCell($contentWidth, 5, 'Documents to submit to UniGo', 0, 'L', false, 1);
         $pdf->Ln(1);
         $pdf->SetFont('dejavusans', '', 8.5);
         $pdf->SetTextColor(38, 63, 89);
@@ -79,7 +79,7 @@ class VisaChecklistPdfService
 
         $qrY = $pageHeight - $bottom - $qrSize;
         if ($pdf->GetY() + 4 > $qrY) {
-            throw new DomainException('The selected required documents do not fit safely on one original letterhead page.');
+            throw new DomainException('The selected client-submission documents do not fit safely on one original letterhead page.');
         }
 
         $pdf->SetDrawColor(215, 25, 45);
@@ -109,16 +109,12 @@ class VisaChecklistPdfService
             throw new InvalidArgumentException('Only applicant checklists are currently supported. Sponsor-specific requirements are not yet stored as verified destination data.');
         }
 
-        foreach ($requirement->required_documents ?? [] as $document) {
-            $this->appendRequiredDocument($documents, $document);
-        }
-
         foreach ($requirement->applicant_checklists ?? [] as $profile) {
             if (! is_array($profile) || ! $this->matchesOccupation($profile['applicant_type'] ?? '', $applicantOccupation)) {
                 continue;
             }
 
-            foreach ($profile['documents'] ?? [] as $document) {
+            foreach ($profile['client_documents'] ?? [] as $document) {
                 $this->appendRequiredDocument($documents, $document);
             }
         }
