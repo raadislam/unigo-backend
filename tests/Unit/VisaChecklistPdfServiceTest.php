@@ -18,6 +18,7 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement->applicant_checklists = [
             [
                 'applicant_type' => 'employee',
+                'checklist_review_status' => 'verified',
                 'client_documents' => [
                     ['name' => 'Employment certificate', 'status' => 'required'],
                     ['name' => 'Recent payslips', 'status' => 'required'],
@@ -26,6 +27,7 @@ class VisaChecklistPdfServiceTest extends TestCase
             ],
             [
                 'applicant_type' => 'business_owner',
+                'checklist_review_status' => 'verified',
                 'client_documents' => [
                     ['name' => 'Trade licence', 'status' => 'required'],
                     ['name' => 'Company bank statement', 'status' => 'required'],
@@ -56,7 +58,8 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement->applicant_checklists = [
             [
                 'applicant_type' => 'employee',
-                'documents' => [
+                'checklist_review_status' => 'verified',
+                'client_documents' => [
                     ['name' => 'Employer letter', 'status' => 'required'],
                     ['name' => 'Appointment attendance', 'status' => 'required'],
                 ],
@@ -69,6 +72,7 @@ class VisaChecklistPdfServiceTest extends TestCase
             ],
             [
                 'applicant_type' => 'business_owner',
+                'checklist_review_status' => 'verified',
                 'client_documents' => [
                     ['name' => 'Trade licence', 'status' => 'required'],
                 ],
@@ -92,7 +96,7 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement = new VisaRequirement();
         $requirement->required_documents = ['Passport', 'Biometrics'];
         $requirement->applicant_checklists = [
-            ['applicant_type' => 'employee', 'documents' => [['name' => 'Employer letter', 'status' => 'required']]],
+            ['applicant_type' => 'employee', 'checklist_review_status' => 'verified', 'client_documents' => [['name' => 'Employer letter', 'status' => 'required']]],
         ];
 
         $this->assertSame([], app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
@@ -108,12 +112,14 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement->applicant_checklists = [
             [
                 'applicant_type' => 'employee',
+                'checklist_review_status' => 'verified',
                 'client_documents' => [
                     ['name' => 'Employment certificate', 'status' => 'required'],
                 ],
             ],
             [
                 'applicant_type' => 'business_owner',
+                'checklist_review_status' => 'verified',
                 'client_documents' => [
                     ['name' => 'Trade licence', 'status' => 'required'],
                 ],
@@ -152,6 +158,7 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement->applicant_checklists = [
             [
                 'applicant_type' => 'self_employed_or_business_owner',
+                'checklist_review_status' => 'verified',
                 'client_documents' => [
                     ['name' => 'Trade licence', 'status' => 'required'],
                     ['name' => 'Conditional tax evidence', 'status' => 'if_applicable'],
@@ -159,6 +166,7 @@ class VisaChecklistPdfServiceTest extends TestCase
             ],
             [
                 'applicant_type' => 'employee',
+                'checklist_review_status' => 'verified',
                 'client_documents' => [
                     ['name' => 'Employment certificate', 'status' => 'required'],
                 ],
@@ -187,6 +195,7 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement->required_documents = ['Do not include embassy-level requirements'];
         $requirement->applicant_checklists = [[
             'applicant_type' => 'employee',
+                'checklist_review_status' => 'verified',
             'client_documents' => [['name' => 'Applicant passport', 'status' => 'required']],
         ]];
         $requirement->setRelation('country', $country);
