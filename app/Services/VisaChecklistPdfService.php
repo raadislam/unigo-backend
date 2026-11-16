@@ -148,6 +148,11 @@ class VisaChecklistPdfService
         $uncategorized = [];
 
         foreach ($documents as $document) {
+            if (preg_match('/employer|employment|salary|trade licence|company|self-employed|business owner|tax return|enrolment|student|retired|pension|apostille|civil-status|minor|guardian|invitation|host|residence permit|biometric/i', $document) === 1) {
+                $uncategorized[] = $document;
+                continue;
+            }
+
             $category = null;
 
             foreach ($categories as $key => $pattern) {
