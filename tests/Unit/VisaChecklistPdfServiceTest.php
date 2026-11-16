@@ -50,6 +50,63 @@ class VisaChecklistPdfServiceTest extends TestCase
         ], $documents);
     }
 
+
+    public function test_pdf_includes_only_explicit_client_submission_documents_and_deduplicates_them(): void
+    {
+        $requirement = new VisaRequirement();
+        $requirement->required_documents = [
+            'Biometrics appointment confirmation',
+            'Travel medical insurance arranged by UniGo',
+            'Completed visa application form prepared by UniGo',
+        ];
+        $requirement->applicant_checklists = [
+            [
+                'applicant_type' => 'employee',
+                'documents' => [
+                    ['name' => 'Employer letter', 'status' => 'required'],
+                    ['name' => 'Appointment attendance', 'status' => 'required'],
+                ],
+                'client_documents' => [
+                    ['name' => 'Passport and biodata copy', 'status' => 'required'],
+                    ['name' => 'Six-month personal bank statement', 'status' => 'required'],
+                    ['name' => 'Employer letter', 'status' => 'required'],
+                    ['name' => 'Passport and biodata copy', 'status' => 'required'],
+                ],
+            ],
+            [
+                'applicant_type' => 'business_owner',
+                'client_documents' => [
+                    ['name' => 'Trade licence', 'status' => 'required'],
+                ],
+            ],
+        ];
+
+        $documents = app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
+            'scope' => 'applicant',
+            'applicant_occupation' => 'employee',
+        ]);
+
+        $this->assertSame([
+            'Passport and biodata copy',
+            'Six-month personal bank statement',
+            'Employer letter',
+        ], $documents);
+    }
+
+    public function test_checklist_does_not_fall_back_to_embassy_requirements_when_client_documents_are_not_classified(): void
+    {
+        $requirement = new VisaRequirement();
+        $requirement->required_documents = ['Passport', 'Biometrics'];
+        $requirement->applicant_checklists = [
+            ['applicant_type' => 'employee', 'documents' => [['name' => 'Employer letter', 'status' => 'required']]],
+        ];
+
+        $this->assertSame([], app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
+            'scope' => 'applicant',
+            'applicant_occupation' => 'employee',
+        ]));
+    }
+
     public function test_sponsor_checklist_is_rejected_until_verified_sponsor_specific_requirements_exist(): void
     {
         $requirement = new VisaRequirement();
