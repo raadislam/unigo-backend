@@ -31,8 +31,6 @@ jobs:
           php-version: '8.4'
           tools: composer:v2
           coverage: none
-      - name: Verify original letterhead asset
-        run: test -s resources/pdf/unigo-letterhead.pdf
       - name: Validate Composer manifests
         run: composer validate --strict
       - name: Install dependencies
@@ -42,6 +40,8 @@ jobs:
           php -l app/Services/VisaChecklistPdfService.php
           php -l app/Http/Controllers/Api/VisaChecklistPdfController.php
           php -l tests/Unit/VisaChecklistPdfServiceTest.php
+      - name: Verify original letterhead asset
+        run: test -s resources/pdf/unigo-letterhead.pdf
       - name: Run PDF checklist tests
         run: php artisan test --filter=VisaChecklistPdfServiceTest
         env:
