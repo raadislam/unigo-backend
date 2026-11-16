@@ -129,7 +129,7 @@ class VisaChecklistPdfService
     private function appendRequiredDocument(array &$documents, mixed $document): void
     {
         if (is_array($document)) {
-            $status = strtolower(trim((string) ($document['status'] ?? 'required')));
+            $status = strtolower(trim((string) ($document['status'] ?? '')));
             if (! in_array($status, ['required', 'mandatory'], true)) {
                 return;
             }
