@@ -15,14 +15,11 @@ class VisaChecklistPdfServiceTest extends TestCase
     {
         $requirement = new VisaRequirement();
         $requirement->required_documents = [
-            'Valid passport',
-            'Completed application form',
-            ['name' => 'Optional itinerary', 'status' => 'conditional'],
         ];
         $requirement->applicant_checklists = [
             [
                 'applicant_type' => 'employee',
-                'documents' => [
+                'client_documents' => [
                     ['name' => 'Employment certificate', 'status' => 'required'],
                     ['name' => 'Recent payslips', 'status' => 'required'],
                     ['name' => 'Leave approval', 'status' => 'conditional'],
@@ -30,7 +27,7 @@ class VisaChecklistPdfServiceTest extends TestCase
             ],
             [
                 'applicant_type' => 'business_owner',
-                'documents' => [
+                'client_documents' => [
                     ['name' => 'Trade licence', 'status' => 'required'],
                     ['name' => 'Company bank statement', 'status' => 'required'],
                 ],
@@ -43,8 +40,6 @@ class VisaChecklistPdfServiceTest extends TestCase
         ]);
 
         $this->assertSame([
-            'Valid passport',
-            'Completed application form',
             'Employment certificate',
             'Recent payslips',
         ], $documents);
