@@ -91,12 +91,12 @@ class VisaChecklistPdfServiceTest extends TestCase
         ], $documents);
     }
 
-    public function test_checklist_does_not_fall_back_to_embassy_requirements_when_client_documents_are_not_classified(): void
+    public function test_checklist_does_not_fall_back_to_embassy_requirements_when_client_documents_are_absent(): void
     {
         $requirement = new VisaRequirement();
         $requirement->required_documents = ['Passport', 'Biometrics'];
         $requirement->applicant_checklists = [
-            ['applicant_type' => 'employee', 'checklist_review_status' => 'verified', 'client_documents' => [['name' => 'Employer letter', 'status' => 'required']]],
+            ['applicant_type' => 'employee', 'checklist_review_status' => 'verified', 'documents' => [['name' => 'Employer letter', 'status' => 'required']]],
         ];
 
         $this->assertSame([], app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
