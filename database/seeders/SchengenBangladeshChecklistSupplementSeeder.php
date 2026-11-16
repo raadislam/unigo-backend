@@ -199,7 +199,6 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                 ],
                 'documents' => [
                     ['name' => 'Original completed and signed Schengen Type C application form; both parents/legal guardian sign for minors', 'status' => 'required'],
-                    ['name' => 'Two recent identical colour photographs, 40 × 35 mm, white background, taken within 6 months', 'status' => 'required'],
                     ['name' => 'Passport valid at least 3 months beyond visa validity and with at least 2 blank unmarked visa pages; biodata copy', 'status' => 'required'],
                     ['name' => 'For employees: original employer letter in English on official company letterhead, stamped, signed and dated; it must state the employer address, telephone and fax numbers, signatory name and position, applicant name, position, salary and years of service, who will pay travel and stay costs, approved leave, and confirmation that the applicant will retain the position after returning', 'status' => 'if_applicable'],
                     ['name' => 'For self-employed applicants: City Corporation-issued trade licence, RJSC-issued certificate of incorporation, income tax return, TIN certificate and company bank statements for the last 6 months', 'status' => 'if_applicable'],
@@ -565,7 +564,25 @@ class SchengenBangladeshChecklistSupplementSeeder extends Seeder
                     ->values()
                     ->all(),
                 'applicant_checklists' => collect($profiles)->map(function ($profileDocs, $type) use ($countryBaseDocuments, $documents, $sourceName, $sourceUrl, $notes, $iso2) {
-                    $combined = collect($countryBaseDocuments)
+                    $checklistBaseDocuments = $countryBaseDocuments;
+
+                    if ($iso2 === 'IT') {
+                        $repeatedItalyBaseItems = [
+                            'Valid passport issued within the previous 10 years, with at least 2 blank visa pages and validity extending at least 3 months beyond planned departure from Schengen',
+                            'Recent photograph meeting the country-specific photo specification or live-photo-at-VAC instruction',
+                            'Return/onward travel reservation and itinerary for the full trip',
+                            'Accommodation evidence for the full stay or invitation/host evidence where applicable',
+                            'Proof of sufficient financial means and source of funds',
+                            'Travel medical insurance for all Schengen countries and the full intended stay, with minimum EUR 30,000 cover',
+                        ];
+
+                        $checklistBaseDocuments = collect($checklistBaseDocuments)
+                            ->reject(fn ($item) => in_array($item['name'], $repeatedItalyBaseItems, true))
+                            ->values()
+                            ->all();
+                    }
+
+                    $combined = collect($checklistBaseDocuments)
                         ->merge($profileDocs)
                         ->merge($documents)
                         ->unique(fn ($item) => $item['name'])
