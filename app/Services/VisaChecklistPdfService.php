@@ -3,209 +3,162 @@
 namespace App\Services;
 
 use App\Models\VisaRequirement;
+use DomainException;
+use InvalidArgumentException;
+use RuntimeException;
 use setasign\Fpdi\Tcpdf\Fpdi;
 
 class VisaChecklistPdfService
 {
     public function generate(VisaRequirement $requirement, array $options = []): string
     {
-        $pdf = new class extends Fpdi {
-            public string $letterheadPath = '';
+        $letterheadPath = resource_path('pdf/unigo-letterhead.pdf');
 
-            public function Header(): void
-            {
-                if (is_file($this->letterheadPath)) {
-                    $this->ImageSVG($this->letterheadPath, 0, 0, 210, 297);
-                }
-                $this->SetY(43);
-            }
+        if (! is_file($letterheadPath)) {
+            throw new RuntimeException('The original UniGo uploaded PDF letterhead is missing.');
+        }
 
-            public function Footer(): void
-            {
-                $this->SetY(-14);
-                $this->SetFont('helvetica', '', 8);
-                $this->SetTextColor(90, 100, 112);
-                $this->Cell(0, 7, 'UniGo Tours & Travels  |  Page '.$this->getAliasNumPage().' of '.$this->getAliasNbPages(), 0, 0, 'R');
-            }
-        };
+        $pdf = new Fpdi();
+        $pageCount = $pdf->setSourceFile($letterheadPath);
 
-        $pdf->letterheadPath = resource_path('pdf/unigo-letterhead.svg');
-        $pdf->SetCompression(false);
+        if ($pageCount < 1) {
+            throw new RuntimeException('The original UniGo PDF letterhead has no pages.');
+        }
+
+        $templateId = $pdf->importPage(1);
+        $pageSize = $pdf->getTemplateSize($templateId);
+        $pageWidth = (float) $pageSize['width'];
+        $pageHeight = (float) $pageSize['height'];
+        $left = $pageWidth * 0.08;
+        $right = $pageWidth * 0.08;
+        $top = $pageHeight * 0.155;
+        $bottom = $pageHeight * 0.09;
+        $qrSize = min(17.0, $pageWidth * 0.075);
+        $contentWidth = $pageWidth - $left - $right;
+
         $pdf->SetCreator('UniGo');
         $pdf->SetAuthor('UniGo Tours & Travels');
-        $pdf->SetTitle(($requirement->country?->name ?? 'Destination').' visa checklist');
-        $pdf->SetSubject('Bangladeshi ordinary passport visa checklist');
-        $pdf->SetKeywords('visa checklist, Bangladesh, UniGo, tourism');
-        $pdf->SetMargins(16, 44, 16);
+        $pdf->SetTitle(($requirement->country?->name ?? 'Destination').' required visa documents');
+        $pdf->SetSubject('Required visa documents for Bangladeshi ordinary passport holders');
+        $pdf->SetMargins($left, $top, $right);
         $pdf->SetHeaderMargin(0);
-        $pdf->SetFooterMargin(12);
-        $pdf->SetAutoPageBreak(true, 34);
-        $pdf->setPrintHeader(true);
-        $pdf->setPrintFooter(true);
-        $pdf->SetFont('dejavusans', '', 11);
-        $pdf->AddPage();
+        $pdf->SetFooterMargin(0);
+        $pdf->SetAutoPageBreak(false, 0);
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+        $pdf->SetFont('dejavusans', '', 8.5);
+        $pdf->AddPage($pageSize['orientation'], [$pageWidth, $pageHeight]);
+        $pdf->useTemplate($templateId, 0, 0, $pageWidth, $pageHeight);
 
-        $html = $this->buildHtml($requirement, $options);
+        $pdf->SetXY($left, $top);
+        $pdf->SetFont('dejavusans', 'B', 13);
+        $pdf->SetTextColor(8, 43, 76);
+        $pdf->MultiCell($contentWidth, 6, ($requirement->country?->name ?? 'Destination').' Visa Checklist', 0, 'L', false, 1);
 
-        $pdf->writeHTML($html, true, false, true, false, '');
-        $slug = $requirement->country?->slug ?? '';
-        $url = 'https://unigo-bd.com/visa-services/'.$slug.'/';
+        $pdf->SetFont('dejavusans', '', 8);
+        $pdf->SetTextColor(82, 101, 121);
+        $pdf->MultiCell($contentWidth, 4.5, 'Bangladeshi ordinary passport  |  Tourism', 0, 'L', false, 1);
         $pdf->Ln(2);
-        if ($pdf->GetY() > 238) {
-            $pdf->AddPage();
+
+        $documents = $this->requiredDocuments($requirement, $options);
+        if ($documents === []) {
+            throw new DomainException('No required documents match the selected occupation filter.');
         }
-        $pdf->SetFont('helvetica', '', 9);
-        $pdf->Cell(0, 6, 'Scan for the latest UniGo destination guide', 0, 1, 'L');
-        $pdf->write2DBarcode($url, 'QRCODE,H', '', '', 24, 24, ['border' => 0, 'padding' => 1], 'N');
+
+        $pdf->SetFont('dejavusans', 'B', 9);
+        $pdf->SetTextColor(8, 43, 76);
+        $pdf->MultiCell($contentWidth, 5, 'Required documents', 0, 'L', false, 1);
+        $pdf->Ln(1);
+        $pdf->SetFont('dejavusans', '', 8.5);
+        $pdf->SetTextColor(38, 63, 89);
+
+        foreach ($documents as $index => $document) {
+            $pdf->MultiCell($contentWidth, 4.6, ($index + 1).'. '.$document, 0, 'L', false, 1);
+            $pdf->Ln(0.4);
+        }
+
+        $qrY = $pageHeight - $bottom - $qrSize;
+        if ($pdf->GetY() + 4 > $qrY) {
+            throw new DomainException('The selected required documents do not fit safely on one original letterhead page.');
+        }
+
+        $pdf->SetDrawColor(215, 25, 45);
+        $pdf->SetLineWidth(0.25);
+        $pdf->Line($left, $qrY - 3, $pageWidth - $right, $qrY - 3);
+        $pdf->SetXY($left, $qrY + 1);
+        $pdf->SetFont('dejavusans', 'B', 8);
+        $pdf->SetTextColor(8, 43, 76);
+        $pdf->MultiCell($contentWidth - $qrSize - 5, 5, 'To get full information, please visit here.', 0, 'L', false, 1);
+        $url = 'https://unigo-bd.com/visa-services/'.($requirement->country?->slug ?? '').'/';
+        $pdf->write2DBarcode($url, 'QRCODE,H', $pageWidth - $right - $qrSize, $qrY, $qrSize, $qrSize, ['border' => 0, 'padding' => 1], 'N');
+
+        if ($pdf->getNumPages() !== 1) {
+            throw new RuntimeException('The visa checklist must be exactly one page.');
+        }
 
         return $pdf->Output('', 'S');
     }
 
-    public function buildHtml(VisaRequirement $requirement, array $options = []): string
+    public function requiredDocuments(VisaRequirement $requirement, array $options = []): array
     {
-        $country = $requirement->country?->name ?? 'Destination';
-        $html = '<h1 style="color:#082b4c;font-size:17pt;">'.$this->escape($country).' Visa Checklist</h1>';
-        $html .= '<p style="font-size:10pt;color:#526579;">Bangladeshi ordinary passport | '.ucfirst($this->escape((string) $requirement->travel_purpose)).'</p>';
-        $html .= $this->section('Visa route and conditions', [
-            'Passport nationality' => $requirement->passport_nationality_name ?? 'Bangladesh',
-            'Passport nationality code' => $requirement->passport_nationality_iso3,
-            'Requirement type' => $requirement->requirement_type,
-            'Visa required' => $this->boolean($requirement->visa_required),
-            'Visa-free available' => $this->boolean($requirement->visa_free_available),
-            'Visa on arrival' => $this->boolean($requirement->visa_on_arrival_available),
-            'eVisa available' => $this->boolean($requirement->evisa_available),
-            'Maximum permitted stay' => $requirement->maximum_permitted_stay,
-            'Entry count' => $requirement->entry_count,
-            'Application channel' => $requirement->application_channel,
-            'Application fee' => $requirement->application_fee,
-            'Processing time' => $requirement->processing_time,
-        ]);
+        $scope = $options['scope'] ?? 'applicant';
+        $applicantOccupation = $options['applicant_occupation'] ?? 'employee';
+        $documents = [];
 
-        $scope = $options['scope'] ?? 'both';
-        if ($scope !== 'sponsor') {
-            $html .= $this->section('Required documents', $requirement->required_documents ?? []);
-            $profiles = $requirement->applicant_checklists ?? [];
-            $selectedOccupation = $options['applicant_occupation'] ?? null;
-            foreach ($profiles as $profile) {
-                $type = is_array($profile) ? ($profile['applicant_type'] ?? 'Applicant') : 'Applicant';
-                $documents = is_array($profile) ? ($profile['documents'] ?? []) : [];
-                $normalType = strtolower(str_replace([' ', '-'], '_', $type));
-                $isSelected = $selectedOccupation && ($normalType === $selectedOccupation || ($selectedOccupation === 'business' && (str_contains($normalType, 'business') || str_contains($normalType, 'self_employed'))));
-                $profileTitle = ucwords(str_replace(['_', '-'], ' ', $type)).($isSelected ? ' (selected profile)' : '');
-                $html .= '<h2>'.$this->escape($profileTitle).' checklist</h2>';
-                $html .= $this->documentList($documents);
-                $html .= $this->section('Checklist source', [
-                    'Source' => $profile['source_name'] ?? null,
-                    'URL' => $profile['source_url'] ?? null,
-                    'Last checked' => $profile['checked_at'] ?? null,
-                ]);
-            }
-            if (!$profiles) {
-                $html .= '<p>Occupation-specific checklist: no separate profile was supplied in the verified record. Confirm any additional occupation documents with the relevant authority.</p>';
-            }
+        if ($scope !== 'applicant') {
+            throw new InvalidArgumentException('Only applicant checklists are currently supported. Sponsor-specific requirements are not yet stored as verified destination data.');
         }
 
-        if ($scope !== 'applicant' && ($options['funding'] ?? 'full') !== 'self') {
-            $html .= '<h2>Sponsor supporting documents</h2><p>These are supporting-document suggestions, not universal official requirements. Prepare only where relevant to the application route.</p>';
-            $html .= $this->documentList([
-                ['name' => 'Sponsor identity and lawful-status evidence, where applicable', 'status' => 'suggested'],
-                ['name' => 'Signed invitation or financial-support letter stating the costs covered', 'status' => 'suggested'],
-                ['name' => 'Recent evidence of funds available to the sponsor', 'status' => 'suggested'],
-                ['name' => 'Evidence of relationship to the applicant, where relevant', 'status' => 'suggested'],
-            ]);
-            $html .= $this->section('Sponsor details', [
-                'Sponsor occupation' => $options['sponsor_occupation'] ?? null,
-                'Funding arrangement' => $options['funding'] ?? null,
-                'Relationship to applicant' => $options['relationship'] ?? null,
-            ]);
+        foreach ($requirement->required_documents ?? [] as $document) {
+            $this->appendRequiredDocument($documents, $document);
         }
 
-        $html .= $this->section('Passport, financial and travel conditions', [
-            'Passport validity' => $requirement->passport_validity_rule,
-            'Blank passport pages' => $requirement->blank_passport_pages_rule,
-            'Proof of funds' => $requirement->proof_of_funds_rule,
-            'Return or onward ticket' => $requirement->return_ticket_rule,
-            'Accommodation' => $requirement->accommodation_rule,
-            'Travel insurance' => $requirement->travel_insurance_rule,
-            'Health requirements' => $requirement->health_requirements,
-            'Transit requirements' => $requirement->transit_requirements,
-            'Effective from' => $requirement->effective_from?->toDateString(),
-            'Effective until' => $requirement->effective_until?->toDateString(),
-            'Official information last checked' => $requirement->official_source_checked_at?->toDateTimeString(),
-        ]);
-
-        $photo = $requirement->photo_specifications ?? [];
-        $html .= '<h2>Photograph specifications</h2>';
-        $html .= $photo ? $this->section('', $photo) : '<p>No verified photo specification is currently recorded. Confirm photo capture and format with the official application centre.</p>';
-
-        $sources = $requirement->sources ?? collect();
-        $html .= '<h2>Official and supporting sources</h2>';
-        foreach ($sources as $source) {
-            $html .= '<p><strong>'.$this->escape($source->source_name ?? $source->source_type).'</strong><br />';
-            $html .= 'Source type: '.$this->escape((string) $source->source_type).'<br />';
-            if ($source->source_url) {
-                $url = $this->escape($source->source_url);
-                $html .= '<a href="'.$url.'">'.$url.'</a><br />';
-            }
-            $html .= 'Primary source: '.($source->is_primary ? 'Yes' : 'No').'<br />';
-            $html .= 'Last checked: '.$this->escape((string) $source->source_last_checked_at).'</p>';
-        }
-        $html .= '<p style="font-size:9pt;color:#526579;">Conditional and if-applicable documents must be prepared only when the stated circumstances apply. Requirements, fees and processing times can change. Confirm the latest instructions with the responsible authority before applying.</p>';
-
-        return $html;
-    }
-
-    private function section(string $title, array $values): string
-    {
-        $html = $title !== '' ? '<h2>'.$this->escape($title).'</h2>' : '';
-        $html .= '<table cellpadding="4" cellspacing="0" border="0">';
-        foreach ($values as $key => $value) {
-            if (is_int($key)) {
-                $name = is_array($value) ? ($value['name'] ?? '') : $value;
-                if (is_array($value)) {
-                    $html .= '<tr><td>'.$this->escape((string) $name).'</td></tr>';
-                } elseif ($name !== null && trim((string) $name) !== '') {
-                    $html .= '<tr><td>'.$this->escape((string) $name).'</td></tr>';
-                }
+        foreach ($requirement->applicant_checklists ?? [] as $profile) {
+            if (! is_array($profile) || ! $this->matchesOccupation($profile['applicant_type'] ?? '', $applicantOccupation)) {
                 continue;
             }
-            if (is_array($value)) {
-                $value = json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            foreach ($profile['documents'] ?? [] as $document) {
+                $this->appendRequiredDocument($documents, $document);
             }
-            if ($value === null || $value === '' || $value === false) {
-                continue;
-            }
-            $html .= '<tr><td width="34%"><strong>'.$this->escape((string) $key).'</strong></td><td>'.$this->escape((string) $value).'</td></tr>';
         }
-        return $html.'</table>';
+
+        return array_values($documents);
     }
 
-    private function documentList(array $documents): string
+    private function appendRequiredDocument(array &$documents, mixed $document): void
     {
-        $html = '<table cellpadding="4" cellspacing="0" border="0">';
-        foreach ($documents as $document) {
-            $name = is_array($document) ? ($document['name'] ?? '') : $document;
-            $status = is_array($document) ? ($document['status'] ?? 'required') : 'required';
-            $notes = is_array($document) ? ($document['notes'] ?? null) : null;
-            if ($name === '') {
-                continue;
+        if (is_array($document)) {
+            $status = strtolower(trim((string) ($document['status'] ?? '')));
+            if (! in_array($status, ['required', 'mandatory'], true)) {
+                return;
             }
-            $html .= '<tr><td width="24%"><strong>'.$this->escape(ucwords(str_replace('_', ' ', (string) $status))).'</strong></td><td>'.$this->escape((string) $name);
-            if ($notes) {
-                $html .= '<br /><i>'.$this->escape((string) $notes).'</i>';
-            }
-            $html .= '</td></tr>';
+            $name = trim((string) ($document['name'] ?? ''));
+        } else {
+            $name = trim((string) $document);
         }
-        return $html.'</table>';
+
+        if ($name === '') {
+            return;
+        }
+
+        $key = mb_strtolower(preg_replace('/\s+/', ' ', $name));
+        $documents[$key] = $name;
     }
 
-    private function escape(string $value): string
+    private function matchesOccupation(string $applicantType, string $occupation): bool
     {
-        return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-    }
+        $type = strtolower(trim(str_replace([' ', '-'], '_', $applicantType)));
+        $occupation = strtolower(trim($occupation));
 
-    private function boolean(?bool $value): ?string
-    {
-        return $value === null ? null : ($value ? 'Yes' : 'No');
+        $aliases = [
+            'employee' => ['employee', 'employed', 'salaried_employee', 'government_employee', 'private_employee'],
+            'business' => ['business', 'business_owner', 'self_employed', 'self_employed_or_business_owner', 'entrepreneur', 'trader'],
+            'student' => ['student', 'pupil'],
+            'retired' => ['retired', 'pensioner'],
+            'other' => ['other', 'unemployed', 'freelancer'],
+        ];
+
+        return in_array($type, $aliases[$occupation] ?? [$occupation], true);
     }
 }

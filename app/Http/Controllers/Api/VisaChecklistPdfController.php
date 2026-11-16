@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\VisaRequirement;
 use App\Services\VisaChecklistPdfService;
 use Illuminate\Http\Request;
+use DomainException;
+use InvalidArgumentException;
 use Symfony\Component\HttpFoundation\Response;
 
 class VisaChecklistPdfController extends Controller
@@ -13,15 +15,12 @@ class VisaChecklistPdfController extends Controller
     public function __invoke(Request $request, string $destination, VisaChecklistPdfService $pdfService): Response
     {
         $options = $request->validate([
-            'scope' => ['nullable', 'in:applicant,both,sponsor'],
+            'scope' => ['nullable', 'in:applicant'],
             'applicant_occupation' => ['nullable', 'in:employee,business,student,retired,other'],
-            'sponsor_occupation' => ['nullable', 'in:employee,business,student,retired,other'],
-            'funding' => ['nullable', 'in:self,full,partial'],
-            'relationship' => ['nullable', 'string', 'max:160'],
         ]);
 
         $requirement = VisaRequirement::query()
-            ->with(['country:id,name,slug,iso2', 'sources' => fn ($query) => $query->orderByDesc('is_primary')->orderBy('source_type')])
+            ->with('country:id,name,slug,iso2')
             ->where('passport_nationality_iso3', 'BGD')
             ->where('travel_purpose', 'tourism')
             ->where('verification_status', 'verified')
@@ -31,7 +30,11 @@ class VisaChecklistPdfController extends Controller
             ->whereHas('country', fn ($query) => $query->where('slug', $destination))
             ->firstOrFail();
 
-        $bytes = $pdfService->generate($requirement, $options);
+        try {
+            $bytes = $pdfService->generate($requirement, $options);
+        } catch (InvalidArgumentException|DomainException $exception) {
+            return response()->json(['success' => false, 'message' => $exception->getMessage()], 422);
+        }
         $filename = ($requirement->country?->slug ?: 'destination').'-visa-checklist-unigo.pdf';
 
         return response($bytes, 200, [

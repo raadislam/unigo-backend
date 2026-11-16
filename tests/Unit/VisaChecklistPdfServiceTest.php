@@ -4,55 +4,162 @@ namespace Tests\Unit;
 
 use App\Models\Country;
 use App\Models\VisaRequirement;
-use App\Models\VisaRequirementSource;
 use App\Services\VisaChecklistPdfService;
-use Illuminate\Support\Collection;
+use InvalidArgumentException;
+use setasign\Fpdi\Tcpdf\Fpdi;
 use Tests\TestCase;
 
 class VisaChecklistPdfServiceTest extends TestCase
 {
-    public function test_it_generates_a_multi_page_pdf_with_all_checklist_items_and_official_details(): void
+    public function test_occupation_filter_returns_only_required_documents_for_the_selected_profile(): void
     {
+        $requirement = new VisaRequirement();
+        $requirement->required_documents = [
+            'Valid passport',
+            'Completed application form',
+            ['name' => 'Optional itinerary', 'status' => 'conditional'],
+        ];
+        $requirement->applicant_checklists = [
+            [
+                'applicant_type' => 'employee',
+                'documents' => [
+                    ['name' => 'Employment certificate', 'status' => 'required'],
+                    ['name' => 'Recent payslips', 'status' => 'required'],
+                    ['name' => 'Leave approval', 'status' => 'conditional'],
+                ],
+            ],
+            [
+                'applicant_type' => 'business_owner',
+                'documents' => [
+                    ['name' => 'Trade licence', 'status' => 'required'],
+                    ['name' => 'Company bank statement', 'status' => 'required'],
+                ],
+            ],
+        ];
+
+        $documents = app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
+            'scope' => 'applicant',
+            'applicant_occupation' => 'employee',
+        ]);
+
+        $this->assertSame([
+            'Valid passport',
+            'Completed application form',
+            'Employment certificate',
+            'Recent payslips',
+        ], $documents);
+    }
+
+    public function test_sponsor_checklist_is_rejected_until_verified_sponsor_specific_requirements_exist(): void
+    {
+        $requirement = new VisaRequirement();
+        $requirement->required_documents = ['Applicant passport'];
+        $requirement->applicant_checklists = [
+            [
+                'applicant_type' => 'employee',
+                'documents' => [
+                    ['name' => 'Employment certificate', 'status' => 'required'],
+                ],
+            ],
+            [
+                'applicant_type' => 'business_owner',
+                'documents' => [
+                    ['name' => 'Trade licence', 'status' => 'required'],
+                ],
+            ],
+        ];
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Only applicant checklists are currently supported');
+
+        app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
+            'scope' => 'sponsor',
+            'sponsor_occupation' => 'business',
+            'funding' => 'full',
+        ]);
+    }
+
+    public function test_combined_checklist_scope_is_rejected_instead_of_silently_omitting_sponsor_documents(): void
+    {
+        $requirement = new VisaRequirement();
+        $requirement->required_documents = ['Applicant passport'];
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Only applicant checklists are currently supported');
+
+        app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
+            'scope' => 'both',
+            'applicant_occupation' => 'employee',
+            'funding' => 'self',
+        ]);
+    }
+
+    public function test_business_occupation_matches_the_published_combined_business_profile(): void
+    {
+        $requirement = new VisaRequirement();
+        $requirement->required_documents = [];
+        $requirement->applicant_checklists = [
+            [
+                'applicant_type' => 'self_employed_or_business_owner',
+                'documents' => [
+                    ['name' => 'Trade licence', 'status' => 'required'],
+                    ['name' => 'Conditional tax evidence', 'status' => 'if_applicable'],
+                ],
+            ],
+            [
+                'applicant_type' => 'employee',
+                'documents' => [
+                    ['name' => 'Employment certificate', 'status' => 'required'],
+                ],
+            ],
+        ];
+
+        $documents = app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
+            'scope' => 'applicant',
+            'applicant_occupation' => 'business',
+        ]);
+
+        $this->assertSame(['Trade licence'], $documents);
+    }
+
+    public function test_pdf_uses_the_original_uploaded_letterhead_page_size_and_contains_exactly_one_page(): void
+    {
+        $letterhead = resource_path('pdf/unigo-letterhead.pdf');
+        $this->assertFileExists($letterhead);
+
         $country = new Country();
         $country->name = 'Test Destination';
         $country->slug = 'test-destination';
 
         $requirement = new VisaRequirement();
         $requirement->travel_purpose = 'tourism';
-        $requirement->application_fee = 'USD 75';
-        $requirement->required_documents = array_map(
-            fn (int $number) => sprintf('Completeness verification document %03d', $number),
-            range(1, 90)
-        );
-        $requirement->photo_specifications = [
-            'status' => 'verified',
-            'dimensions_mm' => '35 × 45 mm',
-            'background' => 'White background',
-        ];
+        $requirement->required_documents = ['Valid passport', 'Completed visa application form'];
         $requirement->setRelation('country', $country);
-        $requirement->setRelation('sources', new Collection());
 
-        $source = new VisaRequirementSource();
-        $source->source_type = 'official';
-        $source->source_name = 'Test Government';
-        $source->source_url = 'https://example.gov/visa';
-        $source->source_last_checked_at = now();
-        $requirement->setRelation('sources', new Collection([$source]));
+        $source = new Fpdi();
+        $source->setSourceFile($letterhead);
+        $sourceTemplate = $source->importPage(1);
+        $sourceSize = $source->getTemplateSize($sourceTemplate);
 
-        $service = app(VisaChecklistPdfService::class);
-        $html = $service->buildHtml($requirement, ['scope' => 'applicant']);
-        $this->assertStringContainsString('Completeness verification document 001', $html);
-        $this->assertStringContainsString('Completeness verification document 090', $html);
-        $this->assertStringContainsString('USD 75', $html);
-        $this->assertStringContainsString('35 × 45 mm', $html);
-        $this->assertStringContainsString('https://example.gov/visa', $html);
+        $bytes = app(VisaChecklistPdfService::class)->generate($requirement, [
+            'scope' => 'applicant',
+            'applicant_occupation' => 'employee',
+        ]);
 
-        $this->assertFileExists(resource_path('pdf/unigo-letterhead.svg'));
+        $this->assertStringStartsWith('%PDF-', $bytes);
+        $this->assertStringContainsString('%%EOF', $bytes);
 
-        $pdf = $service->generate($requirement, ['scope' => 'applicant']);
-        $this->assertStringStartsWith('%PDF-', $pdf);
-        $this->assertStringContainsString('%%EOF', $pdf);
-        preg_match_all('~/Type\s*/Page\b~', $pdf, $pages);
-        $this->assertGreaterThan(1, count($pages[0]));
+        $temporaryPdf = tempnam(sys_get_temp_dir(), 'unigo-checklist-');
+        try {
+            file_put_contents($temporaryPdf, $bytes);
+            $result = new Fpdi();
+            $this->assertSame(1, $result->setSourceFile($temporaryPdf));
+            $resultTemplate = $result->importPage(1);
+            $resultSize = $result->getTemplateSize($resultTemplate);
+            $this->assertEqualsWithDelta($sourceSize['width'], $resultSize['width'], 0.1);
+            $this->assertEqualsWithDelta($sourceSize['height'], $resultSize['height'], 0.1);
+        } finally {
+            @unlink($temporaryPdf);
+        }
     }
 }
