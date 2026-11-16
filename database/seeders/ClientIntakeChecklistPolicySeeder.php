@@ -26,6 +26,10 @@ class ClientIntakeChecklistPolicySeeder extends Seeder
 
                         if (! array_key_exists('client_documents', $profile)) {
                             $profile['client_documents'] = [];
+                            $changed = true;
+                        }
+
+                        if (($profile['checklist_review_status'] ?? null) !== 'verified') {
                             $profile['checklist_purpose'] = 'documents_client_must_submit_to_unigo';
                             $profile['checklist_review_status'] = 'awaiting_country_specific_classification';
                             $profile['checklist_review_note'] = 'This country profile has not yet been classified into client-submitted and UniGo-managed documents. Do not issue a client intake PDF until reviewed.';
