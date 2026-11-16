@@ -123,7 +123,53 @@ class VisaChecklistPdfService
             }
         }
 
-        return array_values($documents);
+        $documents = array_values($documents);
+
+        if (strtoupper((string) ($requirement->country?->iso2 ?? '')) === 'IT') {
+            $documents = $this->deduplicateItalyDocuments($documents);
+        }
+
+        return $documents;
+    }
+
+    private function deduplicateItalyDocuments(array $documents): array
+    {
+        $categories = [
+            'application' => '/application form|visa application form|type c form/i',
+            'passport' => '/passport|biodata page/i',
+            'photograph' => '/photograph|photo|picture/i',
+            'insurance' => '/insurance|medical cover|medical expenses|repatriation/i',
+            'travel' => '/flight|airline booking|return.*reservation|onward.*reservation|travel itinerary|travel plan|tour plan/i',
+            'accommodation' => '/accommodation|hotel confirmation|hotel reservation|host evidence/i',
+            'financial' => '/financial means|financial solvency|bank statement|source of funds|fidejussione|sufficient funds/i',
+        ];
+
+        $selected = [];
+        $uncategorized = [];
+
+        foreach ($documents as $document) {
+            $category = null;
+
+            foreach ($categories as $key => $pattern) {
+                if (preg_match($pattern, $document) === 1) {
+                    $category = $key;
+                    break;
+                }
+            }
+
+            if ($category === null) {
+                $uncategorized[] = $document;
+                continue;
+            }
+
+            if (! isset($selected[$category]) || mb_strlen($document) > mb_strlen($selected[$category])) {
+                $selected[$category] = $document;
+            }
+        }
+
+        $selected['photograph'] = 'Two recent identical ICAO-compliant colour photographs, 40 × 35 mm, with a white background, taken within the last 6 months';
+
+        return array_values(array_merge($uncategorized, array_values($selected)));
     }
 
     private function appendRequiredDocument(array &$documents, mixed $document): void
