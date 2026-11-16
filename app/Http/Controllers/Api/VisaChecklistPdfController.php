@@ -15,9 +15,8 @@ class VisaChecklistPdfController extends Controller
     public function __invoke(Request $request, string $destination, VisaChecklistPdfService $pdfService): Response
     {
         $options = $request->validate([
-            'scope' => ['nullable', 'in:applicant,both,sponsor'],
+            'scope' => ['nullable', 'in:applicant'],
             'applicant_occupation' => ['nullable', 'in:employee,business,student,retired,other'],
-            'funding' => ['nullable', 'in:self,full,partial'],
         ]);
 
         $requirement = VisaRequirement::query()
