@@ -14,8 +14,7 @@ class VisaChecklistPdfServiceTest extends TestCase
     public function test_occupation_filter_returns_only_required_documents_for_the_selected_profile(): void
     {
         $requirement = new VisaRequirement();
-        $requirement->required_documents = [
-        ];
+        $requirement->required_documents = ['Do not include this embassy-level requirement'];
         $requirement->applicant_checklists = [
             [
                 'applicant_type' => 'employee',
@@ -109,13 +108,13 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement->applicant_checklists = [
             [
                 'applicant_type' => 'employee',
-                'documents' => [
+                'client_documents' => [
                     ['name' => 'Employment certificate', 'status' => 'required'],
                 ],
             ],
             [
                 'applicant_type' => 'business_owner',
-                'documents' => [
+                'client_documents' => [
                     ['name' => 'Trade licence', 'status' => 'required'],
                 ],
             ],
@@ -153,14 +152,14 @@ class VisaChecklistPdfServiceTest extends TestCase
         $requirement->applicant_checklists = [
             [
                 'applicant_type' => 'self_employed_or_business_owner',
-                'documents' => [
+                'client_documents' => [
                     ['name' => 'Trade licence', 'status' => 'required'],
                     ['name' => 'Conditional tax evidence', 'status' => 'if_applicable'],
                 ],
             ],
             [
                 'applicant_type' => 'employee',
-                'documents' => [
+                'client_documents' => [
                     ['name' => 'Employment certificate', 'status' => 'required'],
                 ],
             ],
@@ -185,7 +184,11 @@ class VisaChecklistPdfServiceTest extends TestCase
 
         $requirement = new VisaRequirement();
         $requirement->travel_purpose = 'tourism';
-        $requirement->required_documents = ['Valid passport', 'Completed visa application form'];
+        $requirement->required_documents = ['Do not include embassy-level requirements'];
+        $requirement->applicant_checklists = [[
+            'applicant_type' => 'employee',
+            'client_documents' => [['name' => 'Applicant passport', 'status' => 'required']],
+        ]];
         $requirement->setRelation('country', $country);
 
         $source = new Fpdi();
