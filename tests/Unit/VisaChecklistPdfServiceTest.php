@@ -70,12 +70,27 @@ class VisaChecklistPdfServiceTest extends TestCase
         ];
 
         $this->expectException(InvalidArgumentException::class);
-        $this->expectExceptionMessage('Verified sponsor-specific required documents are not available');
+        $this->expectExceptionMessage('Only applicant checklists are currently supported');
 
         app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
             'scope' => 'sponsor',
             'sponsor_occupation' => 'business',
             'funding' => 'full',
+        ]);
+    }
+
+    public function test_combined_checklist_scope_is_rejected_instead_of_silently_omitting_sponsor_documents(): void
+    {
+        $requirement = new VisaRequirement();
+        $requirement->required_documents = ['Applicant passport'];
+
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('Only applicant checklists are currently supported');
+
+        app(VisaChecklistPdfService::class)->requiredDocuments($requirement, [
+            'scope' => 'both',
+            'applicant_occupation' => 'employee',
+            'funding' => 'self',
         ]);
     }
 
