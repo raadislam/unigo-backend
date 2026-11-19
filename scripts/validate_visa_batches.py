@@ -334,6 +334,6 @@ print(
     f"{sum(row['publish_status'] == 'draft' for row in all_rows)} pending; seed/full-audit keys match."
 )
 if warnings:
-    print(f"FRESHNESS WARNINGS: {len(warnings)} source-date fields require re-review")
+    print(f"REVIEW WARNINGS: {len(warnings)} historical source-date fields require re-review")
     for warning in warnings:
         print(f"WARNING: {warning}")
