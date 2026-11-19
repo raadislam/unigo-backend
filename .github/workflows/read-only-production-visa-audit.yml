@@ -48,34 +48,36 @@ jobs:
       - name: Checkout backend audit definitions
         uses: actions/checkout@v4
 
-      - name: Prepare read-only VPS SSH
+      - name: Prepare read-only VPS SSH with pinned host-key verification
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          test -n "$VPS_SSH_KEY"
-          test -n "$VPS_HOST"
-          test -n "$VPS_PORT"
-          test -n "$VPS_USER"
+          : "${VPS_SSH_KEY:?VPS_SSH_KEY secret is missing}"
+          : "${VPS_KNOWN_HOSTS:?VPS_KNOWN_HOSTS secret is missing}"
+          : "${VPS_HOST:?VPS_HOST secret is missing}"
+          : "${VPS_PORT:?VPS_PORT secret is missing}"
+          : "${VPS_USER:?VPS_USER secret is missing}"
           install -m 700 -d ~/.ssh
-          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_audit
+          printf '%s\\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_audit
           chmod 600 ~/.ssh/unigo_audit
-          for attempt in 1 2 3 4 5; do
-            if ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" >> ~/.ssh/known_hosts 2>~/.ssh/audit-keyscan.log; then
-              if [ -s ~/.ssh/known_hosts ]; then
-                chmod 600 ~/.ssh/known_hosts
-                exit 0
-              fi
-            fi
-            echo "Read-only audit SSH host-key scan attempt $attempt failed."
-            cat ~/.ssh/audit-keyscan.log
-            sleep 5
-          done
-          echo "Unable to retrieve the VPS SSH host key for the read-only audit."
-          exit 1
+          printf '%s\\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/pinned_known_hosts
+          chmod 600 ~/.ssh/pinned_known_hosts
+          ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" > ~/.ssh/scanned_known_hosts 2>~/.ssh/audit-keyscan.log
+          test -s ~/.ssh/scanned_known_hosts
+          awk 'NF >= 3 && $1 !~ /^#/ { if ($1 ~ /^@/) print $3 " " $4; else print $2 " " $3 }' ~/.ssh/pinned_known_hosts | sort -u > ~/.ssh/pinned_keys
+          awk 'NF >= 3 && $1 !~ /^#/ { print $2 " " $3 }' ~/.ssh/scanned_known_hosts | sort -u > ~/.ssh/scanned_keys
+          if ! grep -Fxf ~/.ssh/pinned_keys ~/.ssh/scanned_keys >/dev/null; then
+            echo "The VPS host key does not match VPS_KNOWN_HOSTS. Audit is blocked pending out-of-band fingerprint verification."
+            exit 1
+          fi
+          awk 'NR == FNR { pinned[$0] = 1; next } (($2 " " $3) in pinned) { print }' ~/.ssh/pinned_keys ~/.ssh/scanned_known_hosts > ~/.ssh/known_hosts
+          test -s ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
 
       - name: Export read-only production database snapshot
         env:
@@ -84,7 +86,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit' > production-visa-audit.json
+          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php artisan visa:requirements-audit' > production-visa-audit.json
           test -s production-visa-audit.json
 
       - name: Verify Ascension Island master-row identity and unpublished state after batch 46
@@ -94,7 +96,7 @@ jobs:
           VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php scripts/batch46_database_guard.php readback'
+          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php scripts/batch46_database_guard.php readback'
       - name: Print non-sensitive production directory parity diagnostics
         run: |
           python3 - <<'PY'
@@ -224,7 +226,7 @@ jobs:
           ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
           PHP
           scp -i ~/.ssh/unigo_audit -P "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes applicant-checklist-audit.php "$VPS_USER@$VPS_HOST:/tmp/unigo-applicant-checklist-audit.php"
-          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php -l /tmp/unigo-applicant-checklist-audit.php >/dev/null && php /tmp/unigo-applicant-checklist-audit.php; status=$?; rm -f /tmp/unigo-applicant-checklist-audit.php; exit $status' > applicant-checklist-audit.json
+          ssh -i ~/.ssh/unigo_audit -p "$VPS_PORT" -o BatchMode=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'cd /var/www/unigo/backend/current && php -l /tmp/unigo-applicant-checklist-audit.php >/dev/null && php /tmp/unigo-applicant-checklist-audit.php; status=$?; rm -f /tmp/unigo-applicant-checklist-audit.php; exit $status' > applicant-checklist-audit.json
           python3 -m json.tool applicant-checklist-audit.json > /dev/null
           python3 - <<'PY'
           import json
