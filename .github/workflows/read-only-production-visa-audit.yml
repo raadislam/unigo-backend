@@ -79,6 +79,25 @@ jobs:
           test -s ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Verify audit key fingerprint and SSH account
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          actual_fingerprint=$(ssh-keygen -y -f ~/.ssh/unigo_audit | ssh-keygen -lf - | awk '{print $2}')
+          expected_fingerprint='SHA256:vcQGKmBjiZEa25uhvjTcK+8ePWOZhyZIY/DxScvzT5U'
+          echo "Runner audit key fingerprint: $actual_fingerprint"
+          if [[ "$actual_fingerprint" != "$expected_fingerprint" ]]; then
+            echo "VPS_SSH_KEY secret does not match the public key installed on the VPS."
+            exit 1
+          fi
+          if [[ "$VPS_USER" != "root" ]]; then
+            echo "VPS_USER must be root for this audit's production path."
+            exit 1
+          fi
+          echo "SSH key fingerprint and account preflight passed."
+
       - name: Export read-only production database snapshot
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
