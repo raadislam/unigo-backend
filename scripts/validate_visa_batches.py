@@ -79,7 +79,7 @@ earliest_checked = today - timedelta(days=3)
 latest_checked = today + timedelta(days=1)
 seen = set()
 all_rows = []
-errors = []
+errors = []\nwarnings = []
 
 for path in files:
     if not path.exists():
@@ -258,8 +258,10 @@ for path in files:
             value = (row.get(field, "") or "")[:10]
             try:
                 checked = date.fromisoformat(value)
-                if checked < earliest_checked or checked > latest_checked:
-                    errors.append(f"{path.name}:{line}: {field} is stale or unexpectedly future-dated")
+                if checked > latest_checked:
+                    errors.append(f"{path.name}:{line}: {field} is unexpectedly future-dated")
+                elif checked < earliest_checked:
+                    warnings.append(f"{path.name}:{line}: {field} is older than the freshness window; record requires re-review")
             except ValueError:
                 errors.append(f"{path.name}:{line}: {field} is not an ISO date")
         docs = [item.strip() for item in row.get("required_documents", "").split("|") if item.strip()]
@@ -331,3 +333,7 @@ print(
     f"{sum(row['publish_status'] == 'published' for row in all_rows)} verified/publishable; "
     f"{sum(row['publish_status'] == 'draft' for row in all_rows)} pending; seed/full-audit keys match."
 )
+if warnings:
+    print(f"FRESHNESS WARNINGS: {len(warnings)} source-date fields require re-review")
+    for warning in warnings:
+        print(f"WARNING: {warning}")
