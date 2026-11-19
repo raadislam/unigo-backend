@@ -79,7 +79,8 @@ earliest_checked = today - timedelta(days=3)
 latest_checked = today + timedelta(days=1)
 seen = set()
 all_rows = []
-errors = []\nwarnings = []
+errors = []
+warnings = []
 
 for path in files:
     if not path.exists():
