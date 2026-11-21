@@ -7,7 +7,7 @@ use App\Http\Controllers\Api\VisaRequirementController;
 use App\Http\Controllers\Api\VisaChecklistPdfController;
 use Illuminate\Support\Facades\Route;
 
-Route::middleware('throttle:60,1')->group(function () {
+Route::middleware('throttle:180,1')->group(function () {
     Route::get('/countries', [CountryController::class, 'index']);
     Route::get('/countries/{slug}', [CountryController::class, 'show']);
 
