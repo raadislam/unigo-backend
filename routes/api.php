@@ -1,17 +1,20 @@
 <?php
 
-use App\Http\Controllers\Api\Admin\VisaRequirementManagementController;
-use App\Http\Controllers\Api\ContactController;
-use App\Http\Controllers\Api\CountryController;
-use App\Http\Controllers\Api\VisaRequirementController;
-use App\Http\Controllers\Api\VisaChecklistPdfController;
-use Illuminate\Support\Facades\Route;
+use App\\Http\\Controllers\\Api\\Admin\\VisaRequirementManagementController;
+use App\\Http\\Controllers\\Api\\ContactController;
+use App\\Http\\Controllers\\Api\\CountryController;
+use App\\Http\\Controllers\\Api\\VisaRequirementController;
+use App\\Http\\Controllers\\Api\\VisaChecklistPdfController;
+use Illuminate\\Support\\Facades\\Route;
 
-Route::get('/countries', [CountryController::class, 'index']);
-Route::get('/countries/{slug}', [CountryController::class, 'show']);
+Route::middleware('throttle:60,1')->group(function () {
+    Route::get('/countries', [CountryController::class, 'index']);
+    Route::get('/countries/{slug}', [CountryController::class, 'show']);
 
-Route::get('/visa-requirements', [VisaRequirementController::class, 'index']);
-Route::get('/visa-requirements/{destination}', [VisaRequirementController::class, 'show']);
+    Route::get('/visa-requirements', [VisaRequirementController::class, 'index']);
+    Route::get('/visa-requirements/{destination}', [VisaRequirementController::class, 'show']);
+});
+
 Route::post('/visa-requirements/{destination}/checklist-pdf', VisaChecklistPdfController::class)->middleware('throttle:20,1');
 
 Route::post('/contact', [ContactController::class, 'store'])
