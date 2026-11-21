@@ -1,0 +1,32 @@
+name: Validate Backend API Route Syntax
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'routes/api.php'
+      - '.github/workflows/validate-api-route-syntax.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'routes/api.php'
+      - '.github/workflows/validate-api-route-syntax.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+      - name: Validate API route syntax
+        run: php -l routes/api.php
