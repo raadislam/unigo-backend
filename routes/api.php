@@ -7,11 +7,11 @@ use App\Http\Controllers\Api\VisaRequirementController;
 use App\Http\Controllers\Api\VisaChecklistPdfController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/countries', [CountryController::class, 'index']);
-Route::get('/countries/{slug}', [CountryController::class, 'show']);
+Route::get('/countries', [CountryController::class, 'index'])->middleware('throttle:30,1');
+Route::get('/countries/{slug}', [CountryController::class, 'show'])->middleware('throttle:60,1');
 
-Route::get('/visa-requirements', [VisaRequirementController::class, 'index']);
-Route::get('/visa-requirements/{destination}', [VisaRequirementController::class, 'show']);
+Route::get('/visa-requirements', [VisaRequirementController::class, 'index'])->middleware('throttle:30,1');
+Route::get('/visa-requirements/{destination}', [VisaRequirementController::class, 'show'])->middleware('throttle:60,1');
 Route::post('/visa-requirements/{destination}/checklist-pdf', VisaChecklistPdfController::class)->middleware('throttle:20,1');
 
 Route::post('/contact', [ContactController::class, 'store'])
