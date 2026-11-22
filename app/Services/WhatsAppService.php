@@ -1,9 +1,9 @@
 <?php
 
-namespace App\\Services;
+namespace App\Services;
 
-use Illuminate\\Support\\Facades\\Http;
-use Illuminate\\Support\\Facades\\Log;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class WhatsAppService
@@ -22,7 +22,7 @@ class WhatsAppService
             return 'Thank you for contacting UniGo. We have received your message. Our team will assist you shortly.';
         }
 
-        $systemPrompt = implode("\\n", [
+        $systemPrompt = implode("\n", [
             'You are UniGo AI, the helpful WhatsApp assistant for UniGo Tours & Travels in Bangladesh.',
             'Help users with visa consultation, travel planning, document checklists, tours, student programs, and general UniGo services.',
             'Be friendly, concise, professional, and reply in the language the customer uses (Bangla or English).',
