@@ -2,10 +2,16 @@
 
 use App\Http\Controllers\Api\Admin\VisaRequirementManagementController;
 use App\Http\Controllers\Api\ContactController;
+use App\Http\Controllers\Api\WhatsAppWebhookController;
 use App\Http\Controllers\Api\CountryController;
 use App\Http\Controllers\Api\VisaRequirementController;
 use App\Http\Controllers\Api\VisaChecklistPdfController;
 use Illuminate\Support\Facades\Route;
+
+Route::prefix('whatsapp')->middleware('throttle:120,1')->group(function () {
+    Route::get('/webhook', [WhatsAppWebhookController::class, 'verify']);
+    Route::post('/webhook', [WhatsAppWebhookController::class, 'receive']);
+});
 
 Route::middleware('throttle:180,1')->group(function () {
     Route::get('/countries', [CountryController::class, 'index']);
