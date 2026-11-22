@@ -10,9 +10,9 @@ class WhatsAppWebhookController
 {
     public function verify(Request $request): Response
     {
-        $mode = $request->query('hub.mode');
-        $token = (string) $request->query('hub.verify_token', '');
-        $challenge = (string) $request->query('hub.challenge', '');
+        $mode = $request->query('hub.mode', $request->query('hub_mode'));
+        $token = (string) $request->query('hub.verify_token', $request->query('hub_verify_token', ''));
+        $challenge = (string) $request->query('hub.challenge', $request->query('hub_challenge', ''));
         $expectedToken = (string) config('services.whatsapp.webhook_verify_token', '');
 
         if ($mode === 'subscribe' && $expectedToken !== '' && hash_equals($expectedToken, $token)) {
