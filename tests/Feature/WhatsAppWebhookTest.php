@@ -51,14 +51,18 @@ class WhatsAppWebhookTest extends TestCase
 
         $payload = [
             'object' => 'whatsapp_business_account',
-            'entry' => [[
-                'changes' => [[
-                    'value' => [
-                        'messages' => [['id' => 'wamid.test']],
-                        'statuses' => [],
+            'entry' => [
+                [
+                    'changes' => [
+                        [
+                            'value' => [
+                                'messages' => [['id' => 'wamid.test']],
+                                'statuses' => [],
+                            ],
+                        ],
                     ],
-                ]],
-            ]],
+                ],
+            ],
         ];
         $content = json_encode($payload);
         $signature = 'sha256=' . hash_hmac('sha256', $content, 'test-app-secret');
@@ -95,18 +99,24 @@ class WhatsAppWebhookTest extends TestCase
 
         $payload = [
             'object' => 'whatsapp_business_account',
-            'entry' => [[
-                'changes' => [[
-                    'value' => [
-                        'messages' => [[
-                            'id' => 'wamid.incoming-001',
-                            'from' => '8801700000000',
-                            'type' => 'text',
-                            'text' => ['body' => 'Hello UniGo'],
-                        ]],
+            'entry' => [
+                [
+                    'changes' => [
+                        [
+                            'value' => [
+                                'messages' => [
+                                    [
+                                        'id' => 'wamid.incoming-001',
+                                        'from' => '8801700000000',
+                                        'type' => 'text',
+                                        'text' => ['body' => 'Hello UniGo'],
+                                    ],
+                                ],
+                            ],
+                        ],
                     ],
-                ]],
-            ]],
+                ],
+            ],
         ];
         $content = json_encode($payload);
         $signature = 'sha256=' . hash_hmac('sha256', $content, 'test-app-secret');
@@ -133,22 +143,30 @@ class WhatsAppWebhookTest extends TestCase
             'services.whatsapp.phone_number_id' => '123456789',
             'services.openai.api_key' => '',
         ]);
-        Http::fake(['https://graph.facebook.com/*' => Http::response(['messages' => [['id' => 'reply']]], 200)]);
+        Http::fake([
+            'https://graph.facebook.com/*' => Http::response(['messages' => [['id' => 'reply']]], 200),
+        ]);
 
         $payload = [
             'object' => 'whatsapp_business_account',
-            'entry' => [[
-                'changes' => [[
-                    'value' => [
-                        'messages' => [[
-                            'id' => 'wamid.duplicate',
-                            'from' => '8801700000000',
-                            'type' => 'text',
-                            'text' => ['body' => 'Hello'],
-                        ]],
+            'entry' => [
+                [
+                    'changes' => [
+                        [
+                            'value' => [
+                                'messages' => [
+                                    [
+                                        'id' => 'wamid.duplicate',
+                                        'from' => '8801700000000',
+                                        'type' => 'text',
+                                        'text' => ['body' => 'Hello'],
+                                    ],
+                                ],
+                            ],
+                        ],
                     ],
-                ]],
-            ]],
+                ],
+            ],
         ];
         $content = json_encode($payload);
         $signature = 'sha256=' . hash_hmac('sha256', $content, 'test-app-secret');
