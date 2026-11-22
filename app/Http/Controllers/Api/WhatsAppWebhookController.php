@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Services\WhatsAppService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -22,7 +24,7 @@ class WhatsAppWebhookController
         return response('Forbidden', 403, ['Content-Type' => 'text/plain']);
     }
 
-    public function receive(Request $request): Response
+    public function receive(Request $request, WhatsAppService $whatsAppService): Response
     {
         $appSecret = (string) config('services.whatsapp.app_secret', '');
 
@@ -45,8 +47,30 @@ class WhatsAppWebhookController
         foreach (($payload['entry'] ?? []) as $entry) {
             foreach (($entry['changes'] ?? []) as $change) {
                 $value = $change['value'] ?? [];
-                $messageCount += count($value['messages'] ?? []);
+                $messages = $value['messages'] ?? [];
+                $messageCount += count($messages);
                 $statusCount += count($value['statuses'] ?? []);
+
+                foreach ($messages as $message) {
+                    if (($message['type'] ?? '') !== 'text') {
+                        continue;
+                    }
+
+                    $messageId = (string) ($message['id'] ?? '');
+                    $sender = (string) ($message['from'] ?? '');
+                    $text = trim((string) ($message['text']['body'] ?? ''));
+
+                    if ($messageId === '' || $sender === '' || $text === '') {
+                        continue;
+                    }
+
+                    $cacheKey = 'whatsapp:incoming:' . hash('sha256', $messageId);
+                    if (!Cache::add($cacheKey, true, now()->addDay())) {
+                        continue;
+                    }
+
+                    $whatsAppService->replyToIncomingMessage($sender, $text);
+                }
             }
         }
 
