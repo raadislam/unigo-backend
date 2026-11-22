@@ -40,6 +40,13 @@ return [
         'app_secret' => env('WHATSAPP_APP_SECRET'),
     ],
 
+    'openai' => [
+        'api_key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4.1-mini'),
+        'chat_completions_url' => env('OPENAI_CHAT_COMPLETIONS_URL', 'https://api.openai.com/v1/chat/completions'),
+        'timeout' => env('OPENAI_TIMEOUT', 25),
+    ],
+
     'unigo_admin' => [
         'secret' => env('UNIGO_ADMIN_API_SECRET'),
     ],
