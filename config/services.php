@@ -35,6 +35,11 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'webhook_verify_token' => env('WHATSAPP_WEBHOOK_VERIFY_TOKEN'),
+        'app_secret' => env('WHATSAPP_APP_SECRET'),
+    ],
+
     'unigo_admin' => [
         'secret' => env('UNIGO_ADMIN_API_SECRET'),
     ],
