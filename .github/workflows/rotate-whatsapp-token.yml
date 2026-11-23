@@ -1,0 +1,87 @@
+name: Rotate WhatsApp Cloud API Token
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rotate-token:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare pinned SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+        run: |
+          set -euo pipefail
+          : "${VPS_SSH_KEY:?Missing VPS SSH key}"
+          : "${VPS_KNOWN_HOSTS:?Missing pinned known-hosts}"
+          : "${VPS_HOST:?Missing VPS host}"
+          : "${VPS_PORT:?Missing VPS port}"
+          : "${VPS_USER:?Missing VPS user}"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_deploy
+          chmod 600 ~/.ssh/unigo_deploy
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'true'
+
+      - name: Transfer rotated token securely
+        env:
+          WHATSAPP_ACCESS_TOKEN_ROTATED: ${{ secrets.WHATSAPP_ACCESS_TOKEN_ROTATED }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          : "${WHATSAPP_ACCESS_TOKEN_ROTATED:?Add repository secret WHATSAPP_ACCESS_TOKEN_ROTATED first}"
+          TOKEN_FILE="$RUNNER_TEMP/whatsapp-token"
+          printf '%s' "$WHATSAPP_ACCESS_TOKEN_ROTATED" > "$TOKEN_FILE"
+          chmod 600 "$TOKEN_FILE"
+          scp -i ~/.ssh/unigo_deploy -P "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$TOKEN_FILE" "$VPS_USER@$VPS_HOST:/tmp/unigo-whatsapp-token-$RUN_ID"
+          rm -f "$TOKEN_FILE"
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" "chmod 600 /tmp/unigo-whatsapp-token-$RUN_ID"
+
+      - name: Replace token, refresh config, validate read-only API access
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" "RUN_ID='$RUN_ID' bash -s" <<'REMOTE'
+          set -euo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          ENV_FILE="/var/www/unigo/backend/shared/.env"
+          TOKEN_FILE="/tmp/unigo-whatsapp-token-$RUN_ID"
+          test -s "$TOKEN_FILE"
+          trap 'rm -f "$TOKEN_FILE"' EXIT
+          php -r '
+            $token=trim(file_get_contents($argv[1]));
+            if ($token==="") { fwrite(STDERR,"Token file is empty.\n"); exit(1); }
+            $envFile="/var/www/unigo/backend/shared/.env";
+            $backup=$envFile.".backup-token-rotation-".date("YmdHis");
+            if (!copy($envFile,$backup)) { fwrite(STDERR,"Could not back up shared environment.\n"); exit(1); }
+            $escaped=str_replace(["\\\\","\\""],["\\\\\\\\","\\\\\\""],$token);
+            $line="WHATSAPP_ACCESS_TOKEN=\\"".$escaped."\\"";
+            $content=file_get_contents($envFile);
+            $count=0;
+            $content=preg_replace_callback("/^(?:export )?WHATSAPP_ACCESS_TOKEN=.*$/m",fn()=> $line,$content,1,$count);
+            if ($count===0) { $content=rtrim($content)."\\n".$line."\\n"; }
+            if (file_put_contents($envFile,$content,LOCK_EX)===false) { fwrite(STDERR,"Could not update shared environment.\n"); exit(1); }
+            chmod($envFile,0600);
+            echo "WhatsApp token updated; backup created; secret value suppressed.\n";
+          ' "$TOKEN_FILE"
+          cd "$APP_DIR"
+          php artisan config:clear
+          php artisan config:cache
+          php artisan tinker --execute='$token=(string)config("services.whatsapp.access_token",""); $id=(string)config("services.whatsapp.phone_number_id",""); $version=(string)config("services.whatsapp.graph_api_version","v25.0"); if ($token==="" || $id==="") { echo "WhatsApp configuration is incomplete."; exit(1); } $response=\Illuminate\Support\Facades\Http::withToken($token)->timeout(20)->get("https://graph.facebook.com/".$version."/".$id,["fields"=>"id,display_phone_number,verified_name"]); echo "Meta Graph API HTTP=".$response->status()." "; if (!$response->successful()) { $err=$response->json("error",[]); echo "Authentication/permission error code=".($err["code"]??"")." subcode=".($err["error_subcode"]??"")."; response body suppressed."; exit(1); } echo "WhatsApp phone number resource accessible.";'
+          REMOTE
