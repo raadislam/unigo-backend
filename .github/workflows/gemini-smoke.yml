@@ -75,6 +75,13 @@ jobs:
           else
             echo "Gemini key already present in shared environment."
           fi
+          if grep -E '^(export )?GEMINI_MODEL=' "$SHARED_ENV" | grep -F 'gemini-2.5-flash' >/dev/null; then
+            sed -i -E 's/^(export )?GEMINI_MODEL=.*/GEMINI_MODEL=gemini-3.8-flash/' "$SHARED_ENV"
+            echo "Updated retired Gemini model configuration."
+          elif ! grep -E '^(export )?GEMINI_MODEL=' "$SHARED_ENV" >/dev/null; then
+            printf '\nGEMINI_MODEL=gemini-3.8-flash\n' >> "$SHARED_ENV"
+            echo "Set current Gemini model in shared environment."
+          fi
           cd "$APP_DIR"
           php artisan config:clear
           php artisan config:cache
