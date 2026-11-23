@@ -5,10 +5,12 @@ namespace Tests\Feature;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class WhatsAppWebhookTest extends TestCase
 {
+    use RefreshDatabase;
     public function test_meta_webhook_verification_returns_challenge_for_matching_token(): void
     {
         config(['services.whatsapp.webhook_verify_token' => 'test-verify-token']);
