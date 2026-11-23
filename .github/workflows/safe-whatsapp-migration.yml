@@ -167,6 +167,7 @@ jobs:
           gzip -dc "$SCHEMA_BASENAME" | mysql -h127.0.0.1 -uroot unigo_schema_restore_test
           TABLE_COUNT="$(mysql -h127.0.0.1 -uroot unigo_schema_restore_test -Nse 'SHOW TABLES' | wc -l)"
           test "$TABLE_COUNT" -gt 0
+          cd "$GITHUB_WORKSPACE"
           DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=unigo_schema_restore_test DB_USERNAME=root DB_PASSWORD=restoretest php artisan config:clear
           DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=unigo_schema_restore_test DB_USERNAME=root DB_PASSWORD=restoretest php artisan migrate --path=database/migrations/2026_11_23_000001_create_whatsapp_knowledge_table.php --force
           mysql -h127.0.0.1 -uroot unigo_schema_restore_test -Nse "SHOW TABLES LIKE 'whatsapp_knowledge'" | grep -F whatsapp_knowledge
