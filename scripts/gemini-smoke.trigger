@@ -1,1 +1,1 @@
-Retry WhatsApp credential recovery and Meta API diagnostic.
+Redact Meta error bodies from diagnostics and continue other smoke checks.
