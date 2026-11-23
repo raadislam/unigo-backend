@@ -70,12 +70,11 @@ jobs:
             $envFile="/var/www/unigo/backend/shared/.env";
             $backup=$envFile.".backup-token-rotation-".date("YmdHis");
             if (!copy($envFile,$backup)) { fwrite(STDERR,"Could not back up shared environment.\n"); exit(1); }
-            $escaped=str_replace(["\\\\","\\""],["\\\\\\\\","\\\\\\""],$token);
-            $line="WHATSAPP_ACCESS_TOKEN=\\"".$escaped."\\"";
+            $line="WHATSAPP_ACCESS_TOKEN=".$token;
             $content=file_get_contents($envFile);
             $count=0;
             $content=preg_replace_callback("/^(?:export )?WHATSAPP_ACCESS_TOKEN=.*$/m",fn()=> $line,$content,1,$count);
-            if ($count===0) { $content=rtrim($content)."\\n".$line."\\n"; }
+            if ($count===0) { $content=rtrim($content)."\n".$line."\n"; }
             if (file_put_contents($envFile,$content,LOCK_EX)===false) { fwrite(STDERR,"Could not update shared environment.\n"); exit(1); }
             chmod($envFile,0600);
             echo "WhatsApp token updated; backup created; secret value suppressed.\n";
