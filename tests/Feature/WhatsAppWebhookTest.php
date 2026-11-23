@@ -76,7 +76,7 @@ class WhatsAppWebhookTest extends TestCase
         $response->assertSeeText('EVENT_RECEIVED');
     }
 
-    public function test_incoming_text_message_generates_and_sends_ai_reply(): void
+    public function test_incoming_text_message_generates_and_sends_gemini_reply(): void
     {
         Cache::flush();
         config([
@@ -84,13 +84,13 @@ class WhatsAppWebhookTest extends TestCase
             'services.whatsapp.access_token' => 'test-whatsapp-token',
             'services.whatsapp.phone_number_id' => '123456789',
             'services.whatsapp.graph_api_version' => 'v25.0',
-            'services.openai.api_key' => 'test-openai-key',
-            'services.openai.model' => 'gpt-4.1-mini',
+            'services.gemini.api_key' => 'test-gemini-key',
+            'services.gemini.model' => 'gemini-2.5-flash',
         ]);
 
         Http::fake([
-            'https://api.openai.com/v1/chat/completions' => Http::response([
-                'choices' => [['message' => ['content' => 'Hello! How can UniGo help you?']]],
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent' => Http::response([
+                'candidates' => [['content' => ['parts' => [['text' => 'Hello! How can UniGo help you?']]]]],
             ], 200),
             'https://graph.facebook.com/v25.0/123456789/messages' => Http::response([
                 'messages' => [['id' => 'wamid.reply']],
@@ -127,8 +127,8 @@ class WhatsAppWebhookTest extends TestCase
         ], $content);
 
         $response->assertOk();
-        Http::assertSent(fn ($request) => $request->url() === 'https://api.openai.com/v1/chat/completions'
-            && $request->hasHeader('Authorization', 'Bearer test-openai-key'));
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'generativelanguage.googleapis.com')
+            && $request->hasHeader('x-goog-api-key', 'test-gemini-key'));
         Http::assertSent(fn ($request) => $request->url() === 'https://graph.facebook.com/v25.0/123456789/messages'
             && $request['to'] === '8801700000000'
             && $request['text']['body'] === 'Hello! How can UniGo help you?');
@@ -141,7 +141,7 @@ class WhatsAppWebhookTest extends TestCase
             'services.whatsapp.app_secret' => 'test-app-secret',
             'services.whatsapp.access_token' => 'test-whatsapp-token',
             'services.whatsapp.phone_number_id' => '123456789',
-            'services.openai.api_key' => '',
+            'services.gemini.api_key' => '',
         ]);
         Http::fake([
             'https://graph.facebook.com/*' => Http::response(['messages' => [['id' => 'reply']]], 200),
