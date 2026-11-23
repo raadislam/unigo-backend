@@ -75,7 +75,7 @@ jobs:
           else
             echo "Gemini key already present in shared environment."
           fi
-          if grep -E '^(export )?GEMINI_MODEL=' "$SHARED_ENV" | grep -E 'gemini-(2\\.5|3\\.8)-flash' >/dev/null; then
+          if grep -E '^(export )?GEMINI_MODEL=' "$SHARED_ENV" | grep -E 'gemini-(2\.5|3\.8)-flash' >/dev/null; then
             sed -i -E 's/^(export )?GEMINI_MODEL=.*/GEMINI_MODEL=gemini-3.6-flash/' "$SHARED_ENV"
             echo "Updated retired Gemini model configuration."
           elif ! grep -E '^(export )?GEMINI_MODEL=' "$SHARED_ENV" >/dev/null; then
