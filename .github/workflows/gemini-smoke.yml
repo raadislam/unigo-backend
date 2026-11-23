@@ -83,9 +83,9 @@ jobs:
             echo "Set current Gemini model in shared environment."
           fi
           for key in WHATSAPP_ACCESS_TOKEN WHATSAPP_PHONE_NUMBER_ID WHATSAPP_APP_SECRET WHATSAPP_WEBHOOK_VERIFY_TOKEN WHATSAPP_GRAPH_API_VERSION WHATSAPP_TIMEOUT; do
-            if ! grep -Eq "^(export )?\${key}=" "$SHARED_ENV"; then
+            if ! grep -Eq "^(export )?${key}=" "$SHARED_ENV"; then
               if [ -f "$LEGACY_ENV" ]; then
-                legacy_line="$(grep -E "^(export )?\${key}=" "$LEGACY_ENV" | tail -n1 || true)"
+                legacy_line="$(grep -E "^(export )?${key}=" "$LEGACY_ENV" | tail -n1 || true)"
                 if [ -n "$legacy_line" ]; then
                   printf '%s\n' "$legacy_line" >> "$SHARED_ENV"
                   echo "Recovered missing $key from previous environment backup."
@@ -101,9 +101,9 @@ jobs:
 
       - name: Check WhatsApp configuration and Meta token without sending
         env:
-          VPS_HOST: \${{ secrets.VPS_HOST }}
-          VPS_USER: \${{ secrets.VPS_USER }}
-          VPS_PORT: \${{ secrets.VPS_PORT }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
