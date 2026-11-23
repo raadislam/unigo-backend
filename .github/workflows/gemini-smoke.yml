@@ -75,8 +75,8 @@ jobs:
           else
             echo "Gemini key already present in shared environment."
           fi
-          if grep -E '^(export )?GEMINI_MODEL=' "$SHARED_ENV" | grep -F 'gemini-2.5-flash' >/dev/null; then
-            sed -i -E 's/^(export )?GEMINI_MODEL=.*/GEMINI_MODEL=gemini-3.8-flash/' "$SHARED_ENV"
+          if grep -E '^(export )?GEMINI_MODEL=' "$SHARED_ENV" | grep -E 'gemini-(2\\.5|3\\.8)-flash' >/dev/null; then
+            sed -i -E 's/^(export )?GEMINI_MODEL=.*/GEMINI_MODEL=gemini-3.6-flash/' "$SHARED_ENV"
             echo "Updated retired Gemini model configuration."
           elif ! grep -E '^(export )?GEMINI_MODEL=' "$SHARED_ENV" >/dev/null; then
             printf '\nGEMINI_MODEL=gemini-3.8-flash\n' >> "$SHARED_ENV"
@@ -99,7 +99,7 @@ jobs:
           ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" "GEMINI_SMOKE_ID='$GEMINI_SMOKE_ID' bash -s" <<'REMOTE'
           set -euo pipefail
           cd /var/www/unigo/backend/current
-          php artisan tinker --execute='$model="gemini-3.6-flash"; $key=(string)config("services.gemini.api_key",""); if ($key==="") { echo "GEMINI_API_KEY is missing from production config."; exit(1); } $response=\Illuminate\Support\Facades\Http::withHeaders(["x-goog-api-key"=>$key])->timeout(60)->post("https://generativelanguage.googleapis.com/v1beta/models/".$model.":generateContent",["contents"=>[["role"=>"user","parts"=>[["text"=>"Reply with exactly GEMINI_OK."]]]],"generationConfig"=>["temperature"=>0,"maxOutputTokens"=>32,"thinkingConfig"=>["thinkingLevel"=>"LOW"]]]); echo "Gemini model=".$model." HTTP=".$response->status()." "; if (!$response->successful()) { $message=(string)$response->json("error.message","No error message returned"); echo "API error=".mb_substr($message,0,300); exit(1); } $text=trim((string)$response->json("candidates.0.content.parts.0.text","")); if ($text==="") { echo "Empty model response."; exit(1); } echo "Gemini request successful; response length=".mb_strlen($text);'
+          php artisan tinker --execute='$id=getenv("GEMINI_SMOKE_ID"); $question="Describe UniGo visa consultation services briefly. Smoke test ".$id." test@example.invalid"; $reply=app(\App\Services\WhatsAppService::class)->generateReply($question); $fallback="Thank you for contacting UniGo. We have received your message. Our team will assist you shortly."; if ($reply===$fallback) { echo "WhatsAppService returned fallback; check Gemini logs/config."; exit(1); } echo "WhatsAppService Gemini reply passed; characters=".mb_strlen($reply);'
           REMOTE
 
       - name: Verify public API
