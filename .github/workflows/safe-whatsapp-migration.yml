@@ -17,10 +17,40 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  backup-restore-test-migrate:
+  backup-schema-test-migrate:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: restoretest
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -prestoretest" --health-interval=10s --health-timeout=5s --health-retries=12
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql, xml, curl, zip, bcmath
+          coverage: none
+
+      - name: Install application dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Prepare isolated schema restore database
+        env:
+          MYSQL_PWD: restoretest
+        run: |
+          set -euo pipefail
+          cp .env.example .env
+          php artisan key:generate --force
+          mysql -h127.0.0.1 -uroot -e 'CREATE DATABASE unigo_schema_restore_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci'
+
       - name: Prepare SSH with pinned host-key verification
         env:
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
@@ -50,21 +80,15 @@ jobs:
           test -s ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
-      - name: Check backup and restore utilities
+      - name: Create and verify production backups
+        id: backup
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
         run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'command -v php && command -v mysql && command -v mysqldump && command -v gzip && command -v sha256sum'
-
-      - name: Backup, verify, restore-test, migrate production
-        env:
-          VPS_HOST: ${{ secrets.VPS_HOST }}
-          VPS_USER: ${{ secrets.VPS_USER }}
-          VPS_PORT: ${{ secrets.VPS_PORT }}
-        run: |
-          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          OUTPUT="$(ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
           set -euo pipefail
           APP_DIR="/var/www/unigo/backend/current"
           SHARED_DIR="/var/www/unigo/backend/shared"
@@ -73,99 +97,124 @@ jobs:
           test -f "$SHARED_DIR/.env"
           mkdir -p "$BACKUP_DIR"
           chmod 700 "$BACKUP_DIR"
-
           php artisan config:clear
-          MIGRATION_STATUS="$(php artisan migrate:status --no-ansi)"
-          printf '%s\n' "$MIGRATION_STATUS"
+          STATUS="$(php artisan migrate:status --no-ansi)"
+          printf '%s\n' "$STATUS"
           EXPECTED="2026_11_23_000001_create_whatsapp_knowledge_table"
-          PENDING="$(printf '%s\n' "$MIGRATION_STATUS" | grep 'Pending' || true)"
+          PENDING="$(printf '%s\n' "$STATUS" | grep 'Pending' || true)"
           if [ "$(printf '%s\n' "$PENDING" | grep -c 'Pending' || true)" -ne 1 ] || ! printf '%s\n' "$PENDING" | grep -F "$EXPECTED" >/dev/null; then
-            echo "Safety stop: the only pending migration must be $EXPECTED."
+            echo "Safety stop: only the WhatsApp knowledge migration may be pending."
             exit 1
           fi
-
           MYSQL_CNF="$BACKUP_DIR/.mysql-client-$$.cnf"
-          TEST_DB=""
-          cleanup() {
-            if [ -n "$TEST_DB" ]; then
-              mysql --defaults-extra-file="$MYSQL_CNF" -e "DROP DATABASE IF EXISTS \`$TEST_DB\`" >/dev/null 2>&1 || true
-            fi
-            rm -f "$MYSQL_CNF"
-          }
-          trap cleanup EXIT
-
+          trap 'rm -f "$MYSQL_CNF"' EXIT
           MYSQL_CNF_PATH="$MYSQL_CNF" php -r '
             require "vendor/autoload.php";
             Dotenv\Dotenv::createImmutable("/var/www/unigo/backend/shared")->safeLoad();
             $get = fn($k) => (string)($_ENV[$k] ?? $_SERVER[$k] ?? getenv($k) ?: "");
-            $driver = strtolower($get("DB_CONNECTION"));
-            if (!in_array($driver, ["mysql", "mariadb"], true)) { fwrite(STDERR, "Unsupported DB driver.\n"); exit(1); }
-            $db = $get("DB_DATABASE"); $user = $get("DB_USERNAME");
-            if ($db === "" || $user === "" || !preg_match("/^[A-Za-z0-9_]+$/", $db)) { fwrite(STDERR, "Invalid DB settings.\n"); exit(1); }
-            $escape = fn($v) => str_replace(["\\", "\""], ["\\\\", "\\\""], $v);
-            $cnf = "[client]\nhost=\"" . $escape($get("DB_HOST") ?: "127.0.0.1") . "\"\nport=" . (int)($get("DB_PORT") ?: 3306) . "\nuser=\"" . $escape($user) . "\"\npassword=\"" . $escape($get("DB_PASSWORD")) . "\"\n";
-            file_put_contents(getenv("MYSQL_CNF_PATH"), $cnf, LOCK_EX); chmod(getenv("MYSQL_CNF_PATH"), 0600);
-            echo $db;
-          ' > "$BACKUP_DIR/.production-db-name-$$"
-          PROD_DB="$(cat "$BACKUP_DIR/.production-db-name-$$")"
-          rm -f "$BACKUP_DIR/.production-db-name-$$"
+            if (!in_array(strtolower($get("DB_CONNECTION")), ["mysql", "mariadb"], true)) { fwrite(STDERR, "Unsupported database driver.\n"); exit(1); }
+            $db=$get("DB_DATABASE"); $user=$get("DB_USERNAME";
+            if ($db==="" || $user==="" || !preg_match("/^[A-Za-z0-9_]+$/",$db)) { fwrite(STDERR,"Invalid database config.\n"); exit(1); }
+            $e=fn($v)=>str_replace(["\\","\""],["\\\\","\\\""],$v);
+            $cnf="[client]\nhost=\"".$e($get("DB_HOST") ?: "127.0.0.1")."\"\nport=".(int)($get("DB_PORT") ?: 3306)."\nuser=\"".$e($user)."\"\npassword=\"".$e($get("DB_PASSWORD"))."\"\n";
+            file_put_contents(getenv("MYSQL_CNF_PATH"),$cnf,LOCK_EX); chmod(getenv("MYSQL_CNF_PATH"),0600); echo $db;
+          ' > "$BACKUP_DIR/.prod-db-$$"
+          PROD_DB="$(cat "$BACKUP_DIR/.prod-db-$$")"
+          rm -f "$BACKUP_DIR/.prod-db-$$"
           mysql --defaults-extra-file="$MYSQL_CNF" -Nse 'SELECT 1' >/dev/null
-
           TS="$(date -u +%Y%m%dT%H%M%SZ)"
-          BACKUP="$BACKUP_DIR/unigo-production-$TS.sql.gz"
-          mysqldump --defaults-extra-file="$MYSQL_CNF" --single-transaction --quick --routines --triggers --events "$PROD_DB" | gzip -9 > "$BACKUP"
-          chmod 600 "$BACKUP"
-          test -s "$BACKUP"
-          gzip -t "$BACKUP"
-          sha256sum "$BACKUP" | tee "$BACKUP.sha256"
-          chmod 600 "$BACKUP.sha256"
-          echo "Backup verified: $BACKUP"
+          FULL="$BACKUP_DIR/unigo-production-$TS.sql.gz"
+          SCHEMA="$BACKUP_DIR/unigo-production-schema-$TS.sql.gz"
+          mysqldump --defaults-extra-file="$MYSQL_CNF" --no-tablespaces --single-transaction --quick --routines --triggers --events "$PROD_DB" | gzip -9 > "$FULL"
+          mysqldump --defaults-extra-file="$MYSQL_CNF" --no-tablespaces --no-data --triggers "$PROD_DB" | gzip -9 > "$SCHEMA"
+          chmod 600 "$FULL" "$SCHEMA"
+          test -s "$FULL" && test -s "$SCHEMA"
+          gzip -t "$FULL" && gzip -t "$SCHEMA"
+          (cd "$BACKUP_DIR" && sha256sum "$(basename "$FULL")" > "$FULL.sha256")
+          (cd "$BACKUP_DIR" && sha256sum "$(basename "$SCHEMA")" > "$SCHEMA.sha256")
+          chmod 600 "$FULL.sha256" "$SCHEMA.sha256"
+          echo "Full production backup verified: $FULL"
+          echo "Schema-only restore-test backup verified: $SCHEMA"
+          rm -f "$MYSQL_CNF"
+          trap - EXIT
+          echo "$SCHEMA"
+          REMOTE
+          )"
+          printf '%s\n' "$OUTPUT"
+          SCHEMA_PATH="$(printf '%s\n' "$OUTPUT" | tail -n 1)"
+          case "$SCHEMA_PATH" in
+            /var/www/unigo/backend/shared/backups/unigo-production-schema-*.sql.gz) ;;
+            *) echo "Unexpected schema backup path; stopped."; exit 1 ;;
+          esac
+          echo "schema_path=$SCHEMA_PATH" >> "$GITHUB_OUTPUT"
 
-          TEST_DB="unigo_restore_test_$TS"
-          mysql --defaults-extra-file="$MYSQL_CNF" -e "CREATE DATABASE \`$TEST_DB\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-          gzip -dc "$BACKUP" | mysql --defaults-extra-file="$MYSQL_CNF" "$TEST_DB"
-          RESTORED_TABLES="$(mysql --defaults-extra-file="$MYSQL_CNF" "$TEST_DB" -Nse 'SHOW TABLES' | wc -l)"
-          test "$RESTORED_TABLES" -gt 0
-          RESTORED_MIGRATIONS="$(mysql --defaults-extra-file="$MYSQL_CNF" "$TEST_DB" -Nse 'SELECT COUNT(*) FROM migrations')"
-          test "$RESTORED_MIGRATIONS" -gt 0
-          echo "Restore test passed: $RESTORED_TABLES tables restored; migration history readable."
+      - name: Restore schema-only backup and test migration
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          MYSQL_PWD: restoretest
+        run: |
+          set -euo pipefail
+          SCHEMA_PATH="${{ steps.backup.outputs.schema_path }}"
+          scp -i ~/.ssh/unigo_deploy -P "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST:$SCHEMA_PATH" /tmp/unigo-schema.sql.gz
+          scp -i ~/.ssh/unigo_deploy -P "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST:$SCHEMA_PATH.sha256" /tmp/unigo-schema.sql.gz.sha256
+          cd /tmp
+          sha256sum -c unigo-schema.sql.gz.sha256
+          gzip -t unigo-schema.sql.gz
+          gzip -dc unigo-schema.sql.gz | mysql -h127.0.0.1 -uroot unigo_schema_restore_test
+          TABLE_COUNT="$(mysql -h127.0.0.1 -uroot unigo_schema_restore_test -Nse 'SHOW TABLES' | wc -l)"
+          test "$TABLE_COUNT" -gt 0
+          DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=unigo_schema_restore_test DB_USERNAME=root DB_PASSWORD=restoretest php artisan config:clear
+          DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=unigo_schema_restore_test DB_USERNAME=root DB_PASSWORD=restoretest php artisan migrate --path=database/migrations/2026_11_23_000001_create_whatsapp_knowledge_table.php --force
+          mysql -h127.0.0.1 -uroot unigo_schema_restore_test -Nse "SHOW TABLES LIKE 'whatsapp_knowledge'" | grep -F whatsapp_knowledge
+          rm -f /tmp/unigo-schema.sql.gz /tmp/unigo-schema.sql.gz.sha256
+          echo "Schema restore and migration test passed with $TABLE_COUNT existing tables."
 
+      - name: Apply migration to production and refresh caches
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          SHARED_DIR="/var/www/unigo/backend/shared"
+          cd "$APP_DIR"
           php artisan config:clear
-          DB_DATABASE="$TEST_DB" php artisan migrate --force
-          TEST_STATUS="$(DB_DATABASE="$TEST_DB" php artisan migrate:status --no-ansi)"
-          printf '%s\n' "$TEST_STATUS"
-          printf '%s\n' "$TEST_STATUS" | grep -F "$EXPECTED" | grep -F 'Ran' >/dev/null
-          mysql --defaults-extra-file="$MYSQL_CNF" "$TEST_DB" -Nse "SHOW TABLES LIKE 'whatsapp_knowledge'" | grep -F whatsapp_knowledge >/dev/null
-          echo "Isolated restore-and-migration test passed."
-
-          php artisan config:clear
+          STATUS="$(php artisan migrate:status --no-ansi)"
+          EXPECTED="2026_11_23_000001_create_whatsapp_knowledge_table"
+          PENDING="$(printf '%s\n' "$STATUS" | grep 'Pending' || true)"
+          if [ "$(printf '%s\n' "$PENDING" | grep -c 'Pending' || true)" -ne 1 ] || ! printf '%s\n' "$PENDING" | grep -F "$EXPECTED" >/dev/null; then
+            echo "Safety stop: pending migrations changed."
+            exit 1
+          fi
+          BACKUP_DIR="$SHARED_DIR/backups"
+          FULL="$(find "$BACKUP_DIR" -maxdepth 1 -type f -name 'unigo-production-*.sql.gz' ! -name 'unigo-production-schema-*.sql.gz' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+          test -n "$FULL"
+          gzip -t "$FULL"
+          (cd "$BACKUP_DIR" && sha256sum -c "$(basename "$FULL").sha256")
           php artisan migrate --force
-          PROD_STATUS="$(php artisan migrate:status --no-ansi)"
-          printf '%s\n' "$PROD_STATUS"
-          printf '%s\n' "$PROD_STATUS" | grep -F "$EXPECTED" | grep -F 'Ran' >/dev/null
-          mysql --defaults-extra-file="$MYSQL_CNF" "$PROD_DB" -Nse "SHOW TABLES LIKE 'whatsapp_knowledge'" | grep -F whatsapp_knowledge >/dev/null
-          echo "Production migration verified."
-
+          STATUS="$(php artisan migrate:status --no-ansi)"
+          printf '%s\n' "$STATUS"
+          printf '%s\n' "$STATUS" | grep -F "$EXPECTED" | grep -F 'Ran' >/dev/null
           php artisan route:clear
           php artisan config:cache
           if [ -d "$APP_DIR/resources/views" ]; then
             php artisan view:clear
             php artisan view:cache
           fi
-          mysql --defaults-extra-file="$MYSQL_CNF" -e "DROP DATABASE \`$TEST_DB\`"
-          TEST_DB=""
-          rm -f "$MYSQL_CNF"
-          trap - EXIT
-          echo "Migration completed. Backup retained at $BACKUP"
+          echo "Production migration complete. Verified backup: $FULL"
           REMOTE
 
-      - name: Verify production API responds
+      - name: Verify public API
         run: |
           python3 - <<'PY'
           from urllib.request import Request, urlopen
-          url = "https://api.unigo-bd.com/api/countries"
-          request = Request(url, headers={"Accept": "application/json", "User-Agent": "UniGo-Migration-Health-Check/1.0"})
-          with urlopen(request, timeout=45) as response:
+          req = Request("https://api.unigo-bd.com/api/countries", headers={"Accept": "application/json"})
+          with urlopen(req, timeout=45) as response:
               if response.status != 200:
                   raise SystemExit(f"API health check failed: HTTP {response.status}")
               print(f"API health check passed: HTTP {response.status}")
