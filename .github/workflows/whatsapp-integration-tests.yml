@@ -11,6 +11,8 @@ on:
       - '.env.example'
       - 'routes/api.php'
       - 'tests/Feature/WhatsAppWebhookTest.php'
+      - 'app/Models/WhatsAppKnowledge.php'
+      - 'database/migrations/*whatsapp_knowledge*'
       - '.github/workflows/whatsapp-integration-tests.yml'
   workflow_dispatch:
 
