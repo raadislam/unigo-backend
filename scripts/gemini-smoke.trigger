@@ -1,1 +1,1 @@
-Run a safe production Gemini reply smoke test.
+Diagnose production Gemini API response without sending WhatsApp.
