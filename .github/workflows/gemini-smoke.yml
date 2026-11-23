@@ -1,0 +1,78 @@
+name: UniGo Gemini Production Smoke Test
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/gemini-smoke.trigger'
+      - '.github/workflows/gemini-smoke.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: unigo-backend-gemini-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prepare SSH with pinned host-key verification
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          : "${VPS_SSH_KEY:?VPS_SSH_KEY secret is missing}"
+          : "${VPS_KNOWN_HOSTS:?VPS_KNOWN_HOSTS secret is missing}"
+          : "${VPS_HOST:?VPS_HOST secret is missing}"
+          : "${VPS_PORT:?VPS_PORT secret is missing}"
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/unigo_deploy
+          chmod 600 ~/.ssh/unigo_deploy
+          printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/pinned_known_hosts
+          chmod 600 ~/.ssh/pinned_known_hosts
+          ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" > ~/.ssh/scanned_known_hosts 2>~/.ssh/keyscan.log
+          test -s ~/.ssh/scanned_known_hosts
+          awk 'NF >= 3 && $1 !~ /^#/ { if ($1 ~ /^@/) print $3 " " $4; else print $2 " " $3 }' ~/.ssh/pinned_known_hosts | sort -u > ~/.ssh/pinned_keys
+          awk 'NF >= 3 && $1 !~ /^#/ { print $2 " " $3 }' ~/.ssh/scanned_known_hosts | sort -u > ~/.ssh/scanned_keys
+          if ! grep -Fxf ~/.ssh/pinned_keys ~/.ssh/scanned_keys >/dev/null 2>&1; then
+            if ! grep -Fxf ~/.ssh/pinned_keys ~/.ssh/scanned_keys >/dev/null; then
+              echo "VPS host-key mismatch. Smoke test stopped."
+              exit 1
+            fi
+          fi
+          awk 'NR == FNR { pinned[$0] = 1; next } (($2 " " $3) in pinned) { print }' ~/.ssh/pinned_keys ~/.ssh/scanned_known_hosts > ~/.ssh/known_hosts
+          test -s ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+
+      - name: Verify Gemini can generate a reply without sending WhatsApp
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          GEMINI_SMOKE_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" "GEMINI_SMOKE_ID='$GEMINI_SMOKE_ID' bash -s" <<'REMOTE'
+          set -euo pipefail
+          cd /var/www/unigo/backend/current
+          php artisan tinker --execute='$id=getenv("GEMINI_SMOKE_ID"); $question="Give a concise explanation of UniGo visa consultation services. Production Gemini smoke test ".$id." test@example.invalid"; $reply=app(\App\Services\WhatsAppService::class)->generateReply($question); $fallback="Thank you for contacting UniGo. We have received your message. Our team will assist you shortly."; if ($reply===$fallback) { echo "Gemini returned fallback; check API key, quota, and model configuration."; exit(1); } echo "Gemini smoke test passed. Generated response length: ".mb_strlen($reply)." characters.";'
+          REMOTE
+
+      - name: Verify public API
+        run: |
+          python3 - <<'PY'
+          from urllib.request import Request, urlopen
+          req = Request("https://api.unigo-bd.com/api/countries", headers={"Accept": "application/json"})
+          with urlopen(req, timeout=45) as response:
+              if response.status != 200:
+                  raise SystemExit(f"API health check failed: HTTP {response.status}")
+              print(f"API health check passed: HTTP {response.status}")
+          PY
