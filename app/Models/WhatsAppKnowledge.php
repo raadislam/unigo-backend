@@ -11,6 +11,7 @@ class WhatsAppKnowledge extends Model
     protected $fillable = [
         'question',
         'normalized_question',
+        'normalized_question_hash',
         'answer',
         'use_count',
     ];
