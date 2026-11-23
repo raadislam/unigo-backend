@@ -1,1 +1,1 @@
-Retry Meta token diagnostic after shell fix.
+Retry WhatsApp configuration and Meta read-only diagnostics using pinned host key.

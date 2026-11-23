@@ -38,17 +38,9 @@ jobs:
           chmod 600 ~/.ssh/unigo_deploy
           printf '%s\n' "$VPS_KNOWN_HOSTS" > ~/.ssh/pinned_known_hosts
           chmod 600 ~/.ssh/pinned_known_hosts
-          ssh-keyscan -T 10 -p "$VPS_PORT" -H "$VPS_HOST" > ~/.ssh/scanned_known_hosts 2>~/.ssh/keyscan.log
-          test -s ~/.ssh/scanned_known_hosts
-          awk 'NF >= 3 && $1 !~ /^#/ { if ($1 ~ /^@/) print $3 " " $4; else print $2 " " $3 }' ~/.ssh/pinned_known_hosts | sort -u > ~/.ssh/pinned_keys
-          awk 'NF >= 3 && $1 !~ /^#/ { print $2 " " $3 }' ~/.ssh/scanned_known_hosts | sort -u > ~/.ssh/scanned_keys
-          if ! grep -Fxf ~/.ssh/pinned_keys ~/.ssh/scanned_keys >/dev/null; then
-            echo "VPS host-key mismatch. Smoke test stopped."
-            exit 1
-          fi
-          awk 'NR == FNR { pinned[$0] = 1; next } (($2 " " $3) in pinned) { print }' ~/.ssh/pinned_keys ~/.ssh/scanned_known_hosts > ~/.ssh/known_hosts
-          test -s ~/.ssh/known_hosts
+          cp ~/.ssh/pinned_known_hosts ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'true'
 
       - name: Recover Gemini key from previous deployment backup if needed
         env:
