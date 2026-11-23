@@ -50,6 +50,37 @@ jobs:
           test -s ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
+      - name: Recover Gemini key from previous deployment backup if needed
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/unigo_deploy -p "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST" 'bash -s' <<'REMOTE'
+          set -euo pipefail
+          APP_DIR="/var/www/unigo/backend/current"
+          SHARED_ENV="/var/www/unigo/backend/shared/.env"
+          LEGACY_ENV="$APP_DIR/.env.deployment-backup"
+          test -f "$SHARED_ENV"
+          if ! grep -Eq '^(export )?GEMINI_API_KEY=' "$SHARED_ENV"; then
+            if [ -f "$LEGACY_ENV" ] && grep -Eq '^(export )?GEMINI_API_KEY=' "$LEGACY_ENV"; then
+              cp -p "$SHARED_ENV" "$SHARED_ENV.backup-$(date -u +%Y%m%dT%H%M%SZ)"
+              grep -E '^(export )?GEMINI_API_KEY=' "$LEGACY_ENV" | tail -n1 >> "$SHARED_ENV"
+              chmod 600 "$SHARED_ENV"
+              echo "Gemini key restored from pre-deployment environment backup without displaying it."
+            else
+              echo "Gemini key not found in shared or legacy environment files."
+            fi
+          else
+            echo "Gemini key already present in shared environment."
+          fi
+          cd "$APP_DIR"
+          php artisan config:clear
+          php artisan config:cache
+          php artisan tinker --execute='if ((string)config("services.gemini.api_key","")==="") { echo "Gemini key is absent from Laravel configuration."; exit(1); } echo "Gemini key is loaded in Laravel configuration.";'
+          REMOTE
+
       - name: Verify Gemini can generate a reply without sending WhatsApp
         env:
           VPS_HOST: ${{ secrets.VPS_HOST }}
