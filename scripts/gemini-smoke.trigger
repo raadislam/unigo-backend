@@ -1,1 +1,1 @@
-Retry WhatsApp configuration and Meta read-only diagnostics using pinned host key.
+Retry WhatsApp credential recovery and Meta API diagnostic.
