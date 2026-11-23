@@ -27,6 +27,7 @@ jobs:
           VPS_KNOWN_HOSTS: ${{ secrets.VPS_KNOWN_HOSTS }}
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_USER: ${{ secrets.VPS_USER }}
         run: |
           set -euo pipefail
           : "${VPS_SSH_KEY:?VPS_SSH_KEY secret is missing}"
