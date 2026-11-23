@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'scripts/whatsapp-migration.trigger'
+      - 'scripts/whatsapp-migration-retry.trigger'
       - '.github/workflows/safe-whatsapp-migration.yml'
   workflow_dispatch:
 
@@ -113,7 +114,7 @@ jobs:
             Dotenv\Dotenv::createImmutable("/var/www/unigo/backend/shared")->safeLoad();
             $get = fn($k) => (string)($_ENV[$k] ?? $_SERVER[$k] ?? getenv($k) ?: "");
             if (!in_array(strtolower($get("DB_CONNECTION")), ["mysql", "mariadb"], true)) { fwrite(STDERR, "Unsupported database driver.\n"); exit(1); }
-            $db=$get("DB_DATABASE"); $user=$get("DB_USERNAME";
+            $db=$get("DB_DATABASE"); $user=$get("DB_USERNAME");
             if ($db==="" || $user==="" || !preg_match("/^[A-Za-z0-9_]+$/",$db)) { fwrite(STDERR,"Invalid database config.\n"); exit(1); }
             $e=fn($v)=>str_replace(["\\","\""],["\\\\","\\\""],$v);
             $cnf="[client]\nhost=\"".$e($get("DB_HOST") ?: "127.0.0.1")."\"\nport=".(int)($get("DB_PORT") ?: 3306)."\nuser=\"".$e($user)."\"\npassword=\"".$e($get("DB_PASSWORD"))."\"\n";
