@@ -42,11 +42,9 @@ jobs:
           test -s ~/.ssh/scanned_known_hosts
           awk 'NF >= 3 && $1 !~ /^#/ { if ($1 ~ /^@/) print $3 " " $4; else print $2 " " $3 }' ~/.ssh/pinned_known_hosts | sort -u > ~/.ssh/pinned_keys
           awk 'NF >= 3 && $1 !~ /^#/ { print $2 " " $3 }' ~/.ssh/scanned_known_hosts | sort -u > ~/.ssh/scanned_keys
-          if ! grep -Fxf ~/.ssh/pinned_keys ~/.ssh/scanned_keys >/dev/null 2>&1; then
-            if ! grep -Fxf ~/.ssh/pinned_keys ~/.ssh/scanned_keys >/dev/null; then
-              echo "VPS host-key mismatch. Smoke test stopped."
-              exit 1
-            fi
+          if ! grep -Fxf ~/.ssh/pinned_keys ~/.ssh/scanned_keys >/dev/null; then
+            echo "VPS host-key mismatch. Smoke test stopped."
+            exit 1
           fi
           awk 'NR == FNR { pinned[$0] = 1; next } (($2 " " $3) in pinned) { print }' ~/.ssh/pinned_keys ~/.ssh/scanned_known_hosts > ~/.ssh/known_hosts
           test -s ~/.ssh/known_hosts
