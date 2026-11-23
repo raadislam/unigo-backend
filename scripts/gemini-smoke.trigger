@@ -1,1 +1,1 @@
-Set tested Gemini 3.6 Flash and test WhatsAppService.
+Recover missing WhatsApp environment keys and validate Meta token.
