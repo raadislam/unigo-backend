@@ -45,7 +45,7 @@ class WhatsAppService
         ]);
 
         try {
-            $model = (string) config('services.gemini.model', 'gemini-3.8-flash');
+            $model = (string) config('services.gemini.model', 'gemini-3.6-flash');
             $response = Http::withHeaders(['x-goog-api-key' => $apiKey])
                 ->timeout((int) config('services.gemini.timeout', 25))
                 ->post("https://generativelanguage.googleapis.com/v1beta/models/{$model}:generateContent", [
