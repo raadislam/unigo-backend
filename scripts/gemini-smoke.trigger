@@ -1,1 +1,1 @@
-Update retired Gemini model and test production API.
+Test Gemini generation with 60-second timeout.
