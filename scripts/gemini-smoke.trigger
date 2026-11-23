@@ -1,1 +1,1 @@
-Recover missing WhatsApp environment keys and validate Meta token.
+Retry Meta token diagnostic after shell fix.
