@@ -1,1 +1,1 @@
-Redact Meta error bodies from diagnostics and continue other smoke checks.
+Continue Gemini smoke while safely reporting Meta token status.
