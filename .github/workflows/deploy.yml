@@ -57,6 +57,7 @@ on:
       - '.github/workflows/update-schengen-checklists.yml'
       - '.github/workflows/safe-whatsapp-migration.yml'
       - 'scripts/whatsapp-migration.trigger'
+      - 'scripts/whatsapp-migration-retry.trigger'
   workflow_dispatch:
 
 permissions:
