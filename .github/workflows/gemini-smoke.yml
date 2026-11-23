@@ -110,6 +110,7 @@ jobs:
           set -euo pipefail
           cd /var/www/unigo/backend/current
           php artisan tinker --execute='$token=(string)config("services.whatsapp.access_token",""); $id=(string)config("services.whatsapp.phone_number_id",""); $version=(string)config("services.whatsapp.graph_api_version","v25.0"); if ($token==="" || $id==="") { echo "WhatsApp access token or phone number ID missing from Laravel config."; exit(1); } $response=\Illuminate\Support\Facades\Http::withToken($token)->timeout(20)->get("https://graph.facebook.com/".$version."/".$id,["fields"=>"id,display_phone_number,verified_name"]); echo "Meta Graph API HTTP=".$response->status()." "; if (!$response->successful()) { $err=$response->json("error",[]); echo "error=".mb_substr((string)($err["message"]??"Unknown error"),0,300)." code=".($err["code"]??"")." subcode=".($err["error_subcode"]??""); exit(1); } echo "WhatsApp phone number resource accessible; ID matched.";
+          '
           REMOTE
 
       - name: Verify Gemini can generate a reply without sending WhatsApp
