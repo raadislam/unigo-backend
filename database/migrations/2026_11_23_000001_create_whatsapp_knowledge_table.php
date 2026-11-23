@@ -11,7 +11,8 @@ return new class extends Migration
         Schema::create('whatsapp_knowledge', function (Blueprint $table) {
             $table->id();
             $table->text('question');
-            $table->string('normalized_question', 1000)->unique();
+            $table->text('normalized_question');
+            $table->char('normalized_question_hash', 64)->unique();
             $table->longText('answer');
             $table->unsignedInteger('use_count')->default(0);
             $table->timestamps();
