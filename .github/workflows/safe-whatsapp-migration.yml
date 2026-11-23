@@ -158,18 +158,19 @@ jobs:
         run: |
           set -euo pipefail
           SCHEMA_PATH="${{ steps.backup.outputs.schema_path }}"
-          scp -i ~/.ssh/unigo_deploy -P "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST:$SCHEMA_PATH" /tmp/unigo-schema.sql.gz
-          scp -i ~/.ssh/unigo_deploy -P "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST:$SCHEMA_PATH.sha256" /tmp/unigo-schema.sql.gz.sha256
+          SCHEMA_BASENAME="$(basename "$SCHEMA_PATH")"
+          scp -i ~/.ssh/unigo_deploy -P "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST:$SCHEMA_PATH" "/tmp/$SCHEMA_BASENAME"
+          scp -i ~/.ssh/unigo_deploy -P "$VPS_PORT" -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts "$VPS_USER@$VPS_HOST:$SCHEMA_PATH.sha256" "/tmp/$SCHEMA_BASENAME.sha256"
           cd /tmp
-          sha256sum -c unigo-schema.sql.gz.sha256
-          gzip -t unigo-schema.sql.gz
-          gzip -dc unigo-schema.sql.gz | mysql -h127.0.0.1 -uroot unigo_schema_restore_test
+          sha256sum -c "$SCHEMA_BASENAME.sha256"
+          gzip -t "$SCHEMA_BASENAME"
+          gzip -dc "$SCHEMA_BASENAME" | mysql -h127.0.0.1 -uroot unigo_schema_restore_test
           TABLE_COUNT="$(mysql -h127.0.0.1 -uroot unigo_schema_restore_test -Nse 'SHOW TABLES' | wc -l)"
           test "$TABLE_COUNT" -gt 0
           DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=unigo_schema_restore_test DB_USERNAME=root DB_PASSWORD=restoretest php artisan config:clear
           DB_CONNECTION=mysql DB_HOST=127.0.0.1 DB_PORT=3306 DB_DATABASE=unigo_schema_restore_test DB_USERNAME=root DB_PASSWORD=restoretest php artisan migrate --path=database/migrations/2026_11_23_000001_create_whatsapp_knowledge_table.php --force
           mysql -h127.0.0.1 -uroot unigo_schema_restore_test -Nse "SHOW TABLES LIKE 'whatsapp_knowledge'" | grep -F whatsapp_knowledge
-          rm -f /tmp/unigo-schema.sql.gz /tmp/unigo-schema.sql.gz.sha256
+          rm -f "/tmp/$SCHEMA_BASENAME" "/tmp/$SCHEMA_BASENAME.sha256"
           echo "Schema restore and migration test passed with $TABLE_COUNT existing tables."
 
       - name: Apply migration to production and refresh caches
