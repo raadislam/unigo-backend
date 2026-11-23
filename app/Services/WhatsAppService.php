@@ -94,7 +94,7 @@ class WhatsAppService
         }
 
         $exact = WhatsAppKnowledge::query()
-            ->where('normalized_question', $normalized)
+            ->where('normalized_question_hash', hash('sha256', $normalized))
             ->first();
 
         if ($exact) {
@@ -154,6 +154,7 @@ class WhatsAppService
             WhatsAppKnowledge::create([
                 'question' => mb_substr(trim($question), 0, 1000),
                 'normalized_question' => $normalized,
+                'normalized_question_hash' => hash('sha256', $normalized),
                 'answer' => $answer,
                 'use_count' => 0,
             ]);
