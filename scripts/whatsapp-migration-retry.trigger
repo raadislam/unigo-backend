@@ -1,1 +1,1 @@
-Retry safe WhatsApp migration after schema-only restore test update.
+Retry safe WhatsApp knowledge migration using PHP 8.4 schema restore test.
